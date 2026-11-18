@@ -1,0 +1,24 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { makeCtx, evaluate, evaluateNow, specFromBuild } from "../src/engine/evaluate";
+import { searchBuilds } from "../src/engine/builds";
+const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const inv = buildInventory(s.profile, h => defs.get(h), s.account);
+const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
+const set = { healthFloor: 60, mw: "asIs" as const };
+const now = evaluateNow(ctx, "abilities", set)!;
+console.log("NOW", now.spec.subclass, now.spec.exotic, now.score.toFixed(1), now.stats, now.issues, now.fragmentSlots, now.spec.fragments.length);
+let t = Date.now();
+const b = searchBuilds({ inv, defOf: ctx.defOf, defs: ctx.defs, characterId: hunter.id, goal: "abilities", top: 2, pinnedWeapons: [now.spec.weapons[0]] });
+console.log("search ms", Date.now() - t);
+const spec = specFromBuild(b[0]);
+t = Date.now(); const v = evaluate(spec, ctx, set); console.log("eval ms", Date.now() - t, v.spec.subclass, v.spec.exotic, v.score.toFixed(1), v.stats, v.weapons.map(w => w?.item.name));
+// edit: swap exotic and lock a helmet
+t = Date.now(); const v2 = evaluate({ ...spec, exotic: "Star-Eater Scales" }, ctx, set); console.log("edit ms", Date.now() - t, v2.score.toFixed(1), v2.stats, v2.issues);
+console.log("A frags", v.spec.aspects, v.spec.fragments, "bonus", v.bonus, "armor", Object.values(v.armor!.pieces).map(p => p.item.name + (p.mwLevel === 5 ? "*" : "")), "mods", v.armor!.mods);
+const lockedWorn = evaluate({ ...spec, armorLocks: Object.fromEntries(Object.entries(now.spec.armorLocks)) }, ctx, set);
+console.log("A with worn armor", lockedWorn.stats, "mods", lockedWorn.armor!.mods);

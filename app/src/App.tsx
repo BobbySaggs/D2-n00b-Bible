@@ -5,6 +5,8 @@ import { loadEverything, makeSnapshot, type LoadResult } from "./bungie/load";
 import { downloadSnapshot } from "./snapshot";
 import { SignIn } from "./screens/SignIn";
 import { Roster } from "./screens/Roster";
+import { Builder } from "./screens/Builder";
+import { Segmented } from "./ui/bits";
 import { Button, Card, Logo } from "./ui/kit";
 
 type State =
@@ -25,6 +27,7 @@ function ago(t: number, now: number) {
 export default function App() {
   const [st, setSt] = useState<State>({ at: "start" });
   const [now, setNow] = useState(Date.now());
+  const [screen, setScreen] = useState<"builder" | "roster">("builder");
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
 
   const load = useCallback(async () => {
@@ -48,7 +51,7 @@ export default function App() {
   if (st.at === "signedOut") return <SignIn error={st.error} />;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3 py-5">
         <div className="flex items-center gap-3">
           <Logo />
@@ -78,6 +81,10 @@ export default function App() {
         </Card>
       )}
       {st.at === "ready" && (
+        <nav className="mb-5"><Segmented label="Screen" value={screen} onChange={setScreen} options={[{ value: "builder", label: "Builder" }, { value: "roster", label: "My roster" }]} /></nav>
+      )}
+      {st.at === "ready" && screen === "builder" && <Builder inv={st.data.inventory} />}
+      {st.at === "ready" && screen === "roster" && (
         <Roster
           inv={st.data.inventory}
           onExport={async () => {
@@ -86,7 +93,7 @@ export default function App() {
           }}
         />
       )}
-      <footer className="mt-10 text-center text-xs text-ink-dim">Steeped beta · rebuild phase 1</footer>
+      <footer className="mt-10 text-center text-xs text-ink-dim">Steeped beta {__APP_VERSION__}</footer>
     </div>
   );
 }

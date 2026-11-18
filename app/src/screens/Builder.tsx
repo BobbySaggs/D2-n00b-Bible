@@ -1,0 +1,458 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
+import { DEFS } from "../bungie/defs";
+import type { Inventory, Item } from "../model/inventory";
+import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
+import { evaluate, evaluateNow, fragmentSlots, makeCtx, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { count100, lowest } from "../engine/solve";
+import type { Goal } from "../engine/loops";
+import { runSearch } from "../workers/search";
+import { Badge, Button, Card, cn } from "../ui/kit";
+import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
+
+const GOALS: { value: Goal; label: string }[] = [
+  { value: "abilities", label: "General PvE" },
+  { value: "bossDps", label: "Raid boss" },
+  { value: "survival", label: "Hard content" },
+  { value: "team", label: "Team support" },
+];
+const SLOT_LABEL: Record<string, string> = { helmet: "Helmet", arms: "Arms", chest: "Chest", legs: "Legs", class: "Class item", kinetic: "Kinetic", energy: "Energy", power: "Heavy" };
+const WORDS: Record<string, string> = {
+  gEn: "grenade energy", mEn: "melee energy", cEn: "dodge energy", sEn: "super energy", orb: "Orbs of Power", orbPickup: "orbs",
+  frost: "Frost Armor", shard: "Stasis shards", crystal: "Stasis crystals", shatter: "shatters", freeze: "freezes", slow: "slow",
+  invis: "invisibility", weaken: "weaken", volatile: "volatile", overshield: "overshields", radiant: "radiant", scorch: "scorch",
+  ignite: "ignitions", jolt: "jolt", amplified: "amplified", sever: "sever", kDebuffed: "debuffed kills", kMelee: "melee kills",
+  kGrenade: "grenade kills", kPrecision: "precision kills", kSuper: "super kills", dodge: "dodges", heal: "healing", dr: "damage resistance",
+  suppress: "suppress", tangle: "Tangles", bossDmg: "boss damage", teamBuff: "team buffs", reload: "reloads", restoration: "restoration", cure: "cure",
+};
+const word = (t: string) => t.split(" or ").map(x => WORDS[x] ?? x).join(" or ");
+
+const where = (i: Item, cid: string) =>
+  i.owner === cid && i.equipped ? "Worn" : i.owner === cid ? "On character" : i.owner === "vault" ? "Vault" : "Other character";
+
+type Col = 0 | 1;
+
+export function Builder({ inv }: { inv: Inventory }) {
+  const hunter = inv.characters.find(c => c.cls === "Hunter");
+  const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
+  const [goal, setGoal] = useState<Goal>("abilities");
+  const [settings, setSettings] = useState<Settings>({ healthFloor: 60, mw: "asIs" });
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
+  const [busy, setBusy] = useState<[boolean, boolean]>([false, false]);
+  const [err, setErr] = useState("");
+  const [focus, setFocus] = useState<Col>(0); // on phones: compare Now with one build at a time
+
+  const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string } = {}) => {
+    if (!ctx) return;
+    setBusy(b => [cols.includes(0) || b[0], cols.includes(1) || b[1]]);
+    setErr("");
+    try {
+      const found = await runSearch({ characterId: ctx.characterId, goal, top: 4, pinnedWeapons: pinned, ...opts }, inv, ctx.defs);
+      setSpecs(s => {
+        const next = [...s];
+        if (cols.length === 2) { next[0] = found[0] ?? null; next[1] = found[1] ?? null; }
+        else next[cols[0]] = found[0] ?? next[cols[0]];
+        return next;
+      });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(b => [cols.includes(0) ? false : b[0], cols.includes(1) ? false : b[1]]);
+    }
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { search([0, 1]); }, [ctx, goal, pinned.join(",")]);
+
+  const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal, settings]);
+  const views = useMemo(() => specs.map(s => (s && ctx ? evaluate({ ...s, goal }, ctx, settings) : null)), [specs, ctx, goal, settings]);
+  const full = useMemo(() => specs.map(s => (s && ctx && settings.mw === "asIs" ? evaluate({ ...s, goal }, ctx, { ...settings, mw: "full" }) : null)), [specs, ctx, goal, settings]);
+
+  if (!hunter || !ctx) return <Card>The builder knows Hunters first. Titan and Warlock are next.</Card>;
+  const edit = (c: Col, patch: Partial<BuildSpec>) => setSpecs(s => { const n = [...s]; if (n[c]) n[c] = { ...n[c]!, ...patch }; return n; });
+
+  return (
+    <div className="space-y-5">
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <Segmented label="What are you building for?" value={goal} options={GOALS} onChange={setGoal} />
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <Segmented label="Masterwork" value={settings.mw} onChange={mw => setSettings(s => ({ ...s, mw }))}
+            options={[{ value: "asIs", label: "Gear as is" }, { value: "full", label: "If masterworked" }]} />
+          <label className="flex items-center gap-2 text-ink-dim">
+            Health at least
+            <Pick className="w-20" value={settings.healthFloor} onChange={e => setSettings(s => ({ ...s, healthFloor: Number(e.target.value) }))}>
+              {[40, 50, 60, 70, 80, 90, 100].map(v => <option key={v} value={v}>{v}</option>)}
+            </Pick>
+          </label>
+        </div>
+      </section>
+      {err && <Card className="border-bad/40 text-bad">{err}</Card>}
+
+      <section className="grid gap-3 md:grid-cols-3">
+        <ScoreCard title="Now" sub="What you're wearing" v={now} />
+        {([0, 1] as Col[]).map(c => (
+          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Steeped's best for this goal" : "Best alternative"} v={views[c]} base={now} busy={busy[c]}
+            action={<Button size="sm" variant="ghost" disabled={busy[c]} onClick={() => search([c], { onlySubclass: views[c]?.spec.subclass, onlyExotic: views[c]?.spec.exotic })}>Re-tune around this</Button>} />
+        ))}
+      </section>
+
+      <div className="md:hidden">
+        <Segmented label="Compare Now with" value={String(focus) as "0" | "1"} onChange={v => setFocus(Number(v) as Col)}
+          options={[{ value: "0", label: "Now vs Build A" }, { value: "1", label: "Now vs Build B" }]} />
+      </div>
+      <Card className="p-0">
+        <Table now={now} views={views} ctx={ctx} edit={edit} pinned={pinned} setPinned={setPinned} search={search} busy={busy} focus={focus} />
+      </Card>
+
+      <section className="grid gap-3 md:grid-cols-2">
+        {([0, 1] as Col[]).map(c => views[c] && (
+          <Card key={c} className="space-y-3">
+            <h3 className="text-lg">{c === 0 ? "Build A" : "Build B"}: how it works</h3>
+            <HowItWorks v={views[c]!} />
+            <Stronger v={views[c]!} full={full[c]} ctx={ctx} />
+          </Card>
+        ))}
+      </section>
+      {now && now.loops.unfed.length > 0 && (
+        <Card className="space-y-2">
+          <h3 className="text-lg">In what you wear now</h3>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-ink-dim">
+            {now.loops.unfed.map(u => <li key={u.name + u.token}><b className="text-ink">{u.name}</b> does nothing right now: it needs {word(u.token)}, and nothing in your build makes that.</li>)}
+          </ul>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function ScoreCard({ title, sub, v, base, busy, action }: { title: string; sub: string; v: BuildView | null; base?: BuildView | null; busy?: boolean; action?: ReactNode }) {
+  return (
+    <Card className={cn("space-y-2", title !== "Now" && "border-accent/40")} data-testid={`card-${title}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-display text-xl">{title}</div>
+          <div className="text-xs text-ink-dim">{sub}</div>
+        </div>
+        {busy ? <Spinner label="Thinking" /> : v && (
+          <div className="text-right">
+            <div className="font-display text-3xl leading-none" data-testid={`score-${title}`}>{Math.round(v.score)}</div>
+            <div className="text-xs text-ink-dim">build score {base && <Delta v={Math.round(v.score - base.score)} />}</div>
+          </div>
+        )}
+      </div>
+      {v && (
+        <>
+          <div className="text-sm"><span className="text-ink">{v.spec.subclass}</span> <span className="text-ink-dim">+</span> <span className="text-exotic">{v.spec.exotic || "no exotic"}</span></div>
+          <div className="flex flex-wrap gap-2">
+            <Badge>{statSum(v)} stat points{base ? <Delta className="ml-1" v={statSum(v) - statSum(base)} /> : null}</Badge>
+            <Badge tone={count100(v.stats) >= 2 ? "good" : "neutral"}>{count100(v.stats)} stats at 100+</Badge>
+            <Badge tone={lowest(v.stats) >= 50 ? "neutral" : "warn"}>lowest {lowest(v.stats)}</Badge>
+            {v.issues.length > 0 && <Badge tone="warn">{v.issues.length} to fix</Badge>}
+          </div>
+          {action}
+        </>
+      )}
+    </Card>
+  );
+}
+
+const statSum = (v: BuildView) => STAT_ORDER.reduce((t, k) => t + v.stats[k], 0);
+
+function StatBar({ value, base }: { value: number; base?: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-white/8">
+        <div className={cn("absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out", value >= 100 ? "bg-good" : value < 50 ? "bg-warn" : "bg-accent-hi")}
+          style={{ width: `${Math.min(100, value / 2)}%` }} />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-white/40" title="100" />
+      </div>
+      <span className="w-8 text-right font-display tabular-nums">{value}</span>
+      <span className="w-8 text-right">{base !== undefined ? <Delta v={value - base} /> : null}</span>
+    </div>
+  );
+}
+
+const FocusCtx = createContext<Col>(0);
+const Row = ({ label, now: n, cells, same, sticky }: { label: ReactNode; now: ReactNode; cells: ReactNode[]; same?: boolean[]; sticky?: string }) => {
+  const focus = useContext(FocusCtx);
+  return (
+  <tr className="border-t border-line/60 align-top">
+    <th scope="row" className="sticky left-0 z-10 w-20 bg-bg/95 px-2 py-2 md:w-28 md:px-3 text-left text-xs font-medium uppercase tracking-wide text-ink-dim backdrop-blur">{label}{sticky}</th>
+    <td className="px-3 py-2 text-sm md:min-w-48">{n}</td>
+    {cells.map((c, i) => <td key={i} className={cn("px-3 py-2 text-sm md:min-w-56", i !== focus && "max-md:hidden", same && !same[i] && "bg-accent/8")}>{c}</td>)}
+  </tr>
+  );
+};
+const Section = ({ title }: { title: string }) => (
+  <tr><td colSpan={4} className="bg-panel-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-accent-hi">{title}</td></tr>
+);
+
+function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }: {
+  now: BuildView | null; views: (BuildView | null)[]; ctx: Ctx; edit: (c: Col, p: Partial<BuildSpec>) => void;
+  pinned: string[]; setPinned: (p: string[]) => void; search: (c: Col[], o?: { onlySubclass?: Subclass; onlyExotic?: string }) => void; busy: [boolean, boolean];
+  focus: Col;
+}) {
+  const kitOf = (sub: Subclass, kind: K["kind"]) => HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && ctx.kit.get(sub)?.has(k.name));
+  const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
+  const cid = ctx.characterId;
+
+  const kName = (n: string) => <span title={byName.get(n)?.says}>{n || <span className="text-ink-dim">None</span>}</span>;
+  const cols = [0, 1] as Col[];
+
+  const abilityRow = (label: string, key: "super" | "grenade" | "melee" | "classAbility", kind: K["kind"]) => (
+    <Row key={key} label={label} now={kName(now?.spec[key] ?? "")}
+      same={cols.map(c => views[c]?.spec[key] === now?.spec[key])}
+      cells={cols.map(c => {
+        const v = views[c]; if (!v) return null;
+        return (
+          <Pick aria-label={`${label} for build ${c ? "B" : "A"}`} changed={v.spec[key] !== now?.spec[key]} value={v.spec[key]} title={byName.get(v.spec[key])?.says}
+            onChange={e => edit(c, { [key]: e.target.value } as Partial<BuildSpec>)}>
+            {kitOf(v.spec.subclass, kind).map(k => <option key={k.name} value={k.name}>{k.name}</option>)}
+          </Pick>
+        );
+      })} />
+  );
+
+  const weaponLabel = (id: string) => {
+    const w = ctx.weapons.find(x => x.item.id === id);
+    if (!w) return <span className="text-ink-dim">None</span>;
+    const perks = w.ks.filter(k => k.name !== w.item.name && !["Sniper Rifle", "Linear Fusion Rifle", "Fusion Rifle", "Rocket Launcher", "Machine Gun", "Sword", "Grenade Launcher"].includes(k.name)).map(k => k.name);
+    return (
+      <div>
+        <div className={cn(w.item.exotic && "text-exotic")}>{w.item.name}</div>
+        <div className="text-xs text-ink-dim">{w.element} · Power {w.item.power} · {where(w.item, cid)}{perks.length ? ` · ${perks.join(", ")}` : ""}</div>
+      </div>
+    );
+  };
+  const weaponRow = (slot: "kinetic" | "energy" | "power", idx: number) => {
+    const nowId = now?.spec.weapons[idx] ?? "";
+    const options = ctx.weapons.filter(w => w.item.slot === slot && (w.item.power >= ctx.light - 100 || views.some(v => v?.spec.weapons[idx] === w.item.id)))
+      .sort((a, b) => a.element.localeCompare(b.element) || b.item.power - a.item.power);
+    const isPinned = pinned.includes(nowId);
+    return (
+      <Row key={slot} label={SLOT_LABEL[slot]}
+        now={<div className="space-y-1">{weaponLabel(nowId)}{nowId && (
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-ink-dim">
+            <input type="checkbox" checked={isPinned} onChange={() => setPinned(isPinned ? pinned.filter(p => p !== nowId) : [...pinned, nowId])} />
+            Keep this weapon in every build
+          </label>)}</div>}
+        same={cols.map(c => views[c]?.spec.weapons[idx] === nowId)}
+        cells={cols.map(c => {
+          const v = views[c]; if (!v) return null;
+          const cur = v.spec.weapons[idx];
+          return (
+            <div className="space-y-1">
+              <Pick aria-label={`${SLOT_LABEL[slot]} weapon for build ${c ? "B" : "A"}`} changed={cur !== nowId} value={cur}
+                onChange={e => { const w = [...v.spec.weapons]; w[idx] = e.target.value; edit(c, { weapons: w }); }}>
+                {[...new Set(options.map(o => o.element))].map(el => (
+                  <optgroup key={el} label={el}>
+                    {options.filter(o => o.element === el).map(o => <option key={o.item.id} value={o.item.id}>{o.item.name} · {o.item.power}{o.ks.length > 1 ? ` · ${o.ks.filter(k => k.name !== o.item.name).map(k => k.name).slice(0, 2).join(", ")}` : ""}</option>)}
+                  </optgroup>
+                ))}
+              </Pick>
+              <div className="text-xs text-ink-dim">{(() => { const w = ctx.weapons.find(x => x.item.id === cur); return w ? `${w.element} · Power ${w.item.power} · ${where(w.item, cid)}` : ""; })()}</div>
+            </div>
+          );
+        })} />
+    );
+  };
+
+  const armorRow = (slot: Slot) => {
+    const nowPiece = now?.armor?.pieces[slot];
+    return (
+      <Row key={slot} label={SLOT_LABEL[slot]}
+        now={nowPiece ? <ArmorLabel p={nowPiece} cid={cid} /> : <span className="text-ink-dim">None</span>}
+        same={cols.map(c => views[c]?.armor?.pieces[slot]?.item.id === nowPiece?.item.id)}
+        cells={cols.map(c => {
+          const v = views[c]; if (!v) return null;
+          const chosen = v.armor?.pieces[slot];
+          const opts = ctx.pieces.filter(p => p.slot === slot && p.item.cls === "Hunter" && (p.exotic ? p.item.name === v.spec.exotic : true) && (p.item.power >= ctx.light - 60 || p.item.id === chosen?.item.id))
+            .sort((a, b) => Number(b.exotic) - Number(a.exotic) || b.tier - a.tier || b.item.power - a.item.power);
+          const locked = v.spec.armorLocks[slot];
+          return (
+            <div className="space-y-1">
+              <Pick aria-label={`${SLOT_LABEL[slot]} armor for build ${c ? "B" : "A"}`} changed={chosen?.item.id !== nowPiece?.item.id} value={locked ?? ""}
+                onChange={e => { const l = { ...v.spec.armorLocks }; if (e.target.value) l[slot] = e.target.value; else delete l[slot]; edit(c, { armorLocks: l }); }}>
+                <option value="">Best fit: {chosen ? chosen.item.name : "none"}</option>
+                {opts.map(p => <option key={p.item.id} value={p.item.id}>{p.item.name} · T{p.tier} {p.archetype} · {where(p.item, cid)}</option>)}
+              </Pick>
+              {chosen && <ArmorLabel p={chosen} cid={cid} compact />}
+            </div>
+          );
+        })} />
+    );
+  };
+
+  return (
+    <FocusCtx.Provider value={focus}>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="text-left">
+            <th className="sticky left-0 z-10 bg-bg/95 px-3 py-3" />
+            <th className="px-3 py-3 font-display text-lg">Now</th>
+            {cols.map(c => <th key={c} className={cn("px-3 py-3 font-display text-lg text-accent-hi", c !== focus && "max-md:hidden")}>{c === 0 ? "Build A" : "Build B"} {busy[c] && <Spinner />}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          <Section title="Stats" />
+          {STAT_ORDER.map(k => (
+            <Row key={k} label={STAT_LABEL[k]} now={<StatBar value={now?.stats[k] ?? 0} />}
+              cells={cols.map(c => views[c] ? <div data-testid={`stat-${k}-${c}`}><StatBar value={views[c]!.stats[k]} base={now?.stats[k]} /></div> : null)} />
+          ))}
+          <Row label="Stat mods" now={<span className="text-ink-dim">As slotted</span>}
+            cells={cols.map(c => views[c]?.armor ? <span>{summarizeMods(views[c]!.armor!.mods)}</span> : null)} />
+
+          <Section title="Subclass" />
+          <Row label="Subclass" now={now?.spec.subclass} same={cols.map(c => views[c]?.spec.subclass === now?.spec.subclass)}
+            cells={cols.map(c => {
+              const v = views[c]; if (!v) return null;
+              return (
+                <Pick aria-label={`Subclass for build ${c ? "B" : "A"}`} changed={v.spec.subclass !== now?.spec.subclass} value={v.spec.subclass} disabled={busy[c]}
+                  onChange={e => search([c], { onlySubclass: e.target.value as Subclass })}>
+                  {SUBCLASSES.filter(s => ctx.kit.has(s)).map(s => <option key={s} value={s}>{s}</option>)}
+                </Pick>
+              );
+            })} />
+          {abilityRow("Super", "super", "super")}
+          {abilityRow("Grenade", "grenade", "grenade")}
+          {abilityRow("Melee", "melee", "melee")}
+          {abilityRow("Class ability", "classAbility", "classAbility")}
+          {[0, 1].map(i => (
+            <Row key={`asp${i}`} label={`Aspect ${i + 1}`} now={kName(now?.spec.aspects[i] ?? "")}
+              same={cols.map(c => views[c]?.spec.aspects[i] === now?.spec.aspects[i])}
+              cells={cols.map(c => {
+                const v = views[c]; if (!v) return null;
+                const other = v.spec.aspects[1 - i];
+                return (
+                  <Pick aria-label={`Aspect ${i + 1} for build ${c ? "B" : "A"}`} changed={v.spec.aspects[i] !== now?.spec.aspects[i]} value={v.spec.aspects[i] ?? ""}
+                    onChange={e => { const a = [...v.spec.aspects]; a[i] = e.target.value; edit(c, { aspects: a.filter(Boolean) }); }}>
+                    {kitOf(v.spec.subclass, "aspect").filter(k => k.name !== other).map(k => <option key={k.name} value={k.name}>{k.name} ({k.slots ?? 2} slots)</option>)}
+                  </Pick>
+                );
+              })} />
+          ))}
+          <Row label="Fragments" now={<FragList names={now?.spec.fragments ?? []} />}
+            same={cols.map(c => [...(views[c]?.spec.fragments ?? [])].sort().join() === [...(now?.spec.fragments ?? [])].sort().join())}
+            cells={cols.map(c => {
+              const v = views[c]; if (!v) return null;
+              const slots = fragmentSlots(v.spec.aspects, v.spec.subclass);
+              return <FragPicker key={c} v={v} slots={slots} options={kitOf(v.spec.subclass, "fragment")} onChange={f => edit(c, { fragments: f })} />;
+            })} />
+
+          <Section title="Exotic and weapons" />
+          <Row label="Exotic" now={<span className="text-exotic">{kName(now?.spec.exotic ?? "")}</span>} same={cols.map(c => views[c]?.spec.exotic === now?.spec.exotic)}
+            cells={cols.map(c => {
+              const v = views[c]; if (!v) return null;
+              const dead = v.loops.unfed.some(u => u.name === v.spec.exotic);
+              return (
+                <div className="space-y-1">
+                  <Pick aria-label={`Exotic for build ${c ? "B" : "A"}`} changed={v.spec.exotic !== now?.spec.exotic} value={v.spec.exotic}
+                    onChange={e => { const l = { ...v.spec.armorLocks }; for (const s of ARMOR_SLOTS) if (ctx.pieces.find(p => p.item.id === l[s])?.exotic) delete l[s]; edit(c, { exotic: e.target.value, armorLocks: l }); }}>
+                    {exotics.map(n => <option key={n} value={n}>{n}</option>)}
+                  </Pick>
+                  {dead && <div className="text-xs text-warn">Not triggered by this build: {word(v.loops.unfed.find(u => u.name === v.spec.exotic)!.token)}</div>}
+                </div>
+              );
+            })} />
+          {weaponRow("kinetic", 0)}
+          {weaponRow("energy", 1)}
+          {weaponRow("power", 2)}
+
+          <Section title="Armor" />
+          {ARMOR_SLOTS.map(armorRow)}
+        </tbody>
+      </table>
+    </div>
+    </FocusCtx.Provider>
+  );
+}
+
+function summarizeMods(mods: string[]) {
+  const c: Record<string, number> = {};
+  for (const m of mods) c[m] = (c[m] ?? 0) + 1;
+  return Object.entries(c).map(([k, n]) => `${STAT_LABEL[k as keyof typeof STAT_LABEL]}${n > 1 ? ` x${n}` : ""}`).join(", ") || "None";
+}
+
+function ArmorLabel({ p, cid, compact }: { p: import("../engine/armor").Piece; cid: string; compact?: boolean }) {
+  return (
+    <div className="text-xs text-ink-dim">
+      {!compact && <div className={cn("text-sm", p.exotic ? "text-exotic" : "text-ink")}>{p.item.name}</div>}
+      T{p.tier} {p.archetype} · {where(p.item, cid)} · Power {p.item.power}
+      {p.tier >= 3 && p.mwLevel < 5 && <span className="text-warn"> · not masterworked</span>}
+    </div>
+  );
+}
+
+function FragList({ names }: { names: string[] }) {
+  return <div className="flex flex-wrap gap-1">{names.map(n => <span key={n} title={byName.get(n)?.says} className="rounded-full bg-white/8 px-2 py-0.5 text-xs">{n.replace(/^(Whisper|Echo|Ember|Spark|Facet|Thread) of /, "")}</span>)}</div>;
+}
+
+function FragPicker({ v, slots, options, onChange }: { v: BuildView; slots: number; options: K[]; onChange: (f: string[]) => void }) {
+  const chosen = v.spec.fragments;
+  const statCost = (n: string) => {
+    const d = [...DEFS.values()].find(x => x.name === n && (x.plugCat.includes("fragments") || x.plugCat.includes("trinkets")));
+    const known = [392767087, 4244567218, 1735777505, 144602215, 1943323491, 2996146975];
+    return (d?.stats ?? []).filter(([h]) => known.includes(h)).map(([h, val]) => `${val > 0 ? "+" : ""}${val} ${({ 392767087: "Hea", 4244567218: "Mel", 1735777505: "Gre", 144602215: "Sup", 1943323491: "Cla", 2996146975: "Wea" } as Record<number, string>)[h] ?? ""}`).join(" ");
+  };
+  return (
+    <div className="space-y-1.5">
+      <div className="text-xs text-ink-dim">{chosen.length} of {slots} slots</div>
+      <div className="flex flex-wrap gap-1">
+        {options.map(o => {
+          const on = chosen.includes(o.name), full = !on && chosen.length >= slots;
+          const cost = statCost(o.name);
+          return (
+            <button key={o.name} title={o.says} disabled={full} aria-pressed={on}
+              onClick={() => onChange(on ? chosen.filter(n => n !== o.name) : [...chosen, o.name])}
+              className={cn("cursor-pointer rounded-full border px-2 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-35",
+                on ? "border-accent-hi bg-accent/30 text-ink" : "border-line text-ink-dim hover:text-ink")}>
+              {o.name.replace(/^(Whisper|Echo|Ember|Spark|Facet|Thread) of /, "")}{cost && <span className={cn("ml-1", cost.includes("-") ? "text-bad" : "text-good")}>{cost}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HowItWorks({ v }: { v: BuildView }) {
+  const ab: Record<string, string> = { grenade: "Your grenade", melee: "Your melee", classAbility: "Your dodge", super: "Your super" };
+  return (
+    <div className="space-y-2 text-sm">
+      {v.issues.map(i => <p key={i} className="text-warn">{i}</p>)}
+      <ul className="space-y-1.5">
+        {v.loops.energy.map(e => (
+          <li key={e.kind}><b>{ab[e.kind]}</b> ({e.ability}) comes back faster from <span className="text-accent-hi">{e.refills.join(", ")}</span>.</li>
+        ))}
+      </ul>
+      <details>
+        <summary className="cursor-pointer text-ink-dim">Every connection ({v.loops.links.length})</summary>
+        <ul className="mt-2 space-y-1 text-xs text-ink-dim">
+          {v.loops.links.map((l, i) => <li key={i}>{l.from} gives {word(l.token)} to <span className="text-ink">{l.to}</span></li>)}
+        </ul>
+      </details>
+      {v.loops.unfed.length > 0 && (
+        <ul className="space-y-1 text-xs text-warn">
+          {v.loops.unfed.map(u => <li key={u.name + u.token}>{u.name} isn't triggered: it needs {word(u.token)}.</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Stronger({ v, full, ctx }: { v: BuildView; full: BuildView | null; ctx: Ctx }) {
+  const mw = Object.values(v.armor?.pieces ?? {}).filter(p => p.tier >= 3 && p.mwLevel < 5);
+  const infuse = v.weapons.filter(w => w && w.item.power < ctx.light - 10);
+  const gain = full ? STAT_ORDER.map(k => [k, full.stats[k] - v.stats[k]] as const).filter(([, d]) => d) : [];
+  if (!mw.length && !infuse.length) return <p className="text-sm text-good">Nothing to upgrade: every piece is masterworked and at your Power.</p>;
+  return (
+    <div className="space-y-2 border-t border-line pt-3 text-sm">
+      <h4 className="font-display text-base">Make it stronger</h4>
+      <ol className="list-decimal space-y-1 pl-5">
+        {mw.length > 0 && <li>Masterwork {mw.map(p => p.item.name).join(", ")}.{full && gain.length > 0 && <> With the best masterworked armor: {gain.map(([k, d]) => <span key={k} className="mr-1">{STAT_LABEL[k]} <Delta v={d} /></span>)}</>}</li>}
+        {infuse.map(w => <li key={w!.item.id}>Infuse {w!.item.name} (Power {w!.item.power}) up toward {ctx.light}.</li>)}
+      </ol>
+    </div>
+  );
+}

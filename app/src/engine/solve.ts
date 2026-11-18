@@ -21,6 +21,7 @@ export interface SolveOptions {
   wornIds?: Set<string>; // tie-break toward fewer swaps
   keepPerSlot?: number;
   top?: number;
+  locks?: Partial<Record<Slot, string>>; // item ids the player picked for a slot
   minPower?: number; // armor below this needs infusing: legendary pieces are skipped, exotic copies only if no better copy exists
 }
 
@@ -78,7 +79,9 @@ export function solve(all: Piece[], o: SolveOptions): Solution[] {
   // Per slot, keep the strongest pieces for this plan, plus the best piece for each stat,
   // so a floor can always be met by the right piece even if it scores low overall.
   const pools: Piece[][] = ARMOR_SLOTS.map(slot => {
-    const cands = slot === exoSlot ? exo : mine.filter(p => p.slot === slot && !p.exotic);
+    const lockId = o.locks?.[slot];
+    const locked = lockId ? all.filter(p => p.item.id === lockId) : [];
+    const cands = locked.length ? locked : slot === exoSlot ? exo : mine.filter(p => p.slot === slot && !p.exotic);
     const scored = cands.map(p => ({ p, st: pieceStats(p, o.mw), w: 0 }));
     for (const c of scored) c.w = pieceWeight(c.st, o.plan) + (o.wornIds?.has(c.p.item.id) ? 0.01 : 0);
     scored.sort((a, b) => b.w - a.w);

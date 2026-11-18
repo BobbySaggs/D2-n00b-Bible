@@ -71,13 +71,17 @@ export function fragmentBonus(fragments: K[], defs: ItemDef[]): Stats {
   return bonus;
 }
 
-const pick = (kit: Set<string>, sub: Subclass, kind: K["kind"]) =>
+// A stat point is worth this much loop score. Fragments that cost stats must earn it back in loops.
+export const STAT_POINT = 0.15;
+export const statTotal = (s: Stats) => STAT_ORDER.reduce((t, k) => t + s[k], 0);
+
+export const pick = (kit: Set<string>, sub: Subclass, kind: K["kind"]) =>
   HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name));
 
-const weaponParts = (ws: Weapon[]): Part[] => ws.flatMap(w => w.ks.map(k => ({ k })));
+export const weaponParts = (ws: Weapon[]): Part[] => ws.flatMap(w => w.ks.map(k => ({ k })));
 
-type CoreLike = Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic">;
-function corePartsOf(b: CoreLike): Part[] {
+export type CoreLike = Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic">;
+export function corePartsOf(b: CoreLike): Part[] {
   return [b.super, b.grenade, b.melee, b.classAbility, ...b.aspects, ...b.fragments, b.exotic].map(k => ({ k }));
 }
 
@@ -98,10 +102,12 @@ function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
   return s;
 }
 
-function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K, goal: Goal): Weapon[] {
+function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K, goal: Goal, pinned: Set<string> = new Set()): Weapon[] {
   const slots: ("kinetic" | "energy" | "power")[] = ["kinetic", "energy", "power"];
   const chosen: Weapon[] = [];
   for (const slot of slots) {
+    const pin = weapons.find(w => w.item.slot === slot && pinned.has(w.item.id));
+    if (pin) { chosen.push(pin); continue; }
     const cands = weapons.filter(w => w.item.slot === slot && !(w.item.exotic && chosen.some(c => c.item.exotic)));
     let best: Weapon | undefined, bestScore = -Infinity;
     for (const w of cands) {
@@ -122,6 +128,7 @@ export interface SearchInput {
   top?: number;
   onlySubclass?: Subclass;
   onlyExotic?: string;
+  pinnedWeapons?: string[]; // weapon instance ids the player wants kept
 }
 
 export function searchBuilds(o: SearchInput): Build[] {
@@ -148,6 +155,7 @@ export function searchBuilds(o: SearchInput): Build[] {
   }
   cores.sort((a, b) => b.s - a.s);
 
+  const fragCost = new Map<string, number>();
   // Stage 2: the best cores get fragments (greedy, best gain first) and weapons from the vault.
   const out: Build[] = [];
   const seen = new Set<string>();
@@ -160,18 +168,20 @@ export function searchBuilds(o: SearchInput): Build[] {
       const now = scoreLoops(corePartsOf({ ...c, fragments: chosen }), o.goal).score;
       for (const f of frags) {
         if (chosen.includes(f)) continue;
-        const g = scoreLoops(corePartsOf({ ...c, fragments: [...chosen, f] }), o.goal).score - now;
+        const cost = fragCost.get(f.name) ?? (fragCost.set(f.name, statTotal(fragmentBonus([f], o.defs))), fragCost.get(f.name)!);
+        const g = scoreLoops(corePartsOf({ ...c, fragments: [...chosen, f] }), o.goal).score - now + STAT_POINT * cost;
         if (g > gain) { gain = g; best = f; }
       }
       if (!best) break;
       chosen.push(best);
     }
     const core = { ...c, fragments: chosen };
-    const ws = chooseWeapons(corePartsOf(core), weapons, c.subclass, c.exotic, o.goal);
+    const ws = chooseWeapons(corePartsOf(core), weapons, c.subclass, c.exotic, o.goal, new Set(o.pinnedWeapons ?? []));
     const parts = [...corePartsOf(core), ...weaponParts(ws)];
     const loops = scoreLoops(parts, o.goal);
     const key = `${c.subclass}|${c.exotic.name}`;
-    const b: Build = { ...core, goal: o.goal, weapons: ws, loops, score: loops.score, bonus: fragmentBonus(chosen, o.defs) };
+    const bonus = fragmentBonus(chosen, o.defs);
+    const b: Build = { ...core, goal: o.goal, weapons: ws, loops, score: loops.score + STAT_POINT * statTotal(bonus), bonus };
     out.push(b);
     void seen; void key;
   }
@@ -189,13 +199,13 @@ export function searchBuilds(o: SearchInput): Build[] {
 }
 
 // Stat plan: every stat keeps a floor (no dumping), and the stats the loop leans on are pushed.
-export function planFor(b: Build, goal: Goal): StatPlan {
+export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, healthFloor?: number): StatPlan {
   const lean = statLean([...corePartsOf(b), ...weaponParts(b.weapons)], goal);
   const max = Math.max(...Object.values(lean), 0.01);
   const plan = {} as StatPlan;
   for (const k of STAT_ORDER) {
     const w = lean[k] / max; // 0..1
-    const floor = k === "health" ? (goal === "survival" || goal === "bossDps" ? 70 : 60) : 50;
+    const floor = k === "health" ? (healthFloor ?? (goal === "survival" || goal === "bossDps" ? 70 : 60)) : 50;
     plan[k] = { floor, low: 0.4 + w, high: 0.1 + 0.6 * w };
   }
   return plan;
