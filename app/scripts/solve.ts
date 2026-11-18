@@ -19,7 +19,7 @@ const fmt = (st: Record<string, number>) => STAT_ORDER.map(k => `${k.slice(0, 3)
 console.log("WORN     ", fmt(hunter.stats), "| over100", count100(hunter.stats), "low", lowest(hunter.stats));
 for (const mw of ["asIs", "full"] as const) {
   const t = Date.now();
-  const r = solve(pieces, { cls: "Hunter", exoticHash: worn.find(i => i.exotic)!.hash, plan, bonus, mw, wornIds, top: 3 });
+  const r = solve(pieces, { cls: "Hunter", exotic: worn.find(i => i.exotic)!.name, plan, bonus, mw, wornIds, top: 3 });
   console.log(`\n${mw} (${Date.now() - t} ms)`);
   for (const x of r) console.log(fmt(x.stats), "| over100", count100(x.stats), "low", lowest(x.stats), "swaps", x.swaps, "mods", x.mods.join(","), "\n   ", Object.values(x.pieces).map(p => `${p.item.name} T${p.tier}${p.mwLevel === 5 ? " MW" : ""}`).join(" | "));
 }

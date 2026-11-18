@@ -1,0 +1,51 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { readPiece, type Piece } from "../src/engine/armor";
+import { searchBuilds, fitArmor, planFor, ownedWeapons, fragmentBonus, type Build } from "../src/engine/builds";
+import { scoreLoops, type Goal } from "../src/engine/loops";
+import { solve, count100, lowest } from "../src/engine/solve";
+import { STAT_ORDER } from "../src/bungie/config";
+import { byName, type K } from "../src/knowledge/hunter";
+const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const defOf = (h: number) => defs.get(h); const defList = [...defs.values()];
+const inv = buildInventory(s.profile, defOf, s.account);
+const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const pieces = inv.items.map(i => readPiece(i, defOf)).filter(Boolean) as Piece[];
+const worn = inv.items.filter(i => i.owner === hunter.id && i.equipped);
+const wornIds = new Set(worn.map(i => i.id));
+const fmt = (st: Record<string, number>) => STAT_ORDER.map(k => `${k} ${st[k]}`).join(", ");
+// Current build
+const sub = worn.find(i => i.kind === "subclass")!;
+const subNames = sub.plugs.map(h => defOf(h)?.name).filter(Boolean) as string[];
+const ks = subNames.map(n => byName.get(n)).filter((k): k is K => !!k);
+const exo = byName.get(worn.find(i => i.kind === "armor" && i.exotic)!.name)!;
+const ws = ownedWeapons(inv, defOf, 0).filter(w => wornIds.has(w.item.id));
+const cur = scoreLoops([...ks, exo, ...ws.flatMap(w => w.ks)].map(k => ({ k })), "abilities");
+console.log("CURRENT", sub.name, subNames.join(" | "), "| exotic", exo.name, "| weapons", ws.map(w => w.item.name + "[" + w.ks.map(k => k.name).join("/") + "]").join(", "));
+console.log("  score", cur.score.toFixed(1), "| loops", cur.energy.map(e => `${e.ability}<-${e.refills.join(",")}`).join(" ; "), "| unfed", cur.unfed.map(u => `${u.name}:${u.token}`).join("; "));
+console.log("  stats now", fmt(hunter.stats), "| 100+", count100(hunter.stats));
+const show = (b: Build, label: string) => {
+  const exoHash = inv.items.find(i => i.name === b.exotic.name && i.cls === "Hunter")!.hash;
+  const now = fitArmor(b, pieces, { mw: "asIs", wornIds, minPower: hunter.light - 60 })!;
+  const full = fitArmor(b, pieces, { mw: "full", wornIds, minPower: hunter.light - 60 })!;
+  console.log(`\n## ${label}: ${b.subclass} + ${b.exotic.name} (score ${b.score.toFixed(1)})`);
+  console.log(`  super ${b.super.name}; grenade ${b.grenade.name}; melee ${b.melee.name}; class ${b.classAbility.name}`);
+  console.log(`  aspects ${b.aspects.map(a => a.name).join(", ")}; fragments ${b.fragments.map(a => a.name).join(", ")}; frag stats ${fmt(b.bonus)}`);
+  for (const w of b.weapons) console.log(`  weapon ${w.item.slot}: ${w.item.name} (${w.element}, Power ${w.item.power}, T${w.item.gearTier}, ${w.item.owner === "vault" ? "vault" : "character"}) perks ${w.item.plugs.slice(0, 5).map(h => defOf(h)?.name).filter(Boolean).join(", ")}`);
+  console.log(`  loops: ${b.loops.energy.map(e => `${e.ability} <- ${e.refills.join(", ")}`).join(" ;; ")}`);
+  console.log(`  links: ${b.loops.links.map(l => `${l.from} -${l.token}-> ${l.to}`).join("; ")}`);
+  console.log(`  armor now: ${Object.values(now.pieces).map(p => `${p.slot}:${p.item.name} T${p.tier} ${p.archetype} mw${p.mwLevel} P${p.item.power} ${wornIds.has(p.item.id) ? "(worn)" : p.item.owner === "vault" ? "(vault)" : "(char)"}`).join(" | ")}`);
+  console.log(`  mods now: ${now.mods.join(", ")} -> ${fmt(now.stats)} | 100+ ${count100(now.stats)} low ${lowest(now.stats)}`);
+  console.log(`  if masterworked: ${Object.values(full.pieces).map(p => `${p.item.name}${p.mwLevel < 5 && p.tier >= 3 ? " [needs MW]" : ""}`).join(" | ")} mods ${full.mods.join(",")} -> ${fmt(full.stats)} | 100+ ${count100(full.stats)} low ${lowest(full.stats)}`);
+  const plan = planFor(b, b.goal); console.log(`  plan: ${STAT_ORDER.map(k => `${k} f${plan[k].floor} w${plan[k].low.toFixed(1)}`).join(", ")}`);
+};
+for (const [goal, label] of [["abilities", "GENERAL PVE"], ["bossDps", "RAID BOSS"], ["survival", "HARD CONTENT"]] as [Goal, string][]) {
+  const bs = searchBuilds({ inv, defOf, defs: defList, characterId: hunter.id, goal, top: 1 });
+  show(bs[0], label);
+}
+const rev = searchBuilds({ inv, defOf, defs: defList, characterId: hunter.id, goal: "abilities", top: 1, onlySubclass: "Revenant" });
+show(rev[0], "BEST REVENANT");
+void solve; void fragmentBonus;

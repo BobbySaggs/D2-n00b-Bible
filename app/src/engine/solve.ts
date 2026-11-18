@@ -13,7 +13,7 @@ export type StatPlan = Record<StatKey, StatWant>;
 
 export interface SolveOptions {
   cls: ClassName;
-  exoticHash?: number; // required exotic (any copy), or undefined for "no exotic"
+  exotic?: string; // required exotic by name (any copy, old or new), or undefined for "no exotic"
   plan: StatPlan;
   bonus: Stats; // from fragments and other subclass picks
   mw: MwMode; // "asIs" = real stats today, "full" = if every Tier 3+ piece were masterworked
@@ -21,6 +21,7 @@ export interface SolveOptions {
   wornIds?: Set<string>; // tie-break toward fewer swaps
   keepPerSlot?: number;
   top?: number;
+  minPower?: number; // armor below this needs infusing: legendary pieces are skipped, exotic copies only if no better copy exists
 }
 
 export interface Solution {
@@ -67,9 +68,11 @@ const pieceWeight = (st: Stats, plan: StatPlan) => STAT_ORDER.reduce((t, k) => t
 
 export function solve(all: Piece[], o: SolveOptions): Solution[] {
   const K = o.keepPerSlot ?? 10, nMods = o.mods ?? 5, top = o.top ?? 5;
-  const mine = all.filter(p => p.item.cls === o.cls);
-  const exo = o.exoticHash ? mine.filter(p => p.item.hash === o.exoticHash) : [];
-  if (o.exoticHash && !exo.length) return [];
+  const minP = o.minPower ?? 0;
+  const mine = all.filter(p => p.item.cls === o.cls && (p.exotic || p.item.power >= minP));
+  let exo = o.exotic ? mine.filter(p => p.exotic && p.item.name === o.exotic) : [];
+  if (exo.some(p => p.item.power >= minP)) exo = exo.filter(p => p.item.power >= minP);
+  if (o.exotic && !exo.length) return [];
   const exoSlot = exo[0]?.slot;
 
   // Per slot, keep the strongest pieces for this plan, plus the best piece for each stat,
