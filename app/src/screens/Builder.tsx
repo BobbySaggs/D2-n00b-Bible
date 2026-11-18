@@ -9,6 +9,7 @@ import type { Goal } from "../engine/loops";
 import { runSearch } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
+import { GearIcon, LoadoutFigure, iconForItem, iconForName } from "../ui/gear";
 
 const GOALS: { value: Goal; label: string }[] = [
   { value: "abilities", label: "General PvE" },
@@ -143,6 +144,7 @@ function ScoreCard({ title, sub, v, base, busy, action }: { title: string; sub: 
       {v && (
         <>
           <div className="text-sm"><span className="text-ink">{v.spec.subclass}</span> <span className="text-ink-dim">+</span> <span className="text-exotic">{v.spec.exotic || "no exotic"}</span></div>
+          <LoadoutFigure v={v} compact />
           <div className="flex flex-wrap gap-2">
             <Badge>{statSum(v)} stat points{base ? <Delta className="ml-1" v={statSum(v) - statSum(base)} /> : null}</Badge>
             <Badge tone={count100(v.stats) >= 2 ? "good" : "neutral"}>{count100(v.stats)} stats at 100+</Badge>
@@ -196,7 +198,9 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
   const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
   const cid = ctx.characterId;
 
-  const kName = (n: string) => <span title={byName.get(n)?.says}>{n || <span className="text-ink-dim">None</span>}</span>;
+  const kName = (n: string) => n
+    ? <span className="inline-flex items-center gap-2" title={byName.get(n)?.says}><GearIcon src={iconForName(n)} size={24} title={n} />{n}</span>
+    : <span className="text-ink-dim">None</span>;
   const cols = [0, 1] as Col[];
 
   const abilityRow = (label: string, key: "super" | "grenade" | "melee" | "classAbility", kind: K["kind"]) => (
@@ -218,9 +222,12 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
     if (!w) return <span className="text-ink-dim">None</span>;
     const perks = w.ks.filter(k => k.name !== w.item.name && !["Sniper Rifle", "Linear Fusion Rifle", "Fusion Rifle", "Rocket Launcher", "Machine Gun", "Sword", "Grenade Launcher"].includes(k.name)).map(k => k.name);
     return (
-      <div>
-        <div className={cn(w.item.exotic && "text-exotic")}>{w.item.name}</div>
-        <div className="text-xs text-ink-dim">{w.element} · Power {w.item.power} · {where(w.item, cid)}{perks.length ? ` · ${perks.join(", ")}` : ""}</div>
+      <div className="flex gap-2">
+        <GearIcon src={iconForItem(w.item)} size={36} exotic={w.item.exotic} element={w.element} title={w.item.name} />
+        <div>
+          <div className={cn(w.item.exotic && "text-exotic")}>{w.item.name}</div>
+          <div className="text-xs text-ink-dim">{w.element} · Power {w.item.power} · {where(w.item, cid)}{perks.length ? ` · ${perks.join(", ")}` : ""}</div>
+        </div>
       </div>
     );
   };
@@ -250,7 +257,11 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
                   </optgroup>
                 ))}
               </Pick>
-              <div className="text-xs text-ink-dim">{(() => { const w = ctx.weapons.find(x => x.item.id === cur); return w ? `${w.element} · Power ${w.item.power} · ${where(w.item, cid)}` : ""; })()}</div>
+              {(() => { const w = ctx.weapons.find(x => x.item.id === cur); return w ? (
+                <div className="flex items-center gap-2 text-xs text-ink-dim">
+                  <GearIcon src={iconForItem(w.item)} size={28} exotic={w.item.exotic} element={w.element} title={w.item.name} />
+                  {w.element} · Power {w.item.power} · {where(w.item, cid)}
+                </div>) : null; })()}
             </div>
           );
         })} />
@@ -376,10 +387,13 @@ function summarizeMods(mods: string[]) {
 
 function ArmorLabel({ p, cid, compact }: { p: import("../engine/armor").Piece; cid: string; compact?: boolean }) {
   return (
-    <div className="text-xs text-ink-dim">
-      {!compact && <div className={cn("text-sm", p.exotic ? "text-exotic" : "text-ink")}>{p.item.name}</div>}
-      T{p.tier} {p.archetype} · {where(p.item, cid)} · Power {p.item.power}
-      {p.tier >= 3 && p.mwLevel < 5 && <span className="text-warn"> · not masterworked</span>}
+    <div className="flex items-start gap-2">
+      <GearIcon src={iconForItem(p.item)} size={compact ? 28 : 36} exotic={p.exotic} title={p.item.name} />
+      <div className="text-xs text-ink-dim">
+        {!compact && <div className={cn("text-sm", p.exotic ? "text-exotic" : "text-ink")}>{p.item.name}</div>}
+        T{p.tier} {p.archetype} · {where(p.item, cid)} · Power {p.item.power}
+        {p.tier >= 3 && p.mwLevel < 5 && <span className="text-warn"> · not masterworked</span>}
+      </div>
     </div>
   );
 }
