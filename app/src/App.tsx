@@ -83,7 +83,7 @@ export default function App() {
       {st.at === "ready" && (
         <nav className="mb-5"><Segmented label="Screen" value={screen} onChange={setScreen} options={[{ value: "builder", label: "Builder" }, { value: "roster", label: "My roster" }]} /></nav>
       )}
-      {st.at === "ready" && screen === "builder" && <Builder inv={st.data.inventory} />}
+      {st.at === "ready" && screen === "builder" && <Builder inv={st.data.inventory} onRefresh={load} />}
       {st.at === "ready" && screen === "roster" && (
         <Roster
           inv={st.data.inventory}

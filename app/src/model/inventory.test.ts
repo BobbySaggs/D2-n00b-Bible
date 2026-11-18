@@ -30,10 +30,10 @@ describe("buildInventory", () => {
     expect(sub.reusable[2]).toEqual([4002, 4003]);
   });
 
-  it("reads unlocked subclass options from plug sets, skipping locked ones", () => {
+  it("offers only unlocked subclass options, but loads names for every option (Bungie's lock flags are unreliable)", () => {
     const sub = inv.items.find(i => i.name === "Prismatic Hunter")!;
     expect(sub.options[2]).toEqual([4003, 4005]);
-    expect(plugSetHashes(profile, h => defs.get(h))).toEqual([4003, 4005]);
+    expect(plugSetHashes(profile, h => defs.get(h)).sort()).toEqual([4003, 4005, 4006]);
   });
 
   it("collects every hash it needs definitions for", () => {

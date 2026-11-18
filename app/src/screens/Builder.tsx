@@ -5,6 +5,8 @@ import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
 import { breakdown, currentSlotMods, evaluate, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import type { Require } from "../engine/builds";
+import { equipPlan } from "../engine/equip";
+import { EquipDialog } from "./EquipDialog";
 import { count100, lowest } from "../engine/solve";
 import type { Goal } from "../engine/loops";
 import { runSearch } from "../workers/search";
@@ -34,7 +36,7 @@ const where = (i: Item, cid: string) =>
 
 type Col = 0 | 1;
 
-export function Builder({ inv }: { inv: Inventory }) {
+export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => void }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const [goal, setGoal] = useState<Goal>("abilities");
@@ -46,6 +48,7 @@ export function Builder({ inv }: { inv: Inventory }) {
   const [focus, setFocus] = useState<Col>(0);
   const [showWhere, setShowWhere] = useState(false);
   const [req, setReq] = useState<Require>({});
+  const [equipping, setEquipping] = useState<Col | null>(null);
   const [alts, setAlts] = useState<BuildSpec[]>([]); // Steeped's top builds for this goal, for Build B
   const [altIdx, setAltIdx] = useState(0); // on phones: compare Now with one build at a time
 
@@ -97,6 +100,11 @@ export function Builder({ inv }: { inv: Inventory }) {
         </div>
       </section>
       {err && <Card className="border-bad/40 text-bad">{err}</Card>}
+      {equipping !== null && views[equipping] && (
+        <EquipDialog title={`Build ${equipping ? "B" : "A"}: ${views[equipping]!.spec.subclass} + ${views[equipping]!.spec.exotic}`}
+          steps={equipPlan(views[equipping]!, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }}
+          onClose={() => setEquipping(null)} onDone={() => onRefresh?.()} />
+      )}
 
       <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[1]} onApply={r => search([1], { require: r })} />
 
@@ -105,8 +113,12 @@ export function Builder({ inv }: { inv: Inventory }) {
         {([0, 1] as Col[]).map(c => (
           <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]}
             action={c === 0
-              ? <Button size="sm" variant="ghost" onClick={() => setSpecs(s => { const n = [...s]; n[0] = tuneCurrent(ctx, goal); return n; })}>Reset to my build, tuned</Button>
+              ? <div className="flex flex-wrap gap-2">
+                  <Button size="sm" disabled={!views[0]?.armor} onClick={() => setEquipping(0)}>Equip in game</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSpecs(s => { const n = [...s]; n[0] = tuneCurrent(ctx, goal); return n; })}>Reset to my build, tuned</Button>
+                </div>
               : <div className="flex flex-wrap gap-2">
+                  <Button size="sm" disabled={busy[c] || !views[c]?.armor} onClick={() => setEquipping(1)}>Equip in game</Button>
                   {alts.length > 1 && <Button size="sm" disabled={busy[c]} onClick={() => { const i = (altIdx + 1) % alts.length; setAltIdx(i); setSpecs(s => { const n = [...s]; n[1] = alts[i]; return n; }); }}>Next alternative ({altIdx + 1} of {alts.length})</Button>}
                   <Button size="sm" variant="ghost" disabled={busy[c]} onClick={() => search([c], { onlySubclass: views[c]?.spec.subclass, onlyExotic: views[c]?.spec.exotic })}>Re-tune around this</Button>
                 </div>} />

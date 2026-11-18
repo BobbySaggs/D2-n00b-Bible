@@ -160,7 +160,14 @@ export const plugSetHashes = (P: any, defOf: (h: number) => ItemDef | undefined)
     if (!d || !(d.bucket in BUCKET)) return;
     const slot = BUCKET[d.bucket];
     if (slot !== "subclass" && !["helmet", "arms", "chest", "legs", "class"].includes(slot)) return;
-    for (const s of d.sockets) for (const h of unlockedPlugSet(P, s.reusable, cid)) out.add(h);
+    for (const s of d.sockets) {
+      for (const h of unlockedPlugSet(P, s.reusable, cid)) out.add(h);
+      // Subclass plug sets: Bungie's unlock flags are unreliable there, so load every option's name.
+      if (slot === "subclass") {
+        const list: any[] = (cid && P.characterPlugSets?.data?.[cid]?.plugs?.[s.reusable]) ?? P.profilePlugSets?.data?.plugs?.[s.reusable] ?? [];
+        for (const p of list) if (p.plugItemHash) out.add(p.plugItemHash);
+      }
+    }
   };
   for (const it of P.profileInventory?.data?.items ?? []) visit(it);
   for (const g of [P.characterInventories?.data, P.characterEquipment?.data])
