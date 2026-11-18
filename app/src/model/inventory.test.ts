@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import profile from "../../fixtures/profile.json";
 import rawDefs from "../../fixtures/defs.json";
 import { trim, type ItemDef } from "../bungie/defs";
-import { buildInventory, itemHashes, plugHashes } from "./inventory";
+import { buildInventory, itemHashes, plugHashes, plugSetHashes } from "./inventory";
 import { summarize } from "./summary";
 
 const defs = new Map<number, ItemDef>(Object.entries(rawDefs).map(([h, d]) => [Number(h), trim(d, Number(h))]));
@@ -28,6 +28,12 @@ describe("buildInventory", () => {
     const sub = inv.items.find(i => i.name === "Prismatic Hunter")!;
     expect(sub.plugs).toEqual([4001, 4002, 0]);
     expect(sub.reusable[2]).toEqual([4002, 4003]);
+  });
+
+  it("reads unlocked subclass options from plug sets, skipping locked ones", () => {
+    const sub = inv.items.find(i => i.name === "Prismatic Hunter")!;
+    expect(sub.options[2]).toEqual([4003, 4005]);
+    expect(plugSetHashes(profile, h => defs.get(h))).toEqual([4003, 4005]);
   });
 
   it("collects every hash it needs definitions for", () => {

@@ -518,5 +518,30 @@
     }
    }
   }
+ },
+ "characterPlugSets": {
+  "data": {
+   "2305843009": {
+    "plugs": {
+     "85": [
+      {
+       "plugItemHash": 4003,
+       "canInsert": true,
+       "enabled": true
+      },
+      {
+       "plugItemHash": 4005,
+       "canInsert": true,
+       "enabled": true
+      },
+      {
+       "plugItemHash": 4006,
+       "canInsert": false,
+       "enabled": false
+      }
+     ]
+    }
+   }
+  }
  }
 }

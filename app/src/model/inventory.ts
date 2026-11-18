@@ -37,7 +37,8 @@ export interface Item {
   energy: number; // armor energy capacity
   stats: Stats; // armor: current stats incl. mods
   plugs: number[]; // plugged hash per socket index (0 = empty)
-  reusable: Record<number, number[]>; // socket index -> plugs you can swap in (subclasses, weapons)
+  reusable: Record<number, number[]>; // socket index -> plugs you can swap in (weapons; Bungie's list)
+  options: Record<number, number[]>; // socket index -> unlocked plugs from your plug sets (subclasses, armor mods)
 }
 
 export interface Inventory {
@@ -99,6 +100,9 @@ export function buildInventory(
     const reu: Record<number, number[]> = {};
     for (const [idx, list] of Object.entries(reusable[id]?.plugs ?? {}))
       reu[Number(idx)] = (list as any[]).map(p => p.plugItemHash).filter(Boolean);
+    const options: Record<number, number[]> = {};
+    if (kind === "subclass" || kind === "armor")
+      d.sockets.forEach((s, idx) => { const o = unlockedPlugSet(P, s.reusable, owner === "vault" ? undefined : owner); if (o.length) options[idx] = o; });
     items.push({
       id, hash: it.itemHash, name: d.name, slot, kind,
       cls: d.cls in CLASS_NAME ? CLASS_NAME[d.cls] : "Any",
@@ -113,6 +117,7 @@ export function buildInventory(
       stats: kind === "armor" ? statsFrom(stats[id]?.stats) : zeroStats(),
       plugs: (sockets[id]?.sockets ?? []).map((s: any) => s.plugHash ?? 0),
       reusable: reu,
+      options,
     });
   }
 
@@ -139,6 +144,30 @@ export const itemHashes = (P: any): number[] => {
     for (const c of Object.values(g ?? {})) for (const it of (c as any).items ?? []) out.push(it.itemHash);
   return out;
 };
+// Plug sets: what you've unlocked for each subclass socket (and armor mod sockets), keyed by plug set hash.
+export function unlockedPlugSet(P: any, setHash: number, characterId?: string): number[] {
+  if (!setHash) return [];
+  const list: any[] = (characterId && P.characterPlugSets?.data?.[characterId]?.plugs?.[setHash])
+    ?? P.profilePlugSets?.data?.plugs?.[setHash] ?? [];
+  return list.filter(p => p.canInsert !== false && p.enabled !== false).map(p => p.plugItemHash).filter(Boolean);
+}
+
+// Plug hashes behind the subclass and armor sockets of items we own (needs item definitions loaded first).
+export const plugSetHashes = (P: any, defOf: (h: number) => ItemDef | undefined): number[] => {
+  const out = new Set<number>();
+  const visit = (it: any, cid?: string) => {
+    const d = defOf(it.itemHash);
+    if (!d || !(d.bucket in BUCKET)) return;
+    const slot = BUCKET[d.bucket];
+    if (slot !== "subclass" && !["helmet", "arms", "chest", "legs", "class"].includes(slot)) return;
+    for (const s of d.sockets) for (const h of unlockedPlugSet(P, s.reusable, cid)) out.add(h);
+  };
+  for (const it of P.profileInventory?.data?.items ?? []) visit(it);
+  for (const g of [P.characterInventories?.data, P.characterEquipment?.data])
+    for (const [cid, c] of Object.entries(g ?? {})) for (const it of (c as any).items ?? []) visit(it, cid);
+  return [...out];
+};
+
 export const plugHashes = (P: any): number[] => {
   const out: number[] = [];
   for (const s of Object.values(P.itemComponents?.sockets?.data ?? {}))

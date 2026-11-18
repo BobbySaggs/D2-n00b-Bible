@@ -3,7 +3,7 @@ import { api } from "./api";
 
 // Trimmed DestinyInventoryItemDefinition. Cached forever in this browser (IndexedDB).
 // Bump DEF_VERSION when the shape changes so old entries are refetched.
-export const DEF_VERSION = 1;
+export const DEF_VERSION = 2; // 2: plug text from sandbox perks
 
 export interface ItemDef {
   v: number;
@@ -82,6 +82,8 @@ export async function loadDefs(hashes: number[], onProgress?: (done: number, tot
       try {
         const d = await api(`/Destiny2/Manifest/DestinyInventoryItemDefinition/${h}/`);
         const t = trim(d, h);
+        // Aspects, fragments, abilities and mods keep their rules text on sandbox perks, not the item.
+        if (!t.desc && t.plugCat && t.perks.length) t.desc = await perkText(t.perks);
         DEFS.set(h, t);
         fresh.push([h, t]);
       } catch {
@@ -96,3 +98,18 @@ export async function loadDefs(hashes: number[], onProgress?: (done: number, tot
 }
 
 export const def = (h: number) => DEFS.get(h);
+
+async function perkText(perks: number[]): Promise<string> {
+  const out: string[] = [];
+  for (const p of perks.slice(0, 4)) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d: any = await api(`/Destiny2/Manifest/DestinySandboxPerkDefinition/${p}/`);
+      const t = String(d?.displayProperties?.description || "").replace(/\s+/g, " ").trim();
+      if (d?.isDisplayable !== false && t && !out.includes(t)) out.push(t);
+    } catch {
+      /* skip */
+    }
+  }
+  return out.join(" ");
+}

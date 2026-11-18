@@ -248,7 +248,23 @@
   "investmentStats": [],
   "plug": null,
   "sockets": {
-   "socketEntries": []
+   "socketEntries": [
+    {
+     "socketTypeHash": 1,
+     "singleInitialItemHash": 4001,
+     "reusablePlugSetHash": 0
+    },
+    {
+     "socketTypeHash": 2,
+     "singleInitialItemHash": 0,
+     "reusablePlugSetHash": 0
+    },
+    {
+     "socketTypeHash": 3,
+     "singleInitialItemHash": 0,
+     "reusablePlugSetHash": 85
+    }
+   ]
   }
  },
  "3002": {
@@ -363,6 +379,58 @@
   "defaultDamageTypeHash": 0,
   "investmentStats": [],
   "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "4005": {
+  "hash": 4005,
+  "displayProperties": {
+   "name": "Facet of Courage",
+   "description": ""
+  },
+  "itemTypeDisplayName": "Fragment",
+  "itemType": 19,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 0
+  },
+  "classType": 3,
+  "plug": {
+   "plugCategoryIdentifier": "shared.prism.fragments"
+  },
+  "perks": [
+   {
+    "perkHash": 9001
+   }
+  ],
+  "investmentStats": [
+   {
+    "statTypeHash": 1735777505,
+    "value": 10
+   }
+  ],
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "4006": {
+  "hash": 4006,
+  "displayProperties": {
+   "name": "Facet of Locked",
+   "description": ""
+  },
+  "itemTypeDisplayName": "Fragment",
+  "itemType": 19,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 0
+  },
+  "classType": 3,
+  "plug": {
+   "plugCategoryIdentifier": "shared.prism.fragments"
+  },
+  "perks": [],
   "sockets": {
    "socketEntries": []
   }

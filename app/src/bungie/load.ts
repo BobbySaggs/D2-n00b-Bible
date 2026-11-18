@@ -1,7 +1,7 @@
 import { api, BungieError } from "./api";
 import { COMPONENTS } from "./config";
 import { DEFS, def, loadDefs, type ItemDef } from "./defs";
-import { buildInventory, itemHashes, plugHashes, type Inventory } from "../model/inventory";
+import { buildInventory, itemHashes, plugHashes, plugSetHashes, type Inventory } from "../model/inventory";
 
 export interface LoadResult {
   inventory: Inventory;
@@ -27,7 +27,7 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
   const P: any = await api(`/Destiny2/${mem.membershipType}/Profile/${mem.membershipId}/?components=${COMPONENTS}`);
 
   await loadDefs(itemHashes(P), (d, t) => progress(`Reading your gear (${d} of ${t} new items)`));
-  await loadDefs(plugHashes(P), (d, t) => progress(`Reading perks and mods (${d} of ${t} new)`));
+  await loadDefs([...plugHashes(P), ...plugSetHashes(P, def)], (d, t) => progress(`Reading perks, mods and subclass options (${d} of ${t} new)`));
 
   progress("Putting it together");
   const inventory = buildInventory(P, def, account);
@@ -36,7 +36,7 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
 
 // Everything Claude needs to test the engine on your real gear. No sign-in token is included.
 export function makeSnapshot(r: LoadResult) {
-  const used = new Set<number>([...itemHashes(r.raw), ...plugHashes(r.raw)]);
+  const used = new Set<number>([...itemHashes(r.raw), ...plugHashes(r.raw), ...plugSetHashes(r.raw, def)]);
   const defs: Record<number, ItemDef> = {};
   for (const h of used) { const d = DEFS.get(h); if (d) defs[h] = d; }
   return {
