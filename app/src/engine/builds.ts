@@ -206,7 +206,8 @@ export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbi
   for (const k of STAT_ORDER) {
     const w = lean[k] / max; // 0..1
     const floor = k === "health" ? (healthFloor ?? (goal === "survival" || goal === "bossDps" ? 70 : 60)) : 50;
-    plan[k] = { floor, low: 0.4 + w, high: 0.1 + 0.6 * w };
+    // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
+    plan[k] = { floor, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
   }
   return plan;
 }

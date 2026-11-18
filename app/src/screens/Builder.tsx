@@ -3,13 +3,13 @@ import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
-import { evaluate, evaluateNow, fragmentSlots, makeCtx, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { evaluate, evaluateNow, fragmentSlots, makeCtx, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import { count100, lowest } from "../engine/solve";
 import type { Goal } from "../engine/loops";
 import { runSearch } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
-import { GearIcon, LoadoutFigure, iconForItem, iconForName } from "../ui/gear";
+import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
 
 const GOALS: { value: Goal; label: string }[] = [
   { value: "abilities", label: "General PvE" },
@@ -42,17 +42,19 @@ export function Builder({ inv }: { inv: Inventory }) {
   const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
   const [busy, setBusy] = useState<[boolean, boolean]>([false, false]);
   const [err, setErr] = useState("");
-  const [focus, setFocus] = useState<Col>(0); // on phones: compare Now with one build at a time
+  const [focus, setFocus] = useState<Col>(0);
+  const [alts, setAlts] = useState<BuildSpec[]>([]); // Steeped's top builds for this goal, for Build B
+  const [altIdx, setAltIdx] = useState(0); // on phones: compare Now with one build at a time
 
   const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string } = {}) => {
     if (!ctx) return;
     setBusy(b => [cols.includes(0) || b[0], cols.includes(1) || b[1]]);
     setErr("");
     try {
-      const found = await runSearch({ characterId: ctx.characterId, goal, top: 4, pinnedWeapons: pinned, ...opts }, inv, ctx.defs);
+      const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts }, inv, ctx.defs);
       setSpecs(s => {
         const next = [...s];
-        if (cols.length === 2) { next[0] = found[0] ?? null; next[1] = found[1] ?? null; }
+        if (cols.length === 2) { next[0] = tuneCurrent(ctx, goal) ?? found[1] ?? null; next[1] = found[0] ?? null; setAlts(found); setAltIdx(0); }
         else next[cols[0]] = found[0] ?? next[cols[0]];
         return next;
       });
@@ -92,11 +94,17 @@ export function Builder({ inv }: { inv: Inventory }) {
       <section className="grid gap-3 md:grid-cols-3">
         <ScoreCard title="Now" sub="What you're wearing" v={now} />
         {([0, 1] as Col[]).map(c => (
-          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Steeped's best for this goal" : "Best alternative"} v={views[c]} base={now} busy={busy[c]}
-            action={<Button size="sm" variant="ghost" disabled={busy[c]} onClick={() => search([c], { onlySubclass: views[c]?.spec.subclass, onlyExotic: views[c]?.spec.exotic })}>Re-tune around this</Button>} />
+          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]}
+            action={c === 0
+              ? <Button size="sm" variant="ghost" onClick={() => setSpecs(s => { const n = [...s]; n[0] = tuneCurrent(ctx, goal); return n; })}>Reset to my build, tuned</Button>
+              : <div className="flex flex-wrap gap-2">
+                  {alts.length > 1 && <Button size="sm" disabled={busy[c]} onClick={() => { const i = (altIdx + 1) % alts.length; setAltIdx(i); setSpecs(s => { const n = [...s]; n[1] = alts[i]; return n; }); }}>Next alternative ({altIdx + 1} of {alts.length})</Button>}
+                  <Button size="sm" variant="ghost" disabled={busy[c]} onClick={() => search([c], { onlySubclass: views[c]?.spec.subclass, onlyExotic: views[c]?.spec.exotic })}>Re-tune around this</Button>
+                </div>} />
         ))}
       </section>
 
+      <div className="flex justify-end"><MwLegend /></div>
       <div className="md:hidden">
         <Segmented label="Compare Now with" value={String(focus) as "0" | "1"} onChange={v => setFocus(Number(v) as Col)}
           options={[{ value: "0", label: "Now vs Build A" }, { value: "1", label: "Now vs Build B" }]} />
@@ -108,7 +116,7 @@ export function Builder({ inv }: { inv: Inventory }) {
       <section className="grid gap-3 md:grid-cols-2">
         {([0, 1] as Col[]).map(c => views[c] && (
           <Card key={c} className="space-y-3">
-            <h3 className="text-lg">{c === 0 ? "Build A" : "Build B"}: how it works</h3>
+            <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}: how it works</h3>
             <HowItWorks v={views[c]!} />
             <Stronger v={views[c]!} full={full[c]} ctx={ctx} />
           </Card>
@@ -118,7 +126,10 @@ export function Builder({ inv }: { inv: Inventory }) {
         <Card className="space-y-2">
           <h3 className="text-lg">In what you wear now</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm text-ink-dim">
-            {now.loops.unfed.map(u => <li key={u.name + u.token}><b className="text-ink">{u.name}</b> does nothing right now: it needs {word(u.token)}, and nothing in your build makes that.</li>)}
+            {now.loops.unfed.map(u => {
+              const gives = Object.entries(fragmentStatText(u.name)).length ? ` It still gives ${Object.entries(fragmentStatText(u.name)).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ")}, which can be worth keeping.` : "";
+              return <li key={u.name + u.token}><b className="text-ink">{u.name}</b>'s effect does nothing right now: it needs {word(u.token)}, and nothing in your build makes that.{gives}</li>;
+            })}
           </ul>
         </Card>
       )}
@@ -138,6 +149,7 @@ function ScoreCard({ title, sub, v, base, busy, action }: { title: string; sub: 
           <div className="text-right">
             <div className="font-display text-3xl leading-none" data-testid={`score-${title}`}>{Math.round(v.score)}</div>
             <div className="text-xs text-ink-dim">build score {base && <Delta v={Math.round(v.score - base.score)} />}</div>
+            <div className="text-[11px] text-ink-dim" data-testid={`parts-${title}`}>loops {Math.round(v.loopScore)}{base && <Delta className="ml-0.5" v={Math.round(v.loopScore - base.loopScore)} />} · stats {Math.round(v.statScore)}{base && <Delta className="ml-0.5" v={Math.round(v.statScore - base.statScore)} />}</div>
           </div>
         )}
       </div>
@@ -156,6 +168,14 @@ function ScoreCard({ title, sub, v, base, busy, action }: { title: string; sub: 
       )}
     </Card>
   );
+}
+
+function fragmentStatText(name: string): Record<string, number> {
+  const d = [...DEFS.values()].find(x => x.name === name && (x.plugCat.includes("fragments") || x.plugCat.includes("trinkets")));
+  const N: Record<number, string> = { 392767087: "Health", 4244567218: "Melee", 1735777505: "Grenade", 144602215: "Super", 1943323491: "Class", 2996146975: "Weapons" };
+  const out: Record<string, number> = {};
+  for (const [h, v] of d?.stats ?? []) if (N[h]) out[N[h]] = v;
+  return out;
 }
 
 const statSum = (v: BuildView) => STAT_ORDER.reduce((t, k) => t + v.stats[k], 0);
@@ -223,7 +243,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
     const perks = w.ks.filter(k => k.name !== w.item.name && !["Sniper Rifle", "Linear Fusion Rifle", "Fusion Rifle", "Rocket Launcher", "Machine Gun", "Sword", "Grenade Launcher"].includes(k.name)).map(k => k.name);
     return (
       <div className="flex gap-2">
-        <GearIcon src={iconForItem(w.item)} size={36} exotic={w.item.exotic} element={w.element} title={w.item.name} />
+        <GearIcon src={iconForItem(w.item)} size={36} exotic={w.item.exotic} element={w.element} mw={w.item.masterworked} title={w.item.name} />
         <div>
           <div className={cn(w.item.exotic && "text-exotic")}>{w.item.name}</div>
           <div className="text-xs text-ink-dim">{w.element} · Power {w.item.power} · {where(w.item, cid)}{perks.length ? ` · ${perks.join(", ")}` : ""}</div>
@@ -259,7 +279,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
               </Pick>
               {(() => { const w = ctx.weapons.find(x => x.item.id === cur); return w ? (
                 <div className="flex items-center gap-2 text-xs text-ink-dim">
-                  <GearIcon src={iconForItem(w.item)} size={28} exotic={w.item.exotic} element={w.element} title={w.item.name} />
+                  <GearIcon src={iconForItem(w.item)} size={28} exotic={w.item.exotic} element={w.element} mw={w.item.masterworked} title={w.item.name} />
                   {w.element} · Power {w.item.power} · {where(w.item, cid)}
                 </div>) : null; })()}
             </div>
@@ -388,11 +408,11 @@ function summarizeMods(mods: string[]) {
 function ArmorLabel({ p, cid, compact }: { p: import("../engine/armor").Piece; cid: string; compact?: boolean }) {
   return (
     <div className="flex items-start gap-2">
-      <GearIcon src={iconForItem(p.item)} size={compact ? 28 : 36} exotic={p.exotic} title={p.item.name} />
+      <GearIcon src={iconForItem(p.item)} size={compact ? 28 : 36} exotic={p.exotic} mw={p.legacy ? undefined : p.mwLevel >= 5} title={p.item.name} />
       <div className="text-xs text-ink-dim">
         {!compact && <div className={cn("text-sm", p.exotic ? "text-exotic" : "text-ink")}>{p.item.name}</div>}
         T{p.tier} {p.archetype} · {where(p.item, cid)} · Power {p.item.power}
-        {p.tier >= 3 && p.mwLevel < 5 && <span className="text-warn"> · not masterworked</span>}
+        {!p.legacy && (p.mwLevel >= 5 ? <span className="text-warn"> · ★ masterworked</span> : <span> · not masterworked</span>)}
       </div>
     </div>
   );

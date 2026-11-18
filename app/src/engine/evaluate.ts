@@ -3,7 +3,7 @@ import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
 import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, STAT_POINT, statTotal, weaponParts, type Build, type Weapon } from "./builds";
+import { availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, solve, type Solution } from "./solve";
 
@@ -50,8 +50,17 @@ export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefine
   };
 }
 
+// Stats are part of the score: points up to 100 (ability speed) and past 100 (each stat's bonus effect).
+export function statScore(st: Stats): number {
+  let t = 0;
+  for (const v of Object.values(st)) t += 0.2 * Math.min(v, 100) + 0.1 * Math.max(0, Math.min(v, 200) - 100);
+  return t;
+}
+
 export interface BuildView {
   spec: BuildSpec;
+  loopScore: number;
+  statScore: number;
   parts: K[]; // subclass picks + exotic, in a fixed order
   weapons: (Weapon | undefined)[];
   loops: LoopReport;
@@ -94,7 +103,8 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
     if (!armor) issues.push(`No armor fits: you don't own ${exotic.name}, or a locked piece conflicts.`);
   }
   void corePartsOf;
-  return { spec, parts, weapons, loops, score: loops.score + STAT_POINT * statTotal(bonus), bonus, fragmentSlots: slots, armor, stats: armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 }, issues };
+  const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
+  return { spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats), score: loops.score + statScore(stats), bonus, fragmentSlots: slots, armor, stats, issues };
 }
 
 // What you're wearing right now, read from your equipped subclass, exotic and weapons.
@@ -124,9 +134,42 @@ export function evaluateNow(ctx: Ctx, goal: Goal, settings: Settings): BuildView
   const v = evaluate(spec, ctx, { ...settings, mw: "asIs" });
   const ch = ctx.inv.characters.find(c => c.id === ctx.characterId)!;
   v.stats = { ...ch.stats };
+  v.statScore = statScore(v.stats);
+  v.score = v.loopScore + v.statScore;
   if (v.armor) v.armor = { ...v.armor, stats: { ...ch.stats } };
   v.issues = v.issues.filter(i => !i.startsWith("No armor"));
   return v;
+}
+
+// "Your build, tuned": keep your subclass, abilities, aspects, exotic and weapons; swap fragments only when the
+// loop gain beats the stat cost, and let the solver pick armor and mods (it keeps what you wear when that's best).
+export function tuneCurrent(ctx: Ctx, goal: Goal): BuildSpec | null {
+  const spec = currentSpec(ctx, goal);
+  if (!spec) return null;
+  const base = { ...spec, armorLocks: {} };
+  const sub = spec.subclass;
+  const options = [...(ctx.kit.get(sub) ?? [])].map(k).filter((x): x is K => !!x && x.kind === "fragment" && !!x.subs?.includes(sub));
+  const slots = fragmentSlots(spec.aspects, sub);
+  const quick = (frags: string[]) => {
+    const fr = frags.map(k).filter((x): x is K => !!x);
+    const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, spec.exotic].map(k).filter((x): x is K => !!x);
+    const ws = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id)).filter((w): w is Weapon => !!w);
+    return scoreLoops([...[...parts, ...fr].map(x => ({ k: x })), ...weaponParts(ws)], goal).score + 0.2 * statTotal(fragmentBonus(fr, ctx.defs));
+  };
+  let frags = spec.fragments.slice(0, slots);
+  for (let round = 0; round < 8; round++) {
+    let best = frags, bestScore = quick(frags);
+    const tries: string[][] = [];
+    for (const o of options) {
+      if (frags.includes(o.name)) continue;
+      if (frags.length < slots) tries.push([...frags, o.name]);
+      for (let i = 0; i < frags.length; i++) { const t = [...frags]; t[i] = o.name; tries.push(t); }
+    }
+    for (const t of tries) { const sc = quick(t); if (sc > bestScore + 0.01) { bestScore = sc; best = t; } }
+    if (best === frags) break;
+    frags = best;
+  }
+  return { ...base, fragments: frags };
 }
 
 export function specFromBuild(b: Build): BuildSpec {
