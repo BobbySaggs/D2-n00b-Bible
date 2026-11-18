@@ -1,0 +1,370 @@
+{
+ "1001": {
+  "hash": 1001,
+  "displayProperties": {
+   "name": "Star-Eater Scales",
+   "description": "Star-Eater Scales description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Leg Armor",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 6,
+   "bucketTypeHash": 20886954
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "1002": {
+  "hash": 1002,
+  "displayProperties": {
+   "name": "Wildwood Mask",
+   "description": "Wildwood Mask description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Helmet",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 3448274439
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "1003": {
+  "hash": 1003,
+  "displayProperties": {
+   "name": "Wildwood Grips",
+   "description": "Wildwood Grips description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Gauntlets",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 3551918588
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "1004": {
+  "hash": 1004,
+  "displayProperties": {
+   "name": "Wildwood Vest",
+   "description": "Wildwood Vest description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Chest Armor",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 14239492
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "1005": {
+  "hash": 1005,
+  "displayProperties": {
+   "name": "Wildwood Cloak",
+   "description": "Wildwood Cloak description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Hunter Cloak",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 1585787867
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "1006": {
+  "hash": 1006,
+  "displayProperties": {
+   "name": "Gyrfalcon's Hauberk",
+   "description": "Gyrfalcon's Hauberk description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Chest Armor",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 6,
+   "bucketTypeHash": 14239492
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "1007": {
+  "hash": 1007,
+  "displayProperties": {
+   "name": "Heart of Inmost Light",
+   "description": "Heart of Inmost Light description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Chest Armor",
+  "itemType": 2,
+  "inventory": {
+   "tierType": 6,
+   "bucketTypeHash": 14239492
+  },
+  "classType": 0,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "2001": {
+  "hash": 2001,
+  "displayProperties": {
+   "name": "Ace of Spades",
+   "description": "Ace of Spades description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Hand Cannon",
+  "itemType": 3,
+  "inventory": {
+   "tierType": 6,
+   "bucketTypeHash": 1498876634
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 3373582085,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "2002": {
+  "hash": 2002,
+  "displayProperties": {
+   "name": "Sunshot",
+   "description": "Sunshot description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Hand Cannon",
+  "itemType": 3,
+  "inventory": {
+   "tierType": 6,
+   "bucketTypeHash": 2465295065
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 1847026933,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "2003": {
+  "hash": 2003,
+  "displayProperties": {
+   "name": "Gjallarhorn",
+   "description": "Gjallarhorn description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Rocket Launcher",
+  "itemType": 3,
+  "inventory": {
+   "tierType": 6,
+   "bucketTypeHash": 953998645
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 1847026933,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "2004": {
+  "hash": 2004,
+  "displayProperties": {
+   "name": "Calus Mini-Tool",
+   "description": "Calus Mini-Tool description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Submachine Gun",
+  "itemType": 3,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 2465295065
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 1847026933,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "3001": {
+  "hash": 3001,
+  "displayProperties": {
+   "name": "Prismatic Hunter",
+   "description": "Prismatic Hunter description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Hunter Subclass",
+  "itemType": 16,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 3284755031
+  },
+  "classType": 1,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "3002": {
+  "hash": 3002,
+  "displayProperties": {
+   "name": "Sunbreaker",
+   "description": "Sunbreaker description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Titan Subclass",
+  "itemType": 16,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 3284755031
+  },
+  "classType": 0,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "4001": {
+  "hash": 4001,
+  "displayProperties": {
+   "name": "Winter's Shroud",
+   "description": "Winter's Shroud description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Aspect",
+  "itemType": 19,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 0
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": {
+   "plugCategoryIdentifier": "hunter.prism.aspects"
+  },
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "4002": {
+  "hash": 4002,
+  "displayProperties": {
+   "name": "Facet of Dawn",
+   "description": "Facet of Dawn description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Fragment",
+  "itemType": 19,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 0
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [
+   {
+    "statTypeHash": 1735777505,
+    "value": 10
+   }
+  ],
+  "plug": {
+   "plugCategoryIdentifier": "hunter.prism.fragments"
+  },
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "4003": {
+  "hash": 4003,
+  "displayProperties": {
+   "name": "Facet of Hope",
+   "description": "Facet of Hope description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Fragment",
+  "itemType": 19,
+  "inventory": {
+   "tierType": 5,
+   "bucketTypeHash": 0
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": {
+   "plugCategoryIdentifier": "hunter.prism.fragments"
+  },
+  "sockets": {
+   "socketEntries": []
+  }
+ },
+ "5001": {
+  "hash": 5001,
+  "displayProperties": {
+   "name": "Engram",
+   "description": "Engram description",
+   "icon": "/common/x.png"
+  },
+  "itemTypeDisplayName": "Engram",
+  "itemType": 8,
+  "inventory": {
+   "tierType": 3,
+   "bucketTypeHash": 1801258597
+  },
+  "classType": 3,
+  "defaultDamageTypeHash": 0,
+  "investmentStats": [],
+  "plug": null,
+  "sockets": {
+   "socketEntries": []
+  }
+ }
+}

@@ -1,0 +1,522 @@
+{
+ "characters": {
+  "data": {
+   "2305843009": {
+    "characterId": "2305843009",
+    "classType": 1,
+    "light": 550,
+    "dateLastPlayed": "2026-11-17T23:00:00Z",
+    "emblemPath": "/e.png",
+    "stats": {
+     "392767087": 60,
+     "4244567218": 45,
+     "1735777505": 110,
+     "144602215": 70,
+     "1943323491": 102,
+     "2996146975": 101
+    }
+   },
+   "2305843010": {
+    "characterId": "2305843010",
+    "classType": 0,
+    "light": 498,
+    "dateLastPlayed": "2026-10-01T20:00:00Z",
+    "emblemPath": "/e.png",
+    "stats": {
+     "392767087": 100,
+     "4244567218": 30,
+     "1735777505": 40,
+     "144602215": 60,
+     "1943323491": 50,
+     "2996146975": 20
+    }
+   }
+  }
+ },
+ "profileInventory": {
+  "data": {
+   "items": [
+    {
+     "itemHash": 1006,
+     "itemInstanceId": "21",
+     "bucketHash": 138197802,
+     "state": 0,
+     "quantity": 1
+    },
+    {
+     "itemHash": 2004,
+     "itemInstanceId": "22",
+     "bucketHash": 138197802,
+     "state": 0,
+     "quantity": 1
+    },
+    {
+     "itemHash": 1002,
+     "itemInstanceId": "23",
+     "bucketHash": 138197802,
+     "state": 0,
+     "quantity": 1
+    },
+    {
+     "itemHash": 5001,
+     "bucketHash": 138197802,
+     "quantity": 1,
+     "state": 0
+    }
+   ]
+  }
+ },
+ "characterInventories": {
+  "data": {
+   "2305843009": {
+    "items": []
+   },
+   "2305843010": {
+    "items": []
+   }
+  }
+ },
+ "characterEquipment": {
+  "data": {
+   "2305843009": {
+    "items": [
+     {
+      "itemHash": 1002,
+      "itemInstanceId": "11",
+      "bucketHash": 3448274439,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 1003,
+      "itemInstanceId": "12",
+      "bucketHash": 3551918588,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 1004,
+      "itemInstanceId": "13",
+      "bucketHash": 14239492,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 1001,
+      "itemInstanceId": "14",
+      "bucketHash": 20886954,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 1005,
+      "itemInstanceId": "15",
+      "bucketHash": 1585787867,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 2001,
+      "itemInstanceId": "16",
+      "bucketHash": 1498876634,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 2002,
+      "itemInstanceId": "17",
+      "bucketHash": 2465295065,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 2003,
+      "itemInstanceId": "18",
+      "bucketHash": 953998645,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 3001,
+      "itemInstanceId": "19",
+      "bucketHash": 3284755031,
+      "state": 0,
+      "quantity": 1
+     }
+    ]
+   },
+   "2305843010": {
+    "items": [
+     {
+      "itemHash": 1007,
+      "itemInstanceId": "31",
+      "bucketHash": 14239492,
+      "state": 0,
+      "quantity": 1
+     },
+     {
+      "itemHash": 3002,
+      "itemInstanceId": "32",
+      "bucketHash": 3284755031,
+      "state": 0,
+      "quantity": 1
+     }
+    ]
+   }
+  }
+ },
+ "itemComponents": {
+  "instances": {
+   "data": {
+    "11": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "12": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "13": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "14": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "15": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "16": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "17": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "18": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "19": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "31": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "32": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "21": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "22": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 5,
+     "energy": {
+      "energyCapacity": 11
+     }
+    },
+    "23": {
+     "primaryStat": {
+      "value": 550
+     },
+     "gearTier": 3,
+     "energy": {
+      "energyCapacity": 11
+     }
+    }
+   }
+  },
+  "stats": {
+   "data": {
+    "11": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "12": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "13": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "14": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "15": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "21": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "23": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    },
+    "31": {
+     "stats": {
+      "392767087": {
+       "value": 30
+      },
+      "4244567218": {
+       "value": 0
+      },
+      "1735777505": {
+       "value": 25
+      },
+      "144602215": {
+       "value": 20
+      },
+      "1943323491": {
+       "value": 0
+      },
+      "2996146975": {
+       "value": 0
+      }
+     }
+    }
+   }
+  },
+  "sockets": {
+   "data": {
+    "19": {
+     "sockets": [
+      {
+       "plugHash": 4001
+      },
+      {
+       "plugHash": 4002
+      },
+      {
+       "plugHash": 0
+      }
+     ]
+    }
+   }
+  },
+  "reusablePlugs": {
+   "data": {
+    "19": {
+     "plugs": {
+      "2": [
+       {
+        "plugItemHash": 4002
+       },
+       {
+        "plugItemHash": 4003
+       }
+      ]
+     }
+    }
+   }
+  }
+ },
+ "profileCollectibles": {
+  "data": {
+   "collectibles": {
+    "777": {
+     "state": 1
+    }
+   }
+  }
+ }
+}

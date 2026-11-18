@@ -1,0 +1,14 @@
+{
+ "destinyMemberships": [
+  {
+   "membershipType": 3,
+   "membershipId": "4611",
+   "displayName": "Phoo",
+   "crossSaveOverride": 3
+  }
+ ],
+ "primaryMembershipId": "4611",
+ "bungieNetUser": {
+  "uniqueName": "Tester#1234"
+ }
+}

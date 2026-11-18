@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Steeped theme: purple-first, dark always (carried over from the classic app's v6 look). */
+@theme {
+  --color-bg: #170c3c;
+  --color-bg-deep: #0f0729;
+  --color-panel: rgb(255 255 255 / 0.065);
+  --color-panel-2: rgb(10 4 30 / 0.38);
+  --color-line: rgb(197 168 255 / 0.2);
+  --color-ink: #f1ecff;
+  --color-ink-dim: #bbade6;
+  --color-accent: #7b3ff2;
+  --color-accent-hi: #c5a8ff;
+  --color-brand: #485cc7;
+  --color-good: #46e39a;
+  --color-warn: #ffb35c;
+  --color-bad: #ff7a8a;
+  --color-exotic: #f1cf6e;
+  --color-solar: #ff9a4a;
+  --color-void: #b98bff;
+  --color-arc: #6fd6ff;
+  --color-strand: #5ce68c;
+  --color-stasis: #8da8ff;
+  --color-prismatic: #f0a8ff;
+
+  --font-display: "Fredoka", "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-sans: "Lexend", "Segoe UI", system-ui, sans-serif;
+
+  --radius-card: 18px;
+}
+
+html { background: var(--color-bg); }
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgb(123 63 242 / 0.35), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(72 92 199 / 0.28), transparent 60%),
+    var(--color-bg);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--color-accent-hi); outline-offset: 2px; }
