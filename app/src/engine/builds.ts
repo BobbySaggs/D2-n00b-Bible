@@ -129,25 +129,37 @@ export interface SearchInput {
   onlySubclass?: Subclass;
   onlyExotic?: string;
   pinnedWeapons?: string[]; // weapon instance ids the player wants kept
+  require?: Require; // "build around": pieces the player insists on
 }
+
+export interface Require { subclass?: Subclass; super?: string; grenade?: string; melee?: string; classAbility?: string; aspects?: string[]; fragments?: string[]; exotic?: string }
 
 export function searchBuilds(o: SearchInput): Build[] {
   const kit = availableKit(o.inv, o.defOf, o.characterId);
   const exotics = [...new Set(o.inv.items.filter(i => i.kind === "armor" && i.exotic && i.cls === "Hunter").map(i => i.name))]
     .map(n => byName.get(n)).filter((k): k is K => !!k && k.kind === "exotic")
-    .filter(k => !o.onlyExotic || k.name === o.onlyExotic);
+    .filter(k => !o.onlyExotic || k.name === o.onlyExotic)
+    .filter(k => !o.require?.exotic || k.name === o.require.exotic);
   const weapons = ownedWeapons(o.inv, o.defOf);
 
   // Stage 1: every core (super, grenade, melee, dodge, two aspects, exotic) scored on its loops.
   type Core = Omit<Build, "loops" | "score" | "armor" | "bonus" | "goal" | "weapons">;
   const cores: { c: Core; s: number }[] = [];
+  const R = o.require ?? {};
+  const only = (list: K[], name?: string) => (name ? list.filter(k => k.name === name) : list);
   for (const [sub, names] of kit) {
     if (o.onlySubclass && sub !== o.onlySubclass) continue;
-    const supers = pick(names, sub, "super"), grenades = pick(names, sub, "grenade"), melees = pick(names, sub, "melee"),
-      classes = pick(names, sub, "classAbility"), aspects = pick(names, sub, "aspect");
+    if (R.subclass && sub !== R.subclass) continue;
+    // A required piece this subclass can't use rules the subclass out.
+    const needed = [R.super, R.grenade, R.melee, R.classAbility, ...(R.aspects ?? []), ...(R.fragments ?? [])].filter((x): x is string => !!x);
+    if (needed.some(n => !names.has(n) || !byName.get(n)?.subs?.includes(sub))) continue;
+    const supers = only(pick(names, sub, "super"), R.super), grenades = only(pick(names, sub, "grenade"), R.grenade), melees = only(pick(names, sub, "melee"), R.melee),
+      classes = only(pick(names, sub, "classAbility"), R.classAbility), aspects = pick(names, sub, "aspect");
     const pairs: K[][] = [];
     for (let i = 0; i < aspects.length; i++) for (let j = i + 1; j < aspects.length; j++) pairs.push([aspects[i], aspects[j]]);
     if (!pairs.length && aspects.length) pairs.push([aspects[0]]);
+    const reqAsp = R.aspects ?? [];
+    for (let i = pairs.length - 1; i >= 0; i--) if (!reqAsp.every(a => pairs[i].some(x => x.name === a))) pairs.splice(i, 1);
     for (const su of supers) for (const g of grenades) for (const m of melees) for (const ca of classes) for (const asp of pairs) for (const ex of exotics) {
       const c: Core = { subclass: sub, super: su, grenade: g, melee: m, classAbility: ca, aspects: asp, fragments: [], exotic: ex };
       cores.push({ c, s: scoreLoops(corePartsOf(c), o.goal).score });
@@ -162,8 +174,8 @@ export function searchBuilds(o: SearchInput): Build[] {
   for (const { c } of cores.slice(0, 400)) {
     const frags = pick(kit.get(c.subclass)!, c.subclass, "fragment");
     const slots = Math.min(MAX_FRAGMENTS[c.subclass], c.aspects.reduce((t, a) => t + (a.slots ?? 2), 0));
-    const chosen: K[] = [];
-    for (let i = 0; i < slots; i++) {
+    const chosen: K[] = (o.require?.fragments ?? []).map(n => byName.get(n)).filter((x): x is K => !!x).slice(0, slots);
+    for (let i = chosen.length; i < slots; i++) {
       let best: K | undefined, gain = 0;
       const now = scoreLoops(corePartsOf({ ...c, fragments: chosen }), o.goal).score;
       for (const f of frags) {

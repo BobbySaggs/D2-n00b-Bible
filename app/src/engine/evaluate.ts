@@ -6,6 +6,7 @@ import { readPiece, type MwMode, type Piece } from "./armor";
 import { availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, solve, type Solution } from "./solve";
+import { ownedMods, planArmorMods, type PieceMods } from "./mods";
 
 // A build the player can edit: everything by name or item id, so it is easy to store, compare and send to a worker.
 export interface BuildSpec {
@@ -38,6 +39,7 @@ export interface Ctx {
   weapons: Weapon[]; // every weapon you own (any Power), for editing
   kit: Map<Subclass, Set<string>>;
   wornIds: Set<string>;
+  ownedMods: Map<number, Set<number>>;
 }
 
 export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefined, defs: ItemDef[], characterId: string): Ctx {
@@ -48,6 +50,7 @@ export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefine
     weapons: ownedWeapons(inv, defOf, 0),
     kit: availableKit(inv, defOf, characterId),
     wornIds: new Set(inv.items.filter(i => i.owner === characterId && i.equipped).map(i => i.id)),
+    ownedMods: ownedMods(inv.items, defOf),
   };
 }
 
@@ -183,3 +186,99 @@ export function specFromBuild(b: Build): BuildSpec {
 
 export const summary = (v: BuildView) => ({ over100: count100(v.stats), low: lowest(v.stats) });
 export { ARMOR_SLOTS };
+
+// ---------- Breakdown: where each stat comes from, which mod goes on which piece, and what to change in game ----------
+import { STAT_ORDER as ORDER, type StatKey } from "../bungie/config";
+import { pieceStats } from "./armor";
+import { zeroStats } from "../model/inventory";
+
+const modOf = (p: Piece): { stat: StatKey; size: number } | null => {
+  for (const k of ORDER) if (p.mod[k]) return { stat: k, size: p.mod[k] };
+  return null;
+};
+
+// Which +10 mod goes on which piece: a piece keeps its current mod when the build still wants that stat.
+export function modPlan(v: BuildView): Partial<Record<Slot, { stat: StatKey; was: { stat: StatKey; size: number } | null }>> {
+  const out: Partial<Record<Slot, { stat: StatKey; was: { stat: StatKey; size: number } | null }>> = {};
+  if (!v.armor) return out;
+  const left = [...v.armor.mods];
+  const slots = ARMOR_SLOTS.filter(s => v.armor!.pieces[s]);
+  for (const s of slots) {
+    const cur = modOf(v.armor.pieces[s]);
+    const i = cur && cur.size === 10 ? left.indexOf(cur.stat) : -1;
+    if (i >= 0) { out[s] = { stat: cur!.stat, was: cur }; left.splice(i, 1); }
+  }
+  for (const s of slots) if (!out[s] && left.length) out[s] = { stat: left.shift()!, was: modOf(v.armor.pieces[s]) };
+  return out;
+}
+
+export interface Breakdown { armor: Stats; mods: Stats; fragments: Stats; other: Stats; total: Stats }
+export function breakdown(v: BuildView, settings: Settings, isNow: boolean): Breakdown {
+  const armor = zeroStats(), mods = zeroStats(), other = zeroStats();
+  for (const p of Object.values(v.armor?.pieces ?? {})) {
+    const st = pieceStats(p, isNow ? "asIs" : settings.mw);
+    for (const k of ORDER) { armor[k] += st[k]; if (isNow) mods[k] += p.mod[k]; }
+  }
+  if (!isNow) for (const m of v.armor?.mods ?? []) mods[m] += 10;
+  for (const k of ORDER) other[k] = v.stats[k] - armor[k] - mods[k] - v.bonus[k];
+  return { armor, mods, fragments: v.bonus, other, total: v.stats };
+}
+
+export interface Step { what: string; detail?: string }
+const LBL: Record<StatKey, string> = { health: "Health", melee: "Melee", grenade: "Grenade", super: "Super", class: "Class", weapons: "Weapons" };
+const where = (i: { owner: string; equipped: boolean }, cid: string) => (i.owner === cid ? (i.equipped ? "worn" : "on your character") : i.owner === "vault" ? "in your vault" : "on another character");
+
+export function stepsFrom(now: BuildView, v: BuildView, ctx: Ctx): Step[] {
+  const steps: Step[] = [];
+  const a = now.spec, b = v.spec;
+  if (a.subclass !== b.subclass) steps.push({ what: `Switch subclass to ${b.subclass}` });
+  for (const [label, key] of [["super", "super"], ["grenade", "grenade"], ["melee", "melee"], ["class ability", "classAbility"]] as const)
+    if (a.subclass !== b.subclass || a[key] !== b[key]) steps.push({ what: `Set your ${label} to ${b[key]}` });
+  const asOut = a.aspects.filter(x => !b.aspects.includes(x)), asIn = b.aspects.filter(x => !a.aspects.includes(x));
+  asIn.forEach((x, i) => steps.push({ what: `Aspect: ${asOut[i] ? `replace ${asOut[i]} with ` : "add "}${x}` }));
+  const frOut = a.subclass === b.subclass ? a.fragments.filter(x => !b.fragments.includes(x)) : [];
+  const frIn = a.subclass === b.subclass ? b.fragments.filter(x => !a.fragments.includes(x)) : b.fragments;
+  if (frOut.length || frIn.length) steps.push({ what: `Fragments: ${[...frOut.map(x => `remove ${x}`), ...frIn.map(x => `add ${x}`)].join(", ")}` });
+  const slotName = ["Kinetic", "Energy", "Heavy"];
+  b.weapons.forEach((id, i) => {
+    if (id && id !== a.weapons[i]) {
+      const w = ctx.weapons.find(x => x.item.id === id);
+      if (w) steps.push({ what: `${slotName[i]}: equip ${w.item.name}`, detail: `${w.element}, Power ${w.item.power}, ${where(w.item, ctx.characterId)}` });
+    }
+  });
+  for (const s of ARMOR_SLOTS) {
+    const p = v.armor?.pieces[s], q = now.armor?.pieces[s];
+    if (p && p.item.id !== q?.item.id) steps.push({ what: `${s === "class" ? "Class item" : s[0].toUpperCase() + s.slice(1)}: equip ${p.item.name}`, detail: `Tier ${p.tier} ${p.archetype}, ${where(p.item, ctx.characterId)}` });
+  }
+  const plan = modPlan(v);
+  for (const s of ARMOR_SLOTS) {
+    const m = plan[s], p = v.armor?.pieces[s];
+    if (!m || !p) continue;
+    if (m.was && m.was.stat === m.stat && m.was.size === 10) continue;
+    steps.push({ what: `${p.item.name}: put in a +10 ${LBL[m.stat]} mod`, detail: m.was ? `replaces ${m.was.size === 5 ? "minor " : ""}${LBL[m.was.stat]}` : "empty slot" });
+  }
+  return steps;
+}
+
+// The full armor mod plan for a build: the +10 stat mod plus every other slot, per piece.
+export function fullModPlan(v: BuildView, ctx: Ctx): PieceMods[] {
+  const sm: Partial<Record<Slot, StatKey>> = {};
+  for (const [k, x] of Object.entries(modPlan(v))) if (x) sm[k as Slot] = x.stat;
+  return planArmorMods(v, ctx.defOf, sm, ctx.ownedMods);
+}
+
+// Non-stat mods currently socketed on a piece.
+export function currentSlotMods(p: Piece, ctx: Ctx): string[] {
+  return p.item.plugs.map(h => ctx.defOf(h)).filter(d => d && d.plugCat.startsWith("enhancements.v2_") && d.plugCat !== "enhancements.v2_general" && d.name !== "Empty Mod Socket").map(d => d!.name);
+}
+
+export function modSteps(v: BuildView, ctx: Ctx): Step[] {
+  const out: Step[] = [];
+  for (const pm of fullModPlan(v, ctx)) {
+    const cur = currentSlotMods(pm.piece, ctx);
+    const want = pm.mods.map(m => m.name);
+    const add = want.filter(n => !cur.includes(n)), remove = cur.filter(n => !want.includes(n));
+    if (add.length) out.push({ what: `${pm.piece.item.name}: add ${add.join(", ")}`, detail: remove.length ? `remove ${remove.join(", ")}` : undefined });
+  }
+  return out;
+}

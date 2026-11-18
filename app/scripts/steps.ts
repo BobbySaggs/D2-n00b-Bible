@@ -1,0 +1,16 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { makeCtx, evaluate, evaluateNow, tuneCurrent, stepsFrom, breakdown, modPlan } from "../src/engine/evaluate";
+const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const inv = buildInventory(s.profile, h => defs.get(h), s.account);
+const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
+const set = { healthFloor: 50, mw: "asIs" as const, style: "peaks" as const };
+const now = evaluateNow(ctx, "abilities", set)!; const v = evaluate(tuneCurrent(ctx, "abilities")!, ctx, set);
+console.log("NOW breakdown", breakdown(now, set, true));
+console.log("A breakdown", breakdown(v, set, false));
+console.log("mod plan", modPlan(v));
+for (const st of stepsFrom(now, v, ctx)) console.log("-", st.what, st.detail ?? "");

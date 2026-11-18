@@ -1,0 +1,20 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { makeCtx, evaluate, tuneCurrent, modPlan, specFromBuild } from "../src/engine/evaluate";
+import { planArmorMods, ownedMods } from "../src/engine/mods";
+import { searchBuilds } from "../src/engine/builds";
+const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const inv = buildInventory(s.profile, h => defs.get(h), s.account);
+const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
+const set = { healthFloor: 50, mw: "asIs" as const, style: "peaks" as const };
+const show = (v: ReturnType<typeof evaluate>) => {
+  const sm = Object.fromEntries(Object.entries(modPlan(v)).map(([k, x]) => [k, x!.stat]));
+  console.log(`\n# ${v.spec.goal}: ${v.spec.subclass} + ${v.spec.exotic} | weapons ${v.weapons.map(w => `${w?.item.name}(${w?.element},${w?.ammo})`).join(", ")}`);
+  for (const pm of planArmorMods(v, ctx.defOf, sm, ownedMods(ctx.inv.items, ctx.defOf))) console.log(`  ${pm.slot.padEnd(6)} ${pm.piece.item.name.padEnd(26)} [${pm.used}/${pm.capacity}] +10 ${pm.statMod?.stat} | ${pm.mods.map(m => `${m.name}(${m.energy}): ${m.why}`).join(" ; ")}${pm.open ? ` | ${pm.open} open` : ""}`);
+};
+show(evaluate(tuneCurrent(ctx, "abilities")!, ctx, set));
+for (const goal of ["bossDps", "survival"] as const) show(evaluate(specFromBuild(searchBuilds({ inv, defOf: ctx.defOf, defs: ctx.defs, characterId: hunter.id, goal, top: 1 })[0]), ctx, set));

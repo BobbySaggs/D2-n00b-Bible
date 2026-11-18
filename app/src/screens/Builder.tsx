@@ -3,7 +3,8 @@ import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
-import { evaluate, evaluateNow, fragmentSlots, makeCtx, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { breakdown, currentSlotMods, evaluate, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import type { Require } from "../engine/builds";
 import { count100, lowest } from "../engine/solve";
 import type { Goal } from "../engine/loops";
 import { runSearch } from "../workers/search";
@@ -43,15 +44,19 @@ export function Builder({ inv }: { inv: Inventory }) {
   const [busy, setBusy] = useState<[boolean, boolean]>([false, false]);
   const [err, setErr] = useState("");
   const [focus, setFocus] = useState<Col>(0);
+  const [showWhere, setShowWhere] = useState(false);
+  const [req, setReq] = useState<Require>({});
   const [alts, setAlts] = useState<BuildSpec[]>([]); // Steeped's top builds for this goal, for Build B
   const [altIdx, setAltIdx] = useState(0); // on phones: compare Now with one build at a time
 
-  const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string } = {}) => {
+  const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string; require?: Require } = {}) => {
     if (!ctx) return;
     setBusy(b => [cols.includes(0) || b[0], cols.includes(1) || b[1]]);
     setErr("");
     try {
-      const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts }, inv, ctx.defs);
+      const require = opts.require ?? (Object.keys(req).length ? req : undefined);
+      const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts, require }, inv, ctx.defs);
+      if (!found.length) setErr("No build fits everything you asked for. Try removing one of the Build around picks.");
       setSpecs(s => {
         const next = [...s];
         if (cols.length === 2) { next[0] = tuneCurrent(ctx, goal) ?? found[1] ?? null; next[1] = found[0] ?? null; setAlts(found); setAltIdx(0); }
@@ -93,6 +98,8 @@ export function Builder({ inv }: { inv: Inventory }) {
       </section>
       {err && <Card className="border-bad/40 text-bad">{err}</Card>}
 
+      <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[1]} onApply={r => search([1], { require: r })} />
+
       <section className="grid gap-3 md:grid-cols-3">
         <ScoreCard title="Now" sub="What you're wearing" v={now} />
         {([0, 1] as Col[]).map(c => (
@@ -106,19 +113,26 @@ export function Builder({ inv }: { inv: Inventory }) {
         ))}
       </section>
 
-      <div className="flex justify-end"><MwLegend /></div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-dim">
+          <input type="checkbox" checked={showWhere} onChange={e => setShowWhere(e.target.checked)} /> Show where each stat comes from
+        </label>
+        <MwLegend />
+      </div>
       <div className="md:hidden">
         <Segmented label="Compare Now with" value={String(focus) as "0" | "1"} onChange={v => setFocus(Number(v) as Col)}
           options={[{ value: "0", label: "Now vs Build A" }, { value: "1", label: "Now vs Build B" }]} />
       </div>
       <Card className="p-0">
-        <Table now={now} views={views} ctx={ctx} edit={edit} pinned={pinned} setPinned={setPinned} search={search} busy={busy} focus={focus} />
+        <Table now={now} views={views} ctx={ctx} edit={edit} pinned={pinned} setPinned={setPinned} search={search} busy={busy} focus={focus} showWhere={showWhere} settings={settings} />
       </Card>
 
       <section className="grid gap-3 md:grid-cols-2">
         {([0, 1] as Col[]).map(c => views[c] && (
           <Card key={c} className="space-y-3">
-            <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}: how it works</h3>
+            <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}</h3>
+            {now && <DoThis steps={[...stepsFrom(now, views[c]!, ctx), ...modSteps(views[c]!, ctx)]} />}
+            <h4 className="font-display text-base">How it works</h4>
             <HowItWorks v={views[c]!} />
             <Stronger v={views[c]!} full={full[c]} ctx={ctx} />
           </Card>
@@ -211,10 +225,10 @@ const Section = ({ title }: { title: string }) => (
   <tr><td colSpan={4} className="bg-panel-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-accent-hi">{title}</td></tr>
 );
 
-function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }: {
+function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, showWhere, settings }: {
   now: BuildView | null; views: (BuildView | null)[]; ctx: Ctx; edit: (c: Col, p: Partial<BuildSpec>) => void;
   pinned: string[]; setPinned: (p: string[]) => void; search: (c: Col[], o?: { onlySubclass?: Subclass; onlyExotic?: string }) => void; busy: [boolean, boolean];
-  focus: Col;
+  focus: Col; showWhere: boolean; settings: Settings;
 }) {
   const kitOf = (sub: Subclass, kind: K["kind"]) => HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && ctx.kit.get(sub)?.has(k.name));
   const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
@@ -290,11 +304,32 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
     );
   };
 
+  const plans = views.map(v => (v ? modPlan(v) : {}));
+  const fullPlans = views.map(v => (v ? fullModPlan(v, ctx) : []));
+  const modsOf = (c: Col, slot: Slot) => {
+    const pm = fullPlans[c].find(x => x.slot === slot);
+    if (!pm) return null;
+    const cur = currentSlotMods(pm.piece, ctx);
+    return (
+      <div className="mt-0.5 text-xs">
+        {pm.mods.map(m => <span key={m.name} title={m.why} className={cn("mr-1 inline-block", cur.includes(m.name) ? "text-ink-dim" : "text-accent-hi")}>{m.name}<span className="text-ink-dim/70"> {m.energy}</span>·</span>)}
+        <span className="text-ink-dim/70">{pm.used}/{pm.capacity} energy{pm.open ? `, ${pm.open} open` : ""}</span>
+      </div>
+    );
+  };
+  const modLine = (stat?: string, was?: { stat: string; size: number } | null, isNow?: boolean) => {
+    const L = (k: string) => STAT_LABEL[k as keyof typeof STAT_LABEL];
+    if (isNow) return <div className="mt-1 text-xs text-ink-dim">Mod: {was ? `+${was.size} ${L(was.stat)}` : "none"}</div>;
+    if (!stat) return null;
+    const same = was && was.stat === stat && was.size === 10;
+    return <div className={cn("mt-1 text-xs", same ? "text-ink-dim" : "text-accent-hi")}>Mod: +10 {L(stat)}{!same && <span className="text-ink-dim"> (was {was ? `+${was.size} ${L(was.stat)}` : "empty"})</span>}</div>;
+  };
+  const curMod = (p?: import("../engine/armor").Piece) => { if (!p) return null; for (const k of STAT_ORDER) if (p.mod[k]) return { stat: k, size: p.mod[k] }; return null; };
   const armorRow = (slot: Slot) => {
     const nowPiece = now?.armor?.pieces[slot];
     return (
       <Row key={slot} label={SLOT_LABEL[slot]}
-        now={nowPiece ? <ArmorLabel p={nowPiece} cid={cid} /> : <span className="text-ink-dim">None</span>}
+        now={nowPiece ? <div><ArmorLabel p={nowPiece} cid={cid} />{modLine(undefined, curMod(nowPiece), true)}<div className="mt-0.5 text-xs text-ink-dim">{currentSlotMods(nowPiece, ctx).join(" · ") || "No other mods"}</div></div> : <span className="text-ink-dim">None</span>}
         same={cols.map(c => views[c]?.armor?.pieces[slot]?.item.id === nowPiece?.item.id)}
         cells={cols.map(c => {
           const v = views[c]; if (!v) return null;
@@ -310,6 +345,8 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
                 {opts.map(p => <option key={p.item.id} value={p.item.id}>{p.item.name} · T{p.tier} {p.archetype} · {where(p.item, cid)}</option>)}
               </Pick>
               {chosen && <ArmorLabel p={chosen} cid={cid} compact />}
+              {chosen && modLine(plans[c][slot]?.stat, plans[c][slot]?.was)}
+              {chosen && modsOf(c, slot)}
             </div>
           );
         })} />
@@ -330,8 +367,9 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
         <tbody>
           <Section title="Stats" />
           {STAT_ORDER.map(k => (
-            <Row key={k} label={STAT_LABEL[k]} now={<StatBar value={now?.stats[k] ?? 0} />}
-              cells={cols.map(c => views[c] ? <div data-testid={`stat-${k}-${c}`}><StatBar value={views[c]!.stats[k]} base={now?.stats[k]} /></div> : null)} />
+            <Row key={k} label={STAT_LABEL[k]}
+              now={<div><StatBar value={now?.stats[k] ?? 0} />{showWhere && now && <Where b={breakdown(now, settings, true)} k={k} />}</div>}
+              cells={cols.map(c => views[c] ? <div data-testid={`stat-${k}-${c}`}><StatBar value={views[c]!.stats[k]} base={now?.stats[k]} />{showWhere && <Where b={breakdown(views[c]!, settings, false)} k={k} />}</div> : null)} />
           ))}
           <Row label="Stat mods" now={<span className="text-ink-dim">As slotted</span>}
             cells={cols.map(c => views[c]?.armor ? <span>{summarizeMods(views[c]!.armor!.mods)}</span> : null)} />
@@ -401,6 +439,15 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus }
   );
 }
 
+function Where({ b, k }: { b: ReturnType<typeof breakdown>; k: keyof ReturnType<typeof breakdown>["total"] }) {
+  const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+  return (
+    <div className="mt-1 text-[11px] leading-snug text-ink-dim" data-testid="where">
+      armor {b.armor[k]} · mods {sign(b.mods[k])} · fragments {sign(b.fragments[k])}{b.other[k] ? ` · other ${sign(b.other[k])}` : ""}
+    </div>
+  );
+}
+
 function summarizeMods(mods: string[]) {
   const c: Record<string, number> = {};
   for (const m of mods) c[m] = (c[m] ?? 0) + 1;
@@ -448,6 +495,70 @@ function FragPicker({ v, slots, options, onChange }: { v: BuildView; slots: numb
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function BuildAround({ ctx, req, setReq, busy, onApply }: { ctx: Ctx; req: Require; setReq: (r: Require) => void; busy: boolean; onApply: (r: Require) => void }) {
+  const [open, setOpen] = useState(false);
+  const subs = SUBCLASSES.filter(s => ctx.kit.has(s));
+  const inKit = (k: K) => (req.subclass ? [req.subclass] : subs).some(s => k.subs?.includes(s) && ctx.kit.get(s)?.has(k.name));
+  const opts = (kind: K["kind"]) => [...new Map(HUNTER.filter(k => k.kind === kind && inKit(k)).map(k => [k.name, k])).values()];
+  const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
+  const picked = [req.subclass, req.super, req.grenade, req.melee, req.classAbility, ...(req.aspects ?? []), ...(req.fragments ?? []), req.exotic].filter(Boolean) as string[];
+  const set = (patch: Partial<Require>) => { const r = { ...req, ...patch }; for (const k of Object.keys(r) as (keyof Require)[]) { const v = r[k]; if (!v || (Array.isArray(v) && !v.length)) delete r[k]; } setReq(r); };
+  const sel = (label: string, value: string | undefined, list: string[], on: (v: string) => void) => (
+    <label className="space-y-1 text-xs text-ink-dim">
+      <span>{label}</span>
+      <Pick aria-label={`Build around ${label}`} value={value ?? ""} onChange={e => on(e.target.value)}>
+        <option value="">Any</option>
+        {list.map(n => <option key={n} value={n}>{n}</option>)}
+      </Pick>
+    </label>
+  );
+  const asp = req.aspects ?? [];
+  return (
+    <Card className="space-y-3" data-testid="build-around">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-lg">Build around what you want</h3>
+          <p className="text-sm text-ink-dim">{picked.length ? <>Build B must use: <span className="text-ink">{picked.join(", ")}</span></> : "Pick anything you insist on (an aspect, a grenade, an exotic) and Build B finds the best build that keeps it."}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? "Hide" : picked.length ? "Change" : "Choose"}</Button>
+          {picked.length > 0 && <Button size="sm" variant="quiet" onClick={() => { setReq({}); onApply({}); }}>Clear</Button>}
+        </div>
+      </div>
+      {open && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {sel("Subclass", req.subclass, subs, v => set({ subclass: v as Subclass }))}
+            {sel("Super", req.super, opts("super").map(k => k.name), v => set({ super: v }))}
+            {sel("Grenade", req.grenade, opts("grenade").map(k => k.name), v => set({ grenade: v }))}
+            {sel("Melee", req.melee, opts("melee").map(k => k.name), v => set({ melee: v }))}
+            {sel("Class ability", req.classAbility, opts("classAbility").map(k => k.name), v => set({ classAbility: v }))}
+            {sel("Aspect", asp[0], opts("aspect").map(k => k.name), v => set({ aspects: [v, asp[1]].filter(Boolean) as string[] }))}
+            {sel("Second aspect", asp[1], opts("aspect").map(k => k.name).filter(n => n !== asp[0]), v => set({ aspects: [asp[0], v].filter(Boolean) as string[] }))}
+            {sel("Exotic", req.exotic, exotics, v => set({ exotic: v }))}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button disabled={busy || !picked.length} onClick={() => { onApply(req); setOpen(false); }}>{busy ? "Finding…" : "Find the best build with these"}</Button>
+            <span className="text-xs text-ink-dim">Uses the goal you picked above (General PvE, Raid boss...). Build A stays your build, tuned.</span>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function DoThis({ steps }: { steps: { what: string; detail?: string }[] }) {
+  if (!steps.length) return <p className="text-sm text-good">Nothing to change: this is what you're wearing.</p>;
+  return (
+    <div className="space-y-1.5" data-testid="do-this">
+      <h4 className="font-display text-base">Do this in game ({steps.length} changes)</h4>
+      <ol className="list-decimal space-y-1 pl-5 text-sm">
+        {steps.map((st, i) => <li key={i}>{st.what}{st.detail && <span className="text-ink-dim"> ({st.detail})</span>}</li>)}
+      </ol>
     </div>
   );
 }
