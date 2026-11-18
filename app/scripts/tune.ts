@@ -10,7 +10,7 @@ const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Nu
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
 const hunter = inv.characters.find(c => c.cls === "Hunter")!;
 const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
-const set = { healthFloor: 60, mw: "asIs" as const };
+const set = { healthFloor: 50, mw: "asIs" as const, style: "peaks" as const };
 const tot = (x: Record<string, number>) => STAT_ORDER.reduce((t, k) => t + x[k], 0);
 const show = (n: string, v: ReturnType<typeof evaluate>) => console.log(n.padEnd(8), "score", v.score.toFixed(0), "loops", v.loopScore.toFixed(0), "stats", v.statScore.toFixed(0), "|", STAT_ORDER.map(k => v.stats[k]).join("/"), "total", tot(v.stats), "| frags", v.spec.fragments.join(", "), "| armor", Object.values(v.armor?.pieces ?? {}).map(p => p.item.name).join(", "), "| mods", v.armor?.mods.join(","));
 for (const goal of ["abilities", "bossDps", "survival"] as const) {

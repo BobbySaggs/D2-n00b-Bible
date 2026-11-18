@@ -37,7 +37,7 @@ export function Builder({ inv }: { inv: Inventory }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const [goal, setGoal] = useState<Goal>("abilities");
-  const [settings, setSettings] = useState<Settings>({ healthFloor: 60, mw: "asIs" });
+  const [settings, setSettings] = useState<Settings>({ healthFloor: 50, mw: "asIs", style: "peaks" });
   const [pinned, setPinned] = useState<string[]>([]);
   const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
   const [busy, setBusy] = useState<[boolean, boolean]>([false, false]);
@@ -79,6 +79,8 @@ export function Builder({ inv }: { inv: Inventory }) {
       <section className="flex flex-wrap items-center justify-between gap-3">
         <Segmented label="What are you building for?" value={goal} options={GOALS} onChange={setGoal} />
         <div className="flex flex-wrap items-center gap-3 text-sm">
+          <Segmented label="Stat style" value={settings.style} onChange={style => setSettings(s => ({ ...s, style }))}
+            options={[{ value: "peaks", label: "Most 100s" }, { value: "even", label: "Even spread" }]} />
           <Segmented label="Masterwork" value={settings.mw} onChange={mw => setSettings(s => ({ ...s, mw }))}
             options={[{ value: "asIs", label: "Gear as is" }, { value: "full", label: "If masterworked" }]} />
           <label className="flex items-center gap-2 text-ink-dim">

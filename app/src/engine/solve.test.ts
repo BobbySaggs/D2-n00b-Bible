@@ -89,4 +89,14 @@ describe("solver", () => {
     expect(Math.min(safe.stats.melee, safe.stats.health, safe.stats.class)).toBeGreaterThanOrEqual(45);
     expect(count100(safe.stats)).toBeGreaterThanOrEqual(1);
   });
+
+  it("with Most 100s, spends two mods to carry a stat across 100 instead of spreading them", () => {
+    const peak = { floor: 50, low: 0.6, high: 0.25, peak: 1 };
+    const plan = { health: peak, melee: peak, grenade: peak, super: peak, class: peak, weapons: peak } as StatPlan;
+    const raw = { health: 82, melee: 60, grenade: 60, super: 60, class: 60, weapons: 60 };
+    const greedy = placeMods(raw, plan, 2);
+    const exact = placeMods(raw, plan, 2, true);
+    expect(exact.stats.health).toBe(102);
+    expect(count100(exact.stats)).toBeGreaterThanOrEqual(count100(greedy.stats));
+  });
 });

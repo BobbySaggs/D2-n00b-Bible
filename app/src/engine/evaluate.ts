@@ -3,7 +3,7 @@ import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
 import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type Weapon } from "./builds";
+import { availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, solve, type Solution } from "./solve";
 
@@ -25,6 +25,7 @@ export interface BuildSpec {
 export interface Settings {
   healthFloor: number;
   mw: MwMode;
+  style: StatStyle; // "peaks" = most stats at 100+ (nothing under the floor), "even" = spread evenly
 }
 
 export interface Ctx {
@@ -95,7 +96,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
 
   let armor: Solution | undefined;
   if (exotic && sup && gr && me && ca) {
-    const plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.healthFloor);
+    const plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.healthFloor, settings.style);
     armor = solve(ctx.pieces, {
       cls: "Hunter", exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
       locks: spec.armorLocks, minPower: ctx.light - 60, top: 1,

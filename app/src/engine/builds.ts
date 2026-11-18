@@ -199,7 +199,8 @@ export function searchBuilds(o: SearchInput): Build[] {
 }
 
 // Stat plan: every stat keeps a floor (no dumping), and the stats the loop leans on are pushed.
-export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, healthFloor?: number): StatPlan {
+export type StatStyle = "peaks" | "even";
+export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, healthFloor?: number, style: StatStyle = "peaks"): StatPlan {
   const lean = statLean([...corePartsOf(b), ...weaponParts(b.weapons)], goal);
   const max = Math.max(...Object.values(lean), 0.01);
   const plan = {} as StatPlan;
@@ -207,13 +208,15 @@ export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbi
     const w = lean[k] / max; // 0..1
     const floor = k === "health" ? (healthFloor ?? (goal === "survival" || goal === "bossDps" ? 70 : 60)) : 50;
     // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
-    plan[k] = { floor, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
+    plan[k] = style === "peaks"
+      ? { floor, low: 0.6 + 0.4 * w, high: 0.25 + 0.3 * w, peak: 1 + 0.5 * w }
+      : { floor, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
   }
   return plan;
 }
 
-export function fitArmor(b: Build, pieces: Piece[], o: { mw: "asIs" | "full"; wornIds?: Set<string>; minPower?: number }) {
-  const plan = planFor(b, b.goal);
+export function fitArmor(b: Build, pieces: Piece[], o: { mw: "asIs" | "full"; wornIds?: Set<string>; minPower?: number; style?: StatStyle }) {
+  const plan = planFor(b, b.goal, undefined, o.style);
   return solve(pieces, { cls: "Hunter", exotic: b.exotic.name, plan, bonus: b.bonus, mw: o.mw, wornIds: o.wornIds, top: 1, minPower: o.minPower })[0];
 }
 

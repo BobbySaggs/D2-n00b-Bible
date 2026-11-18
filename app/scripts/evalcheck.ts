@@ -9,7 +9,7 @@ const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Nu
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
 const hunter = inv.characters.find(c => c.cls === "Hunter")!;
 const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
-const set = { healthFloor: 60, mw: "asIs" as const };
+const set = { healthFloor: 50, mw: "asIs" as const, style: "peaks" as const };
 const now = evaluateNow(ctx, "abilities", set)!;
 console.log("NOW", now.spec.subclass, now.spec.exotic, now.score.toFixed(1), now.stats, now.issues, now.fragmentSlots, now.spec.fragments.length);
 let t = Date.now();
