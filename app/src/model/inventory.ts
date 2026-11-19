@@ -24,7 +24,7 @@ export interface Item {
   hash: number;
   name: string;
   slot: Slot | null;
-  kind: "armor" | "weapon" | "subclass" | "other";
+  kind: "armor" | "weapon" | "subclass" | "artifact" | "other";
   cls: ClassName | "Any";
   exotic: boolean;
   owner: string; // character id or "vault"
@@ -92,7 +92,7 @@ export function buildInventory(
     const d = defOf(it.itemHash);
     if (!d || !d.name) continue;
     const slot = BUCKET[d.bucket] ?? null;
-    const kind: Item["kind"] = slot === "subclass" ? "subclass"
+    const kind: Item["kind"] = slot === "subclass" ? "subclass" : slot === "artifact" ? "artifact"
       : slot && ["helmet", "arms", "chest", "legs", "class"].includes(slot) ? "armor"
       : slot && ["kinetic", "energy", "power"].includes(slot) ? "weapon" : "other";
     if (kind === "other") continue; // engrams, consumables, mods, quests
@@ -102,7 +102,7 @@ export function buildInventory(
     for (const [idx, list] of Object.entries(reusable[id]?.plugs ?? {}))
       reu[Number(idx)] = (list as any[]).map(p => p.plugItemHash).filter(Boolean);
     const options: Record<number, number[]> = {};
-    if (kind === "subclass" || kind === "armor")
+    if (kind === "subclass" || kind === "armor" || kind === "artifact")
       d.sockets.forEach((s, idx) => { const o = unlockedPlugSet(P, s.reusable, owner === "vault" ? undefined : owner); if (o.length) options[idx] = o; });
     items.push({
       id, hash: it.itemHash, name: d.name, slot, kind,
@@ -169,11 +169,11 @@ export const plugSetHashes = (P: any, defOf: (h: number) => ItemDef | undefined)
     const d = defOf(it.itemHash);
     if (!d || !(d.bucket in BUCKET)) return;
     const slot = BUCKET[d.bucket];
-    if (slot !== "subclass" && !["helmet", "arms", "chest", "legs", "class"].includes(slot)) return;
+    if (slot !== "subclass" && slot !== "artifact" && !["helmet", "arms", "chest", "legs", "class"].includes(slot)) return;
     for (const s of d.sockets) {
       for (const h of unlockedPlugSet(P, s.reusable, cid)) out.add(h);
       // Subclass plug sets: Bungie's unlock flags are unreliable there, so load every option's name.
-      if (slot === "subclass") {
+      if (slot === "subclass" || slot === "artifact") {
         const list: any[] = (cid && P.characterPlugSets?.data?.[cid]?.plugs?.[s.reusable]) ?? P.profilePlugSets?.data?.plugs?.[s.reusable] ?? [];
         for (const p of list) if (p.plugItemHash) out.add(p.plugItemHash);
       }

@@ -5,6 +5,7 @@ import { byName, ELEMENT, HUNTER, MAX_FRAGMENTS, SUBCLASSES, WEAPON_TYPE, type K
 import { readPiece, type Piece } from "./armor";
 import { scoreLoops, statLean, type Goal, type LoopReport, type Part } from "./loops";
 import { solve, type Solution, type StatPlan } from "./solve";
+import { artifactsOf, bestArtifact, type ArtifactFit } from "./artifact";
 
 export interface Weapon {
   item: Item;
@@ -26,6 +27,7 @@ export interface Build {
   score: number;
   armor?: Solution;
   bonus: Stats;
+  artifact?: ArtifactFit;
 }
 
 type DefOf = (h: number) => ItemDef | undefined;
@@ -95,9 +97,11 @@ export const pick = (kit: Set<string>, sub: Subclass, kind: K["kind"]) =>
 const marker = (name: string): K => ({ name, kind: "weapon", makes: [], uses: [], says: "" });
 export const weaponParts = (ws: Weapon[]): Part[] => ws.flatMap(w => [...w.ks.map(k => ({ k })), { k: marker(`__el:${w.element}`) }, { k: marker(`__type:${w.type}`) }]);
 
-export type CoreLike = Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic">;
+export type CoreLike = Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic"> & { subclass?: Subclass };
+// The subclass rides along as a marker so perks like "while your Void subclass is equipped" can check it.
+export const subMarker = (sub: Subclass): Part => ({ k: { name: `__sub:${ELEMENT[sub]}`, kind: "weapon", makes: [], uses: [], says: "" } });
 export function corePartsOf(b: CoreLike): Part[] {
-  return [b.super, b.grenade, b.melee, b.classAbility, ...b.aspects, ...b.fragments, b.exotic].map(k => ({ k }));
+  return [...[b.super, b.grenade, b.melee, b.classAbility, ...b.aspects, ...b.fragments, b.exotic].map(k => ({ k })), ...(b.subclass ? [subMarker(b.subclass)] : [])];
 }
 
 function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
@@ -147,7 +151,7 @@ export interface SearchInput {
   require?: Require; // "build around": pieces the player insists on
 }
 
-export interface Require { subclass?: Subclass; super?: string; grenade?: string; melee?: string; classAbility?: string; aspects?: string[]; fragments?: string[]; exotic?: string }
+export interface Require { subclass?: Subclass; super?: string; grenade?: string; melee?: string; classAbility?: string; aspects?: string[]; fragments?: string[]; exotic?: string; artifact?: string; artifactPerks?: string[] }
 
 export function searchBuilds(o: SearchInput): Build[] {
   const kit = availableKit(o.inv, o.defOf, o.characterId);
@@ -213,6 +217,32 @@ export function searchBuilds(o: SearchInput): Build[] {
     void seen; void key;
   }
   out.sort((a, b) => b.score - a.score);
+  // Stage 3: the leading builds pick an artifact and its perks (all seven artifacts, every perk Bungie offers).
+  const arts = artifactsOf(o.inv, o.defOf, o.characterId);
+  if (arts.length) {
+    const pinned = new Set(o.pinnedWeapons ?? []);
+    for (const b of out.slice(0, 15)) {
+      // Artifact and weapons shape each other (Volatile Flow wants a Void gun), so for each artifact: fit perks,
+      // re-pick weapons with those perks in play, then fit perks again for the final weapons.
+      let best: { fit: NonNullable<ReturnType<typeof bestArtifact>>; ws: Weapon[]; score: number } | undefined;
+      for (const a of arts) {
+        if (o.require?.artifact && a.name !== o.require.artifact) continue;
+        const lock = o.require?.artifactPerks ?? [];
+        const first = bestArtifact([...corePartsOf(b), ...weaponParts(b.weapons)], o.goal, [a], undefined, lock);
+        if (!first) continue;
+        const ws = chooseWeapons([...corePartsOf(b), ...first.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned);
+        const fit = bestArtifact([...corePartsOf(b), ...weaponParts(ws)], o.goal, [a], undefined, lock)!;
+        if (!best || fit.score > best.score) best = { fit, ws, score: fit.score };
+      }
+      if (!best) continue;
+      b.artifact = best.fit;
+      b.weapons = best.ws;
+      b.loops = scoreLoops([...corePartsOf(b), ...weaponParts(best.ws), ...best.fit.perks.map(p => ({ k: p.perk }))], o.goal);
+      b.score = b.loops.score + STAT_POINT * statTotal(b.bonus);
+    }
+    out.splice(15);
+    out.sort((a, b) => b.score - a.score);
+  }
   // Keep one build per subclass + exotic so the list shows real alternatives.
   const distinct: Build[] = [];
   for (const b of out) {

@@ -14,12 +14,13 @@ export function EquipDialog({ title, steps, who, onClose, onDone }: { title: str
 
   const groups = useMemo(() => {
     const g: { name: string; idx: number[] }[] = [
-      { name: "Bring gear to your Hunter", idx: [] }, { name: "Equip", idx: [] }, { name: "Subclass", idx: [] }, { name: "Armor mods", idx: [] },
+      { name: "Bring gear to your Hunter", idx: [] }, { name: "Equip", idx: [] }, { name: "Subclass", idx: [] }, { name: "Armor mods", idx: [] }, { name: "Artifact", idx: [] },
     ];
     steps.forEach((s, i) => {
       if (s.kind === "move") g[0].idx.push(i);
       else if (s.kind === "equip") g[1].idx.push(i);
       else if ((s.kind === "plug" || s.kind === "manual") && s.group === "subclass") g[2].idx.push(i);
+      else if ((s.kind === "plug" || s.kind === "manual") && s.group === "artifact") g[4].idx.push(i);
       else g[3].idx.push(i);
     });
     return g.filter(x => x.idx.length);

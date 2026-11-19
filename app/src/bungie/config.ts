@@ -30,8 +30,9 @@ export const BUCKET: Record<number, Slot> = {
   3448274439: "helmet", 3551918588: "arms", 14239492: "chest", 20886954: "legs", 1585787867: "class",
   1498876634: "kinetic", 2465295065: "energy", 953998645: "power",
   3284755031: "subclass",
+  1506418338: "artifact",
 };
-export type Slot = "helmet" | "arms" | "chest" | "legs" | "class" | "kinetic" | "energy" | "power" | "subclass";
+export type Slot = "helmet" | "arms" | "chest" | "legs" | "class" | "kinetic" | "energy" | "power" | "subclass" | "artifact";
 export const ARMOR_SLOTS: Slot[] = ["helmet", "arms", "chest", "legs", "class"];
 export const WEAPON_SLOTS: Slot[] = ["kinetic", "energy", "power"];
 export const VAULT_BUCKET = 138197802;

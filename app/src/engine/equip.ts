@@ -2,14 +2,16 @@ import { ARMOR_SLOTS, STAT_LABEL } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Item } from "../model/inventory";
 import { fullModPlan, type BuildView, type Ctx } from "./evaluate";
+import { placePerks } from "./artifact";
 
 // The full list of what "Equip in game" will do, in the order Bungie needs it. Steps that the app can't do
 // (a plug Steeped can't identify) come back as "manual" so they're never silently skipped.
 export type EquipStep =
   | { kind: "move"; label: string; item: Item; via: "vault" | "direct" }
   | { kind: "equip"; label: string; items: Item[] }
-  | { kind: "plug"; label: string; item: Item; socket: number; hash: number; group: "subclass" | "mods" }
-  | { kind: "manual"; label: string; why: string; group: "subclass" | "mods" };
+  | { kind: "plug"; label: string; item: Item; socket: number; hash: number; group: Group }
+  | { kind: "manual"; label: string; why: string; group: Group };
+type Group = "subclass" | "mods" | "artifact";
 
 const SUB_KIND = (cat: string) =>
   /supers/.test(cat) ? "super" : /grenades/.test(cat) ? "grenade" : /melee/.test(cat) ? "melee" : /class_abilities/.test(cat) ? "classAbility"
@@ -34,7 +36,8 @@ export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
   // 1) Bring everything to this character.
   for (const it of items) if (it.owner !== cid) steps.push({ kind: "move", label: `Move ${it.name} from ${it.owner === "vault" ? "your vault" : "another character"}`, item: it, via: it.owner === "vault" ? "direct" : "vault" });
   // 2) Equip: subclass and legendaries first, exotics last (Bungie allows one exotic weapon and one exotic armor).
-  const need = [...(sub && !sub.equipped ? [sub] : []), ...items.filter(i => !(i.owner === cid && i.equipped))];
+  const art = v.artifact && v.spec.artifact ? v.artifact : undefined;
+  const need = [...(sub && !sub.equipped ? [sub] : []), ...(art && !art.equipped ? [art.item] : []), ...items.filter(i => !(i.owner === cid && i.equipped))];
   const legendary = need.filter(i => !i.exotic), exotic = need.filter(i => i.exotic);
   if (legendary.length) steps.push({ kind: "equip", label: `Equip ${legendary.map(i => i.name).join(", ")}`, items: legendary });
   if (exotic.length) steps.push({ kind: "equip", label: `Equip ${exotic.map(i => i.name).join(", ")}`, items: exotic });
@@ -84,7 +87,17 @@ export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
     }
   }
 
-  // 4) Armor mods: clear what changes, then the +10 stat mod, then the other slots.
+  // 4) Artifact perks: each perk into a socket that takes it, keeping perks that stay where they are.
+  if (art) {
+    for (const { socket, perk } of placePerks(art, v.spec.artifactPerks ?? [])) {
+      if (art.item.plugs[socket] === perk.hash) continue;
+      steps.push({ kind: "plug", group: "artifact", label: `Artifact perk: ${perk.name}`, item: art.item, socket, hash: perk.hash });
+    }
+    const placed = placePerks(art, v.spec.artifactPerks ?? []).map(p => p.perk.name);
+    for (const n of v.spec.artifactPerks ?? []) if (!placed.includes(n)) steps.push({ kind: "manual", group: "artifact", label: `Artifact perk: ${n}`, why: "No open socket takes it. Set it in game." });
+  }
+
+  // 5) Armor mods: clear what changes, then the +10 stat mod, then the other slots.
   for (const pm of fullModPlan(v, ctx)) {
     const it = pm.piece.item;
     const def = ctx.defOf(it.hash);

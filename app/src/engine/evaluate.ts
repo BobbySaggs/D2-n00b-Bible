@@ -1,10 +1,12 @@
 import { ARMOR_SLOTS, type Slot } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
-import { byName, HUNTER, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
+import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
+import type { ArtifactPerk } from "../knowledge/artifact";
+import { artifactsOf, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { artifactKit, availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
-import { ambient, scoreLoops, setAmbient, type Goal, type LoopReport } from "./loops";
+import { availableKit, corePartsOf, subMarker, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
+import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, solve, type Solution } from "./solve";
 import { ownedMods, planArmorMods, type PieceMods } from "./mods";
 
@@ -21,6 +23,8 @@ export interface BuildSpec {
   exotic: string;
   weapons: string[]; // weapon instance ids, kinetic / energy / power ("" = empty)
   armorLocks: Partial<Record<Slot, string>>; // armor the player picked; other slots are filled by the solver
+  artifact?: string; // artifact name ("" or missing = keep whatever is equipped)
+  artifactPerks?: string[];
 }
 
 export interface Settings {
@@ -40,15 +44,15 @@ export interface Ctx {
   kit: Map<Subclass, Set<string>>;
   wornIds: Set<string>;
   ownedMods: Map<number, Set<number>>;
-  artifact: ReturnType<typeof artifactKit>;
+  artifacts: ArtifactChoice[]; // all seven, with the perks each one can take
+  perks: Map<string, ArtifactPerk>;
 }
 
 export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefined, defs: ItemDef[], characterId: string): Ctx {
   const ch = inv.characters.find(c => c.id === characterId)!;
-  const artifact = artifactKit(inv, defOf, characterId);
-  setAmbient(artifact.known);
+  const artifacts = artifactsOf(inv, defOf, characterId);
   return {
-    artifact,
+    artifacts, perks: perkByName(artifacts),
     inv, defOf, defs, characterId, light: ch.light,
     pieces: inv.items.map(i => readPiece(i, defOf)).filter((p): p is Piece => !!p),
     weapons: ownedWeapons(inv, defOf, 0),
@@ -78,7 +82,8 @@ export interface BuildView {
   armor?: Solution;
   stats: Stats;
   issues: string[]; // plain-words problems to fix (missing piece, too many fragments...)
-  artifactTips: { perk: K; gain: number; swap: boolean }[]; // artifact perks that would add the most to this build
+  artifact?: ArtifactChoice;
+  artifactPerks: ArtifactPerk[];
 }
 
 const k = (n: string) => byName.get(n);
@@ -99,7 +104,9 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const weapons = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id));
   const core = { super: sup!, grenade: gr!, melee: me!, classAbility: ca!, aspects, fragments, exotic: exotic! };
   const parts = [sup, gr, me, ca, ...aspects, ...fragments, exotic].filter((x): x is K => !!x);
-  const loopParts = [...parts.map(x => ({ k: x })), ...weaponParts(weapons.filter((w): w is Weapon => !!w))];
+  const artifact = ctx.artifacts.find(a => a.name === spec.artifact) ?? ctx.artifacts.find(a => a.equipped);
+  const artifactPerks = (spec.artifactPerks ?? []).map(n => ctx.perks.get(n)).filter((x): x is ArtifactPerk => !!x);
+  const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(weapons.filter((w): w is Weapon => !!w)), ...artifactPerks.map(k => ({ k }))];
   const loops = scoreLoops(loopParts, spec.goal);
   const bonus = fragmentBonus(fragments, ctx.defs);
 
@@ -114,16 +121,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   }
   void corePartsOf;
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
-  return { artifactTips: artifactTips(loopParts, spec.goal, ctx.artifact.name), spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats), score: loops.score + statScore(stats), bonus, fragmentSlots: slots, armor, stats, issues };
-}
-
-// Artifact perks you don't have running that would add the most to this build. "swap" = it's on a different artifact.
-export function artifactTips(parts: { k: K }[], goal: Goal, current: string): BuildView["artifactTips"] {
-  const on = new Set(ambient().map(a => a.k.name));
-  const base = scoreLoops(parts, goal).score;
-  return HUNTER.filter(x => x.kind === "artifact" && !on.has(x.name))
-    .map(perk => ({ perk, gain: scoreLoops([...parts, { k: perk }], goal).score - base, swap: perk.artifact !== current }))
-    .filter(t => t.gain >= 2).sort((a, b) => b.gain - a.gain).slice(0, 3);
+  return { artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats), score: loops.score + statScore(stats), bonus, fragmentSlots: slots, armor, stats, issues };
 }
 
 // What you're wearing right now, read from your equipped subclass, exotic and weapons.
@@ -136,6 +134,7 @@ export function currentSpec(ctx: Ctx, goal: Goal): BuildSpec | null {
   const exo = worn.find(i => i.kind === "armor" && i.exotic);
   const locks: Partial<Record<Slot, string>> = {};
   for (const a of worn.filter(i => i.kind === "armor")) if (a.slot) locks[a.slot] = a.id;
+  const art = ctx.artifacts.find(a => a.equipped);
   const wslot = (s: string) => worn.find(i => i.kind === "weapon" && i.slot === s)?.id ?? "";
   return {
     goal, subclass: sub.name as Subclass,
@@ -143,6 +142,7 @@ export function currentSpec(ctx: Ctx, goal: Goal): BuildSpec | null {
     classAbility: of("classAbility")[0]?.name ?? "",
     aspects: of("aspect").map(x => x.name), fragments: of("fragment").map(x => x.name),
     exotic: exo?.name ?? "", weapons: [wslot("kinetic"), wslot("energy"), wslot("power")], armorLocks: locks,
+    artifact: art?.name ?? "", artifactPerks: art ? art.sockets.map(x => x.current?.name).filter((n): n is string => !!n) : [],
   };
 }
 
@@ -188,7 +188,24 @@ export function tuneCurrent(ctx: Ctx, goal: Goal): BuildSpec | null {
     if (best === frags) break;
     frags = best;
   }
-  return { ...base, fragments: frags };
+  // Same artifact you have on, perks re-picked for this build.
+  const art = ctx.artifacts.find(a => a.name === spec.artifact);
+  let artifactPerks = spec.artifactPerks;
+  if (art) {
+    const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, ...frags, spec.exotic].map(k).filter((x): x is K => !!x).map(x => ({ k: x }));
+    const ws = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id)).filter((w): w is Weapon => !!w);
+    artifactPerks = fitArtifact([...parts, subMarker(sub), ...weaponParts(ws)], goal, art).perks.map(p => p.perk.name);
+  }
+  return { ...base, fragments: frags, artifactPerks };
+}
+
+// Switch a build to another artifact (or re-pick perks on the same one), choosing its best perks for this build.
+export function refitArtifact(spec: BuildSpec, ctx: Ctx, name: string): Partial<BuildSpec> {
+  const art = ctx.artifacts.find(a => a.name === name);
+  if (!art) return { artifact: name, artifactPerks: [] };
+  const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, ...spec.fragments, spec.exotic].map(k).filter((x): x is K => !!x).map(x => ({ k: x }));
+  const ws = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id)).filter((w): w is Weapon => !!w);
+  return { artifact: name, artifactPerks: fitArtifact([...parts, subMarker(spec.subclass), ...weaponParts(ws)], spec.goal, art).perks.map(p => p.perk.name) };
 }
 
 export function specFromBuild(b: Build): BuildSpec {
@@ -196,6 +213,7 @@ export function specFromBuild(b: Build): BuildSpec {
     goal: b.goal, subclass: b.subclass, super: b.super.name, grenade: b.grenade.name, melee: b.melee.name,
     classAbility: b.classAbility.name, aspects: b.aspects.map(a => a.name), fragments: b.fragments.map(f => f.name),
     exotic: b.exotic.name, weapons: ["kinetic", "energy", "power"].map(s => b.weapons.find(w => w.item.slot === s)?.item.id ?? ""), armorLocks: {},
+    artifact: b.artifact?.artifact.name ?? "", artifactPerks: b.artifact?.perks.map(p => p.perk.name) ?? [],
   };
 }
 
@@ -265,6 +283,10 @@ export function stepsFrom(now: BuildView, v: BuildView, ctx: Ctx): Step[] {
     const p = v.armor?.pieces[s], q = now.armor?.pieces[s];
     if (p && p.item.id !== q?.item.id) steps.push({ what: `${s === "class" ? "Class item" : s[0].toUpperCase() + s.slice(1)}: equip ${p.item.name}`, detail: `Tier ${p.tier} ${p.archetype}, ${where(p.item, ctx.characterId)}` });
   }
+  if (b.artifact && b.artifact !== a.artifact) steps.push({ what: `Artifact: switch to ${b.artifact}`, detail: "Character screen, artifact slot" });
+  const pOut = b.artifact === a.artifact ? (a.artifactPerks ?? []).filter(x => !(b.artifactPerks ?? []).includes(x)) : [];
+  const pIn = b.artifact === a.artifact ? (b.artifactPerks ?? []).filter(x => !(a.artifactPerks ?? []).includes(x)) : (b.artifactPerks ?? []);
+  if (pIn.length) steps.push({ what: `Artifact perks: ${[...pOut.map(x => `remove ${x}`), ...pIn.map(x => `add ${x}`)].join(", ")}` });
   const plan = modPlan(v);
   for (const s of ARMOR_SLOTS) {
     const m = plan[s], p = v.armor?.pieces[s];

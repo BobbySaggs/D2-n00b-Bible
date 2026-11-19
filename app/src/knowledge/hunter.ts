@@ -252,8 +252,8 @@ export const HUNTER: K[] = [
 
   // ---------- Artifact perks (Monument of Triumph: seven artifacts, perks saved with loadouts) ----------
   { name: "Volatile Flow", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["volatile:2", "multikill"], uses: ["orbPickup"], needs: ["__el:Void"], role: ["adClear"], says: "Picking up an orb loads Volatile Rounds into your Void weapons." },
-  { name: "Void Weapon Channeling", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["dmg:2"], uses: ["gEn|mEn"], needs: ["__el:Void"], says: "Void weapon kills with a fully charged Void ability boost your weapon damage." },
-  { name: "Unto the Breach", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["breach"], uses: ["weaken|volatile|suppress"], says: "Killing a Void-debuffed enemy leaves a Void Breach." },
+  { name: "Void Weapon Channeling", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["dmg:2"], uses: [], needs: ["__el:Void+__sub:Void", "__el:Void+__sub:Prismatic"], says: "Void weapon kills while a Void ability is fully charged boost your Void weapon damage. Needs Void abilities, so a Void or Prismatic subclass." },
+  { name: "Unto the Breach", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["breach"], uses: ["weaken|volatile|suppress"], needs: ["__sub:Void", "__sub:Prismatic"], says: "Killing a Void-debuffed enemy leaves a Void Breach, only while your Void or Prismatic subclass is equipped." },
   { name: "Protective Breach", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["overshield:2"], uses: ["breach"], role: ["survival"], says: "Walking over a Void Breach gives you an overshield." },
   { name: "Supernova", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["dmg"], uses: ["breach"], says: "Picking up a Void Breach empowers your next Void attack." },
   { name: "Bricks from Beyond", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["ammo", "bossDmg"], uses: [], needs: ["__el:Void"], role: ["bossDps", "team"], says: "Killing elites with Void weapons makes Heavy ammo for the team." },

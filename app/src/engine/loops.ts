@@ -42,6 +42,10 @@ export interface LoopReport {
   unfed: { name: string; token: string }[];
 }
 
+// "__el:Void" -> "a Void weapon", "__sub:Void" -> "a Void subclass", "__type:Auto Rifle" -> "an Auto Rifle".
+const needWords = (n: string) => n.startsWith("__el:") ? `a ${n.slice(5)} weapon` : n.startsWith("__sub:") ? `a ${n.slice(6)} subclass`
+  : n.startsWith("__type:") ? `${/^[AEIOU]/.test(n.slice(7)) ? "an" : "a"} ${n.slice(7)}` : n;
+
 // Pieces every build carries without picking them: today that is your equipped artifact's perks.
 let AMBIENT: Part[] = [];
 export function setAmbient(ks: K[]) { AMBIENT = ks.map(k => ({ k, why: "artifact" })); }
@@ -51,7 +55,8 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   const parts = [...given, ...AMBIENT.filter(a => !given.some(g => g.k.name === a.k.name))];
   const names = new Set(parts.map(p => p.k.name));
   // A piece whose hard requirement is missing (Orpheus Rig without Deadfall) does nothing at all.
-  const dead = new Set(parts.filter(p => p.k.needs && !p.k.needs.some(n => names.has(n))).map(p => p.k.name));
+  // "a+b" in needs means both; the list itself is any-of.
+  const dead = new Set(parts.filter(p => p.k.needs && !p.k.needs.some(n => n.split("+").every(x => names.has(x)))).map(p => p.k.name));
   const live = parts.filter(p => !dead.has(p.k.name));
 
   const buildMade = (factor: (p: Part) => number) => {
@@ -127,8 +132,8 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   // Artifact perks are always on, so an idle one costs nothing; it just shows as a missed chance.
   score -= 1.2 * unfed.filter(u => !isArtifact(u.name)).length;
   for (const d of dead) {
-    const need = (parts.find(p => p.k.name === d)!.k.needs ?? []).map(n => n.replace("__el:", "a ").replace("__type:", "a ") + (n.startsWith("__el:") ? " weapon" : "")).join(" or ");
-    unfed.push({ name: d, token: `needs ${need}` });
+    const need = (parts.find(p => p.k.name === d)!.k.needs ?? []).map(n => n.split("+").map(needWords).join(" with ")).join(" or ");
+    unfed.push({ name: d, token: need });
     if (!isArtifact(d)) score -= 8;
   }
 

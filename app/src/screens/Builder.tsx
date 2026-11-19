@@ -3,7 +3,7 @@ import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
-import { breakdown, currentSlotMods, evaluate, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { breakdown, currentSlotMods, evaluate, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import type { Require } from "../engine/builds";
 import { equipPlan } from "../engine/equip";
 import { EquipDialog } from "./EquipDialog";
@@ -146,7 +146,7 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
           <Card key={c} className="space-y-3">
             <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}</h3>
             {now && <DoThis steps={[...stepsFrom(now, views[c]!, ctx), ...modSteps(views[c]!, ctx)]} />}
-            <HowToPlay v={views[c]!} ctx={ctx} />
+            <HowToPlay v={views[c]!} />
             <h4 className="font-display text-base">How it works</h4>
             <HowItWorks v={views[c]!} />
             <Stronger v={views[c]!} full={full[c]} ctx={ctx} />
@@ -445,6 +445,30 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
           {weaponRow("energy", 1)}
           {weaponRow("power", 2)}
 
+          <Section title="Artifact" />
+          <Row label="Artifact" now={now?.artifact ? <ArtName a={now.artifact} /> : <span className="text-ink-dim">None</span>}
+            same={cols.map(c => views[c]?.artifact?.name === now?.artifact?.name)}
+            cells={cols.map(c => {
+              const v = views[c]; if (!v) return null;
+              return (
+                <Pick aria-label={`Artifact for build ${c ? "B" : "A"}`} changed={v.artifact?.name !== now?.artifact?.name} value={v.artifact?.name ?? ""}
+                  onChange={e => edit(c, refitArtifact(v.spec, ctx, e.target.value))}>
+                  {ctx.artifacts.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+                </Pick>
+              );
+            })} />
+          <Row label="Perks" now={now ? <PerkList v={now} /> : null}
+            same={cols.map(c => [...(views[c]?.spec.artifactPerks ?? [])].sort().join() === [...(now?.spec.artifactPerks ?? [])].sort().join())}
+            cells={cols.map(c => {
+              const v = views[c]; if (!v) return null;
+              return (
+                <div className="space-y-1.5">
+                  <PerkList v={v} was={now?.spec.artifactPerks} />
+                  {v.artifact && <Button size="sm" variant="quiet" onClick={() => edit(c, refitArtifact(v.spec, ctx, v.artifact!.name))}>Re-pick perks for this build</Button>}
+                </div>
+              );
+            })} />
+
           <Section title="Armor" />
           {ARMOR_SLOTS.map(armorRow)}
         </tbody>
@@ -514,13 +538,35 @@ function FragPicker({ v, slots, options, onChange }: { v: BuildView; slots: numb
   );
 }
 
+const ArtName = ({ a }: { a: { name: string; item: { hash: number } } }) => (
+  <span className="inline-flex items-center gap-2"><GearIcon src={DEFS.get(a.item.hash)?.icon ?? ""} size={24} title={a.name} />{a.name}</span>
+);
+
+// An artifact's perks: idle ones (nothing in the build sets them off) are flagged, and new ones are marked.
+function PerkList({ v, was }: { v: BuildView; was?: string[] }) {
+  if (!v.artifactPerks.length) return <span className="text-ink-dim">No perks picked</span>;
+  const idle = new Map(v.loops.unfed.map(u => [u.name, u.token]));
+  return (
+    <ul className="space-y-1 text-xs">
+      {v.artifactPerks.map(p => (
+        <li key={p.name} title={p.says} className={cn(idle.has(p.name) && "text-warn")}>
+          <span className="inline-flex items-center gap-1.5"><GearIcon src={DEFS.get(p.hash)?.icon ?? ""} size={18} title={p.name} />{p.name}</span>
+          {was && !was.includes(p.name) && <span className="ml-1 text-accent-hi">new</span>}
+          {idle.has(p.name) && <span className="text-warn"> · idle, needs {word(idle.get(p.name)!)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function BuildAround({ ctx, req, setReq, busy, onApply }: { ctx: Ctx; req: Require; setReq: (r: Require) => void; busy: boolean; onApply: (r: Require) => void }) {
   const [open, setOpen] = useState(false);
   const subs = SUBCLASSES.filter(s => ctx.kit.has(s));
   const inKit = (k: K) => (req.subclass ? [req.subclass] : subs).some(s => k.subs?.includes(s) && ctx.kit.get(s)?.has(k.name));
   const opts = (kind: K["kind"]) => [...new Map(HUNTER.filter(k => k.kind === kind && inKit(k)).map(k => [k.name, k])).values()];
   const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
-  const picked = [req.subclass, req.super, req.grenade, req.melee, req.classAbility, ...(req.aspects ?? []), ...(req.fragments ?? []), req.exotic].filter(Boolean) as string[];
+  const picked = [req.subclass, req.super, req.grenade, req.melee, req.classAbility, ...(req.aspects ?? []), ...(req.fragments ?? []), req.exotic, req.artifact, ...(req.artifactPerks ?? [])].filter(Boolean) as string[];
+  const perkNames = [...new Set(ctx.artifacts.filter(a => !req.artifact || a.name === req.artifact).flatMap(a => a.sockets.flatMap(s => s.options.map(o => o.name))))].sort();
   const set = (patch: Partial<Require>) => { const r = { ...req, ...patch }; for (const k of Object.keys(r) as (keyof Require)[]) { const v = r[k]; if (!v || (Array.isArray(v) && !v.length)) delete r[k]; } setReq(r); };
   const sel = (label: string, value: string | undefined, list: string[], on: (v: string) => void) => (
     <label className="space-y-1 text-xs text-ink-dim">
@@ -555,6 +601,9 @@ function BuildAround({ ctx, req, setReq, busy, onApply }: { ctx: Ctx; req: Requi
             {sel("Aspect", asp[0], opts("aspect").map(k => k.name), v => set({ aspects: [v, asp[1]].filter(Boolean) as string[] }))}
             {sel("Second aspect", asp[1], opts("aspect").map(k => k.name).filter(n => n !== asp[0]), v => set({ aspects: [asp[0], v].filter(Boolean) as string[] }))}
             {sel("Exotic", req.exotic, exotics, v => set({ exotic: v }))}
+            {sel("Artifact", req.artifact, ctx.artifacts.map(a => a.name), v => set({ artifact: v, artifactPerks: (req.artifactPerks ?? []).filter(p => !v || ctx.artifacts.find(a => a.name === v)?.sockets.some(s => s.options.some(o => o.name === p))) }))}
+            {sel("Artifact perk", req.artifactPerks?.[0], perkNames, v => set({ artifactPerks: [v, req.artifactPerks?.[1]].filter(Boolean) as string[] }))}
+            {sel("Second perk", req.artifactPerks?.[1], perkNames.filter(n => n !== req.artifactPerks?.[0]), v => set({ artifactPerks: [req.artifactPerks?.[0], v].filter(Boolean) as string[] }))}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled={busy || !picked.length} onClick={() => { onApply(req); setOpen(false); }}>{busy ? "Finding…" : "Find the best build with these"}</Button>
@@ -579,9 +628,9 @@ function DoThis({ steps }: { steps: { what: string; detail?: string }[] }) {
 }
 
 // The playbook: what to actually do in a fight, built from the signature combos this build has.
-function HowToPlay({ v, ctx }: { v: BuildView; ctx: Ctx }) {
-  const a = ctx.artifact;
-  const idle = v.loops.unfed.filter(u => a.known.some(k => k.name === u.name));
+function HowToPlay({ v }: { v: BuildView }) {
+  const idle = v.artifactPerks.filter(p => v.loops.unfed.some(u => u.name === p.name));
+  const active = v.artifactPerks.filter(p => !idle.includes(p));
   return (
     <div className="space-y-2 rounded-md border border-line bg-panel-2/40 p-3 text-sm">
       <h4 className="font-display text-base">How to play it</h4>
@@ -590,13 +639,13 @@ function HowToPlay({ v, ctx }: { v: BuildView; ctx: Ctx }) {
           {v.loops.combos.map(c => <li key={c.name}><b>{c.name}.</b> {c.play}</li>)}
         </ol>
       ) : <p className="text-ink-dim">No signature combo in this build yet: its pieces work on their own rather than feeding each other.</p>}
-      {a.name && (
-        <div className="space-y-1 border-t border-line pt-2 text-xs text-ink-dim">
-          <p><b className="text-ink">Artifact: {a.name}.</b> Running {a.known.map(k => k.name).join(", ") || "nothing Steeped knows yet"}{a.unknown.length ? ` (also ${a.unknown.join(", ")}, not rated yet)` : ""}.</p>
-          {idle.length > 0 && <p className="text-warn">Doing nothing in this build: {idle.map(u => `${u.name} (${word(u.token)})`).join("; ")}.</p>}
-          {v.artifactTips.map(t => (
-            <p key={t.perk.name}>Worth adding: <b className="text-ink">{t.perk.name}</b>{t.swap ? ` (on ${t.perk.artifact}, so swap artifacts)` : " (fill an open slot)"}: {t.perk.says}</p>
-          ))}
+      {v.artifact && (
+        <div className="space-y-1 border-t border-line pt-2 text-xs text-ink-dim" data-testid="artifact-play">
+          <p><b className="text-ink">Artifact: {v.artifact.name}.</b></p>
+          <ul className="space-y-0.5">
+            {active.map(p => <li key={p.name}><b className="text-ink">{p.name}:</b> {p.says}</li>)}
+          </ul>
+          {idle.length > 0 && <p className="text-warn">Doing nothing in this build: {idle.map(p => p.name).join(", ")}. Swap them for perks that fit.</p>}
         </div>
       )}
     </div>
