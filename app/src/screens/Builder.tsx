@@ -701,7 +701,7 @@ export function PointsPanel({ v, base, refScore, open }: { v: BuildView; base?: 
       <summary className="cursor-pointer font-display text-base">Where the rating comes from</summary>
       <p className="mt-1 text-xs text-ink-dim">Each piece shows how many rating points this build would lose without it. Pieces that only work together (Glacier and Shatterdive) each show the whole pairing, so the numbers overlap and don't add up to the total.{was ? " The right column is the same piece in what you're wearing now." : ""}</p>
       {groups.map(g => {
-        const list = rows.filter(r => r.group === g).sort((a, b) => b.points - a.points);
+        const list = rows.filter(r => r.group === g).sort((a, b) => (g === "Stats" ? 0 : b.points - a.points)); // stats stay in the game's order
         if (!list.length) return null;
         const sum = list.reduce((t, r) => t + r.points, 0);
         return (
