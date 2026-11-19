@@ -15,13 +15,15 @@ import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
 
 const GOALS: { value: Goal; label: string }[] = [
-  { value: "abilities", label: "General PvE" },
+  { value: "whole", label: "Whole activity" },
+  { value: "abilities", label: "Ability spam" },
   { value: "bossDps", label: "Raid boss" },
   { value: "survival", label: "Hard content" },
   { value: "team", label: "Team support" },
 ];
 const SLOT_LABEL: Record<string, string> = { helmet: "Helmet", arms: "Arms", chest: "Chest", legs: "Legs", class: "Class item", kinetic: "Kinetic", energy: "Energy", power: "Heavy" };
 const WORDS: Record<string, string> = {
+  multikill: "pack kills", breach: "Void Breaches", champion: "champion stuns", ammo: "ammo",
   gEn: "grenade energy", mEn: "melee energy", cEn: "dodge energy", sEn: "super energy", orb: "Orbs of Power", orbPickup: "orbs",
   frost: "Frost Armor", shard: "Stasis shards", crystal: "Stasis crystals", shatter: "shatters", freeze: "freezes", slow: "slow",
   invis: "invisibility", weaken: "weaken", volatile: "volatile", overshield: "overshields", radiant: "radiant", scorch: "scorch",
@@ -39,7 +41,7 @@ type Col = 0 | 1;
 export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => void }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
-  const [goal, setGoal] = useState<Goal>("abilities");
+  const [goal, setGoal] = useState<Goal>("whole");
   const [settings, setSettings] = useState<Settings>({ healthFloor: 50, mw: "asIs", style: "peaks" });
   const [pinned, setPinned] = useState<string[]>([]);
   const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
@@ -144,6 +146,7 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
           <Card key={c} className="space-y-3">
             <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}</h3>
             {now && <DoThis steps={[...stepsFrom(now, views[c]!, ctx), ...modSteps(views[c]!, ctx)]} />}
+            <HowToPlay v={views[c]!} ctx={ctx} />
             <h4 className="font-display text-base">How it works</h4>
             <HowItWorks v={views[c]!} />
             <Stronger v={views[c]!} full={full[c]} ctx={ctx} />
@@ -571,6 +574,31 @@ function DoThis({ steps }: { steps: { what: string; detail?: string }[] }) {
       <ol className="list-decimal space-y-1 pl-5 text-sm">
         {steps.map((st, i) => <li key={i}>{st.what}{st.detail && <span className="text-ink-dim"> ({st.detail})</span>}</li>)}
       </ol>
+    </div>
+  );
+}
+
+// The playbook: what to actually do in a fight, built from the signature combos this build has.
+function HowToPlay({ v, ctx }: { v: BuildView; ctx: Ctx }) {
+  const a = ctx.artifact;
+  const idle = v.loops.unfed.filter(u => a.known.some(k => k.name === u.name));
+  return (
+    <div className="space-y-2 rounded-md border border-line bg-panel-2/40 p-3 text-sm">
+      <h4 className="font-display text-base">How to play it</h4>
+      {v.loops.combos.length ? (
+        <ol className="list-decimal space-y-1.5 pl-5">
+          {v.loops.combos.map(c => <li key={c.name}><b>{c.name}.</b> {c.play}</li>)}
+        </ol>
+      ) : <p className="text-ink-dim">No signature combo in this build yet: its pieces work on their own rather than feeding each other.</p>}
+      {a.name && (
+        <div className="space-y-1 border-t border-line pt-2 text-xs text-ink-dim">
+          <p><b className="text-ink">Artifact: {a.name}.</b> Running {a.known.map(k => k.name).join(", ") || "nothing Steeped knows yet"}{a.unknown.length ? ` (also ${a.unknown.join(", ")}, not rated yet)` : ""}.</p>
+          {idle.length > 0 && <p className="text-warn">Doing nothing in this build: {idle.map(u => `${u.name} (${word(u.token)})`).join("; ")}.</p>}
+          {v.artifactTips.map(t => (
+            <p key={t.perk.name}>Worth adding: <b className="text-ink">{t.perk.name}</b>{t.swap ? ` (on ${t.perk.artifact}, so swap artifacts)` : " (fill an open slot)"}: {t.perk.says}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

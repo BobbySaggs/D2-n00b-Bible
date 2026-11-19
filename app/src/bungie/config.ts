@@ -35,6 +35,7 @@ export type Slot = "helmet" | "arms" | "chest" | "legs" | "class" | "kinetic" | 
 export const ARMOR_SLOTS: Slot[] = ["helmet", "arms", "chest", "legs", "class"];
 export const WEAPON_SLOTS: Slot[] = ["kinetic", "energy", "power"];
 export const VAULT_BUCKET = 138197802;
+export const ARTIFACT_BUCKET = 1506418338;
 
 export const DAMAGE: Record<number, string> = {
   3373582085: "Kinetic", 2303181850: "Arc", 1847026933: "Solar", 3454344768: "Void", 151347233: "Stasis", 3949783978: "Strand",

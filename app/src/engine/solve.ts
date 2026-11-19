@@ -38,7 +38,8 @@ export const FLOOR_PENALTY = 6;
 
 export function statValue(v: number, w: StatWant): number {
   const c = Math.min(v, 200);
-  let t = w.low * Math.min(c, 100) + w.high * Math.max(0, c - 100) - FLOOR_PENALTY * Math.max(0, w.floor - v);
+  // Monument of Triumph: cooldowns are nearly maxed at 70 (2.56x vs 2.75x at 100), so 70 to 100 is worth about half.
+  let t = w.low * Math.min(c, 70) + 0.5 * w.low * Math.min(30, Math.max(0, c - 70)) + w.high * Math.max(0, c - 100) - FLOOR_PENALTY * Math.max(0, w.floor - v);
   if (w.peak) t += w.peak * (Math.min(30, Math.max(0, c - 70)) + (c >= 100 ? 12 : 0));
   return t;
 }

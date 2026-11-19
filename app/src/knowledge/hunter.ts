@@ -13,11 +13,13 @@ import type { StatKey } from "../bungie/config";
 //   Solar:   scorch ignite radiant restoration cure firesprite
 //   Arc:     jolt amplified blind bolt ionic
 //   Strand:  sever unravel tangle suspend woven threadling
-//   other:   orb heal dr reload ammo dmg bossDmg transcend teamBuff
+//   other:   orb heal dr reload ammo dmg bossDmg transcend teamBuff breach champion
+// Kill power vs control: freeze, slow and crystals only hold enemies. Kills come from tokens that actually
+// delete packs: multikill (chain explosions, shatters that wipe a group), kWeapon, kGrenade, kAbility.
 // "token:2" means a strong effect. In uses, "a|b|c" means any one of them is enough. Debuffs (slow, freeze, weaken, scorch, jolt, sever...) automatically
 // count as kDebuffed when the build also kills things.
 
-export type Kind = "super" | "grenade" | "melee" | "classAbility" | "aspect" | "fragment" | "exotic" | "weapon";
+export type Kind = "super" | "grenade" | "melee" | "classAbility" | "aspect" | "fragment" | "exotic" | "weapon" | "artifact";
 export type Subclass = "Revenant" | "Nightstalker" | "Gunslinger" | "Arcstrider" | "Threadrunner" | "Prismatic Hunter";
 export const SUBCLASSES: Subclass[] = ["Prismatic Hunter", "Revenant", "Nightstalker", "Gunslinger", "Arcstrider", "Threadrunner"];
 export const ELEMENT: Record<Subclass, string> = {
@@ -35,6 +37,7 @@ export interface K {
   needs?: string[]; // hard requirement: one of these must be in the build or this piece does nothing
   role?: string[]; // bossDps, adClear, survival, team, champion
   says: string; // what it does for you, in plain words
+  artifact?: string; // artifact perks: which artifact has it
 }
 
 const S = (subs: Subclass[]) => subs;
@@ -57,9 +60,9 @@ export const HUNTER: K[] = [
 
   // ---------- Grenades ----------
   { name: "Duskfield Grenade", kind: "grenade", subs: [...STASIS, P], makes: ["slow:2", "freeze", "dr"], uses: ["gEn"], wants: { grenade: 1 }, role: ["survival"], says: "A slowing field that freezes anything that stays in it." },
-  { name: "Glacier Grenade", kind: "grenade", subs: STASIS, makes: ["crystal:2", "freeze"], uses: ["gEn"], wants: { grenade: 1 }, says: "A wall of Stasis crystals you can shatter." },
+  { name: "Glacier Grenade", kind: "grenade", subs: STASIS, makes: ["crystal:2", "freeze"], uses: ["gEn"], wants: { grenade: 1 }, says: "A wall of Stasis crystals that freezes what it lands on. On its own it only holds enemies; shattering the wall is what kills them." },
   { name: "Coldsnap Grenade", kind: "grenade", subs: STASIS, makes: ["freeze:2", "kGrenade"], uses: ["gEn"], wants: { grenade: 1 }, says: "Seekers that freeze enemies down a line." },
-  { name: "Shatter Grenade", kind: "grenade", subs: STASIS, makes: ["shatter", "kGrenade"], uses: ["gEn", "freeze"], wants: { grenade: 1 }, says: "Sticky shrapnel that instantly shatters frozen enemies." },
+  { name: "Shatter Grenade", kind: "grenade", subs: STASIS, makes: ["shatter", "kGrenade", "multikill", "champion"], uses: ["gEn", "freeze"], wants: { grenade: 1 }, role: ["adClear", "champion"], says: "Sticky grenade that bursts into ricocheting shrapnel; frozen enemies shatter instantly. Stuns Unstoppable Champions." },
   { name: "Vortex Grenade", kind: "grenade", subs: VOID, makes: ["kGrenade", "weaken"], uses: ["gEn"], wants: { grenade: 1 }, says: "A pulling vortex of damage." },
   { name: "Scatter Grenade", kind: "grenade", subs: VOID, makes: ["kGrenade"], uses: ["gEn"], wants: { grenade: 1 }, says: "Lots of small explosions." },
   { name: "Axion Bolt", kind: "grenade", subs: VOID, makes: ["kGrenade"], uses: ["gEn"], wants: { grenade: 1 }, says: "Seeking Void bolts." },
@@ -88,10 +91,10 @@ export const HUNTER: K[] = [
   { name: "Acrobat's Dodge", kind: "classAbility", subs: [...SOLAR, P], makes: ["dodge", "radiant", "teamBuff"], uses: ["cEn"], wants: { class: 1 }, role: ["team", "bossDps"], says: "A dodge that makes you and nearby allies radiant (more weapon damage)." },
 
   // ---------- Aspects ----------
-  { name: "Winter's Shroud", kind: "aspect", subs: [...STASIS, P], slots: 2, makes: ["slow", "cEn"], uses: ["dodge"], wants: { class: 1 }, says: "Dodging slows enemies around you, and slowing refunds your dodge." },
-  { name: "Shatterdive", kind: "aspect", subs: STASIS, slots: 3, makes: ["shatter:2", "frost"], uses: ["airborne", "freeze|crystal"], says: "Slam down from the air to shatter frozen enemies and crystals, gaining Frost Armor." },
-  { name: "Grim Harvest", kind: "aspect", subs: STASIS, slots: 3, makes: ["frost:2", "shatter", "cEn"], uses: ["shard"], role: ["survival"], says: "Picking up shards gives Frost Armor; with it, your Stasis and Kinetic kills shatter enemies." },
-  { name: "Touch of Winter", kind: "aspect", subs: STASIS, slots: 2, makes: ["crystal:2"], uses: ["gEn"], wants: { grenade: 0.5 }, needs: ["Glacier Grenade", "Duskfield Grenade", "Coldsnap Grenade", "Shatter Grenade"], says: "Upgrades your Stasis grenade, adding Stasis crystals to it." },
+  { name: "Winter's Shroud", kind: "aspect", subs: [...STASIS, P], slots: 3, makes: ["slow", "cEn"], uses: ["dodge"], wants: { class: 1 }, says: "Dodging slows enemies around you, and slowing refunds your dodge." },
+  { name: "Shatterdive", kind: "aspect", subs: STASIS, slots: 3, makes: ["shatter:2", "multikill", "frost"], uses: ["airborne", "freeze|crystal"], says: "Slam down from the air to shatter frozen enemies and crystals, gaining Frost Armor." },
+  { name: "Grim Harvest", kind: "aspect", subs: STASIS, slots: 2, makes: ["frost:2", "shatter", "multikill", "cEn"], uses: ["shard"], role: ["survival", "adClear"], says: "Picking up shards gives Frost Armor; with it, your Stasis and Kinetic kills shatter enemies, and taking damage refills your dodge." },
+  { name: "Touch of Winter", kind: "aspect", subs: STASIS, slots: 2, makes: ["crystal:2", "gEn"], uses: ["gEn"], wants: { grenade: 0.5 }, needs: ["Glacier Grenade", "Duskfield Grenade", "Coldsnap Grenade", "Shatter Grenade"], says: "Upgrades every Stasis grenade: Glacier gets an extra crystal, Duskfield a bigger field, Coldsnap seekers split, Shatter gets more shrapnel and refunds grenade energy on frozen targets." },
   { name: "Vanishing Step", kind: "aspect", subs: VOID, slots: 2, makes: ["invis:2"], uses: ["dodge"], wants: { class: 0.7 }, role: ["survival"], says: "Dodging turns you invisible." },
   { name: "Stylish Executioner", kind: "aspect", subs: [...VOID, P], slots: 2, makes: ["invis", "weaken"], uses: ["kDebuffed"], role: ["survival"], says: "Killing any debuffed enemy turns you invisible, and your next melee weakens." },
   { name: "Trapper's Ambush", kind: "aspect", subs: VOID, slots: 2, makes: ["weaken", "invis"], uses: ["airborne"], says: "Diving from the air leaves a weakening smoke trap." },
@@ -117,10 +120,10 @@ export const HUNTER: K[] = [
   { name: "Whisper of Torment", kind: "fragment", subs: STASIS, makes: ["gEn"], uses: ["frost"], role: ["survival"], says: "Taking damage refills your grenade (more with Frost Armor). Costs 10 Grenade." },
   { name: "Whisper of Fractures", kind: "fragment", subs: STASIS, makes: ["frost"], uses: ["freeze", "mEn"], says: "Shattering a frozen enemy with a melee gives Frost Armor." },
   { name: "Whisper of Impetus", kind: "fragment", subs: STASIS, makes: ["reload"], uses: ["mEn"], says: "Stasis melee hits reload your weapons." },
-  { name: "Whisper of Conduction", kind: "fragment", subs: STASIS, makes: ["shard"], uses: ["shard"], says: "Stasis shards fly to you." },
+  { name: "Whisper of Conduction", kind: "fragment", subs: STASIS, makes: ["shard"], uses: ["shard"], says: "Stasis shards fly to you. Shards are built into Stasis now, so this always has something to pull." },
   { name: "Whisper of Rending", kind: "fragment", subs: STASIS, makes: ["shatter"], uses: ["crystal|freeze"], says: "Primary weapons break crystals and frozen enemies faster." },
   { name: "Whisper of Hunger", kind: "fragment", subs: STASIS, makes: ["mEn"], uses: ["shard"], says: "Shards refill more melee. Costs 20 Melee." },
-  { name: "Whisper of Rime", kind: "fragment", subs: STASIS, makes: ["frost"], uses: ["frost"], role: ["survival"], says: "Frost Armor lasts longer and stacks higher." },
+  { name: "Whisper of Rime", kind: "fragment", subs: STASIS, makes: ["frost"], uses: ["frost"], role: ["survival"], says: "Frost Armor stacks last longer (6 seconds instead of 5)." },
 
   // ---------- Fragments: Solar ----------
   { name: "Ember of Singeing", kind: "fragment", subs: SOLAR, makes: ["cEn"], uses: ["scorch"], says: "Scorching enemies refunds your dodge." },
@@ -183,7 +186,7 @@ export const HUNTER: K[] = [
   { name: "Caliban's Hand", kind: "exotic", makes: ["ignite:2", "scorch", "mEn:2"], uses: ["mEn"], wants: { melee: 1 }, role: ["adClear"], needs: ["Proximity Explosive Knife"], says: "Proximity Knives ignite, and ignition kills refund the knife." },
   { name: "Wormhusk Crown", kind: "exotic", makes: ["cure", "heal"], uses: ["dodge"], role: ["survival"], says: "Dodging heals you." },
   { name: "Relativism", kind: "exotic", makes: ["invis", "kMelee"], uses: ["mEn"], says: "Class item with two spirit perks; the Assassin spirit makes melee kills and finishers turn you invisible." },
-  { name: "Fr0st-EE5", kind: "exotic", makes: ["gEn", "mEn", "cEn", "frost", "dmg"], uses: ["sprint"], role: ["survival"], says: "Sprinting recharges every ability and builds Frost Armor; Frost Armor boosts Stasis weapons." },
+  { name: "Fr0st-EE5", kind: "exotic", makes: ["gEn", "mEn", "cEn", "frost", "dmg:2"], uses: ["sprint"], role: ["survival"], says: "Sprinting recharges every ability and builds Frost Armor; Frost Armor boosts Stasis weapons." },
   { name: "Renewal Grasps", kind: "exotic", makes: ["frost", "dr:2", "teamBuff"], uses: ["gEn"], role: ["survival", "team"], needs: ["Duskfield Grenade"], says: "Huge Duskfields that give allies Frost Armor and weaken enemy damage." },
   { name: "The Sixth Coyote", kind: "exotic", makes: ["orb", "dodge"], uses: ["dodge"], wants: { class: 0.5 }, says: "Two dodges, and a kill after dodging makes an orb." },
   { name: "The Dragon's Shadow", kind: "exotic", makes: ["reload", "cEn"], uses: ["dodge"], says: "Dodging reloads and speeds you up." },
@@ -197,12 +200,12 @@ export const HUNTER: K[] = [
   { name: "Ophidia Spathe", kind: "exotic", makes: ["kMelee", "dmg"], uses: ["mEn"], wants: { melee: 1 }, needs: ["Knife Trick", "Proximity Explosive Knife"], says: "Two throwing knives per charge." },
   { name: "The Bombardiers", kind: "exotic", makes: ["slow", "scorch", "suppress", "sever", "blind"], uses: ["dodge"], says: "Dodging leaves a bomb that matches your super's element." },
   { name: "Foetracer", kind: "exotic", makes: ["dmg"], uses: ["kAbility"], says: "Ability hits on big enemies boost matching weapon damage." },
-  { name: "Lucky Pants", kind: "exotic", makes: ["dmg"], uses: [], needs: ["__handcannon"], says: "Hand cannon damage boost." },
-  { name: "Oathkeeper", kind: "exotic", makes: ["dmg"], uses: [], needs: ["__bow"], says: "Hold bow draws forever." },
+  { name: "Lucky Pants", kind: "exotic", makes: ["dmg"], uses: [], needs: ["__type:Hand Cannon"], says: "Hand cannon damage boost." },
+  { name: "Oathkeeper", kind: "exotic", makes: ["dmg"], uses: [], needs: ["__type:Combat Bow"], says: "Hold bow draws forever." },
   { name: "Knucklehead Radar", kind: "exotic", makes: [], uses: [], says: "Radar while aiming." },
   { name: "St0mp-EE5", kind: "exotic", makes: ["dr"], uses: [], says: "Better jumps and slides." },
   { name: "Gemini Jester", kind: "exotic", makes: [], uses: ["dodge"], says: "Dodging disorients (mostly PvP)." },
-  { name: "Mechaneer's Tricksleeves", kind: "exotic", makes: ["dmg"], uses: [], needs: ["__sidearm"], says: "Sidearm boost at low health." },
+  { name: "Mechaneer's Tricksleeves", kind: "exotic", makes: ["dmg"], uses: [], needs: ["__type:Sidearm"], says: "Sidearm boost at low health." },
   { name: "Young Ahamkara's Spine", kind: "exotic", makes: ["gEn"], uses: ["kAbility"], needs: ["Tripmine Grenade"], says: "Tripmine grenades (Gunslinger)." },
   { name: "Shinobu's Vow", kind: "exotic", makes: ["gEn", "bolt", "heal"], uses: ["gEn"], needs: ["Skip Grenade"], says: "Extra Skip Grenade charge (Arcstrider)." },
   { name: "Sealed Ahamkara Grasps", kind: "exotic", makes: ["reload", "dmg"], uses: ["kMelee", "finisher"], says: "Melee kills reload your weapons and boost freshly drawn ones." },
@@ -224,10 +227,10 @@ export const HUNTER: K[] = [
   { name: "Delicate Tomb", kind: "weapon", makes: ["ionic", "jolt"], uses: [], says: "Arc fusion that jolts." },
   { name: "Headstone", kind: "weapon", makes: ["crystal:2"], uses: ["kPrecision"], says: "Precision kills make Stasis crystals." },
   { name: "Rimestealer", kind: "weapon", makes: ["frost:2"], uses: ["crystal|freeze"], role: ["survival"], says: "Breaking crystals or frozen enemies gives Frost Armor." },
-  { name: "Destabilizing Rounds", kind: "weapon", makes: ["volatile:2"], uses: ["kWeapon"], says: "Kills spread volatile." },
+  { name: "Destabilizing Rounds", kind: "weapon", makes: ["volatile:2", "multikill"], uses: ["kWeapon"], role: ["adClear"], says: "Kills make nearby enemies volatile, so packs blow each other up." },
   { name: "Repulsor Brace", kind: "weapon", makes: ["overshield:2"], uses: ["weaken|volatile|suppress"], role: ["survival"], says: "Killing Void-debuffed enemies gives an overshield." },
-  { name: "Incandescent", kind: "weapon", makes: ["scorch:2"], uses: ["kWeapon"], says: "Kills spread scorch." },
-  { name: "Voltshot", kind: "weapon", makes: ["jolt:2"], uses: ["reload"], says: "Reloading after a kill jolts." },
+  { name: "Incandescent", kind: "weapon", makes: ["scorch:2", "ignite", "multikill"], uses: ["kWeapon"], role: ["adClear"], says: "Kills spread scorch, which ignites packs." },
+  { name: "Voltshot", kind: "weapon", makes: ["jolt:2", "multikill"], uses: ["reload"], role: ["adClear"], says: "Reloading after a kill jolts, and jolt chains through packs." },
   { name: "Hatchling", kind: "weapon", makes: ["threadling:2"], uses: ["kPrecision"], says: "Precision kills make Threadlings." },
   { name: "Slice", kind: "weapon", makes: ["sever:2"], uses: ["cEn"], says: "After your dodge, this weapon severs." },
   { name: "Demolitionist", kind: "weapon", makes: ["gEn:2", "reload"], uses: ["gEn"], wants: { grenade: 0.3 }, says: "Kills refill your grenade, and throwing a grenade reloads." },
@@ -235,14 +238,52 @@ export const HUNTER: K[] = [
   { name: "Explosive Light", kind: "weapon", makes: ["bossDmg:2"], uses: ["orbPickup"], role: ["bossDps"], says: "Orbs supercharge your next rocket." },
   { name: "Envious Arsenal", kind: "weapon", makes: ["bossDmg"], uses: [], role: ["bossDps"], says: "Refills the launcher from reserves." },
   { name: "Bait and Switch", kind: "weapon", makes: ["bossDmg"], uses: [], role: ["bossDps"], says: "Damage boost after hitting with all three weapons." },
-  { name: "Firefly", kind: "weapon", makes: ["kPrecision"], uses: [], says: "Precision kills explode." },
   { name: "Golden Tricorn Enhanced", kind: "weapon", makes: ["dmg"], uses: ["kGrenade", "kMelee"], says: "Kills plus a matching ability kill boost damage." },
   { name: "Rolling Storm", kind: "weapon", makes: ["bolt"], uses: [], says: "Kills give Bolt Charge." },
   { name: "Cold Steel", kind: "weapon", makes: ["slow"], uses: [], says: "Sword hits slow." },
   { name: "Reconstruction", kind: "weapon", makes: ["bossDmg:2", "reload"], uses: [], role: ["bossDps"], says: "Reloads itself over time, up to double capacity: big boss damage on a rocket." },
   { name: "Killing Tally", kind: "weapon", makes: ["dmg"], uses: ["kWeapon"], says: "Kills stack damage until you reload." },
   { name: "Cynosure", kind: "weapon", makes: [], uses: [], role: ["bossDps"], says: "Strand rocket launcher." },
-  { name: "Chain Reaction", kind: "weapon", makes: ["kWeapon"], uses: [], says: "Kills explode." },
+  { name: "Chain Reaction", kind: "weapon", makes: ["kWeapon", "multikill"], uses: [], role: ["adClear"], says: "Kills explode." },
+  { name: "Gnawing Hunger", kind: "weapon", makes: ["kWeapon"], uses: [], role: ["adClear", "bossDps"], says: "Void auto rifle. With volatile rounds every kill chains explosions through the pack." },
+  { name: "Subsistence", kind: "weapon", makes: ["reload"], uses: ["kWeapon"], says: "Kills refill the magazine, so you rarely stop shooting." },
+  { name: "Kill Clip", kind: "weapon", makes: ["dmg:2"], uses: ["kWeapon", "reload"], says: "Reloading after a kill gives a big damage boost." },
+  { name: "Firefly", kind: "weapon", makes: ["kPrecision", "multikill"], uses: [], role: ["adClear"], says: "Precision kills explode." },
+
+  // ---------- Artifact perks (Monument of Triumph: seven artifacts, perks saved with loadouts) ----------
+  { name: "Volatile Flow", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["volatile:2", "multikill"], uses: ["orbPickup"], needs: ["__el:Void"], role: ["adClear"], says: "Picking up an orb loads Volatile Rounds into your Void weapons." },
+  { name: "Void Weapon Channeling", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["dmg:2"], uses: ["gEn|mEn"], needs: ["__el:Void"], says: "Void weapon kills with a fully charged Void ability boost your weapon damage." },
+  { name: "Unto the Breach", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["breach"], uses: ["weaken|volatile|suppress"], says: "Killing a Void-debuffed enemy leaves a Void Breach." },
+  { name: "Protective Breach", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["overshield:2"], uses: ["breach"], role: ["survival"], says: "Walking over a Void Breach gives you an overshield." },
+  { name: "Supernova", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["dmg"], uses: ["breach"], says: "Picking up a Void Breach empowers your next Void attack." },
+  { name: "Bricks from Beyond", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["ammo", "bossDmg"], uses: [], needs: ["__el:Void"], role: ["bossDps", "team"], says: "Killing elites with Void weapons makes Heavy ammo for the team." },
+  { name: "Shatter Orbs", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["orb"], uses: [], says: "Breaking a shield with a matching element drops an Orb of Power." },
+  { name: "Targeting Autoloader", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["reload", "dmg"], uses: [], needs: ["__type:Auto Rifle"], says: "Auto rifle kills reload the magazine and boost damage." },
+  { name: "Sustained Fire", kind: "artifact", artifact: "NPA Repulsion Regulator", makes: ["dr"], uses: [], needs: ["__type:Auto Rifle"], role: ["survival"], says: "Holding the trigger on an auto rifle gives damage resistance." },
+  { name: "Hail the Storm", kind: "artifact", artifact: "Slayer Baron Apothecary Satchel", makes: ["multikill:2"], uses: ["shatter"], role: ["adClear"], says: "Shattering Stasis crystals sends out explosive ice shrapnel." },
+  { name: "Wind Chill", kind: "artifact", artifact: "Slayer Baron Apothecary Satchel", makes: ["frost", "shard"], uses: ["freeze|slow"], says: "Fast Stasis hits build Frost Armor; hitting frozen targets drops shards." },
+  { name: "Crystalline Converter", kind: "artifact", artifact: "Slayer Baron Apothecary Satchel", makes: ["crystal"], uses: ["shard"], says: "Collected shards turn your next powered melee into explosive crystals." },
+  { name: "Brain Freeze", kind: "artifact", artifact: "Slayer Baron Apothecary Satchel", makes: ["slow"], uses: ["freeze"], says: "Frozen enemies give off a fog that slows those nearby." },
+  { name: "Served Cold", kind: "artifact", artifact: "Slayer Baron Apothecary Satchel", makes: ["cEn"], uses: ["shard"], says: "Stasis shards refund class ability energy." },
+  { name: "Frost Renewal", kind: "artifact", artifact: "Slayer Baron Apothecary Satchel", makes: ["freeze", "dr"], uses: ["frost"], role: ["survival"], says: "Taking heavy damage with Frost Armor sets off a freezing burst." },
+];
+
+// Signature combos: pieces that are far stronger together than their parts suggest. Each entry lists what
+// must be in the build ("a|b" = either; "@token" = anything that makes it; "__el:Void" = a Void weapon),
+// what the pairing really produces, and how to play it. This is where kill power comes from.
+export interface Combo { name: string; all: string[]; makes: string[]; play: string; wants?: Partial<Record<StatKey, number>> }
+export const COMBOS: Combo[] = [
+  { name: "Shatter wall", wants: { grenade: 2 }, all: ["Glacier Grenade", "Shatterdive"], makes: ["multikill:3", "shatter:2"], play: "Throw Glacier into the middle of the pack, jump and Shatterdive onto the wall. The crystals and everything frozen next to them shatter at once." },
+  { name: "Bigger wall", wants: { grenade: 0.5 }, all: ["Glacier Grenade", "Touch of Winter"], makes: ["crystal", "multikill"], play: "Touch of Winter adds a crystal and widens the wall, so one grenade covers more of the room." },
+  { name: "Grenade on repeat", wants: { grenade: 1 }, all: ["Glacier Grenade|Duskfield Grenade|Coldsnap Grenade", "Whisper of Shards"], makes: ["gEn:2"], play: "Every crystal you break speeds up your next grenade. Break the wall, throw again." },
+  { name: "Ice shrapnel", all: ["Hail the Storm", "@shatter"], makes: ["multikill:2"], play: "Each shatter throws explosive ice shrapnel into the enemies around it." },
+  { name: "Shatter on frozen", wants: { grenade: 1.5 }, all: ["Shatter Grenade", "@freeze"], makes: ["multikill:2", "gEn"], play: "Freeze the pack first, then stick a Shatter Grenade on it. Frozen enemies shatter instantly and Touch of Winter refunds the grenade." },
+  { name: "Crystal headshots", all: ["Headstone", "Shatterdive|Whisper of Shards|Rimestealer"], makes: ["crystal", "multikill"], play: "Precision kills with your Headstone weapon leave crystals. Break them to keep the loop going." },
+  { name: "Volatile spray", wants: { weapons: 1 }, all: ["Volatile Flow", "__el:Void"], makes: ["volatile:2", "multikill:2"], play: "Grab an orb, then hold the trigger on packs with your Void weapon. Every hit marks enemies volatile and kills chain explosions." },
+  { name: "Gnawing Hunger loop", wants: { weapons: 1 }, all: ["Gnawing Hunger", "Volatile Flow|Destabilizing Rounds|Gyrfalcon's Hauberk"], makes: ["multikill:2", "dmg", "bossDmg"], play: "Gnawing Hunger with volatile rounds melts packs and majors. Kill, reload for Kill Clip, keep shooting. It also does real damage to bosses between heavy ammo." },
+  { name: "Breach overshield", all: ["Unto the Breach", "Protective Breach", "@volatile|weaken|suppress"], makes: ["overshield", "dr"], play: "Volatile kills leave Void Breaches. Walk over them for an overshield." },
+  { name: "Frost Armor tank", wants: { health: 0.5 }, all: ["Grim Harvest|Rimestealer|Fr0st-EE5|Wind Chill", "Whisper of Rime|Whisper of Chains"], makes: ["dr:2"], play: "Keep Frost Armor stacked: at 5 stacks you take about 35% less damage, and stacks now melt one at a time." },
+  { name: "Orb engine", wants: { super: 1 }, all: ["Star-Eater Scales", "@orb"], makes: ["bossDmg:2"], play: "Pick up orbs before your super to overcharge it, then fire it on the boss." },
 ];
 
 // Weapon types: what the frame of weapon is good for, before its perks.

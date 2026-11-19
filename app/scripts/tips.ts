@@ -1,0 +1,15 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { makeCtx, currentSpec, evaluate } from "../src/engine/evaluate";
+const s = JSON.parse(gunzipSync(readFileSync("/home/claude/snap/snap3.json.gz")).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const inv = buildInventory(s.profile, h => defs.get(h), s.account);
+const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
+const spec = currentSpec(ctx, "whole")!;
+const v = evaluate(spec, ctx, { healthFloor: 50, mw: "asIs", style: "peaks" });
+console.log(spec.subclass, spec.exotic, spec.grenade, spec.aspects, spec.fragments);
+console.log("combos", v.loops.combos.map(c => c.name));
+console.log("tips", v.artifactTips.map(t => `${t.perk.name} +${t.gain.toFixed(1)} swap=${t.swap}`));

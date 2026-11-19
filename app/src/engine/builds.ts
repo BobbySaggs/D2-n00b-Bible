@@ -11,6 +11,8 @@ export interface Weapon {
   ks: K[]; // knowledge that applies: the weapon itself and its perks
   element: string;
   ammo: number; // 1 primary, 2 special, 3 heavy
+  type: string; // Auto Rifle, Hand Cannon...
+  rated: boolean; // Steeped knows this weapon or one of its perks (otherwise it only knows the frame)
 }
 
 export interface Build {
@@ -54,10 +56,21 @@ export function ownedWeapons(inv: Inventory, defOf: DefOf, minPower = 400): Weap
       const names = new Set<string>([item.name]);
       for (const h of item.plugs) { const d = defOf(h); if (d?.name) names.add(d.name); }
       const ks = [...names].map(n => byName.get(n)).filter((k): k is K => !!k && k.kind === "weapon");
-      const type = WEAPON_TYPE[defOf(item.hash)?.type ?? ""];
+      const rated = ks.length > 0;
+      const typeName = defOf(item.hash)?.type ?? "";
+      const type = WEAPON_TYPE[typeName];
       if (type) ks.push(type);
-      return { item, ks, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1 };
+      return { item, ks, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated };
     });
+}
+
+// Your equipped artifact's perks, matched to what Steeped knows. Unknown perks are returned by name so the page can show them.
+export function artifactKit(inv: Inventory, defOf: DefOf, characterId: string): { name: string; known: K[]; unknown: string[] } {
+  const a = inv.artifacts?.[characterId];
+  if (!a) return { name: "", known: [], unknown: [] };
+  const names = a.perks.map(h => defOf(h)?.name ?? "").filter(n => n && !/^Empty/i.test(n));
+  const known = names.map(n => byName.get(n)).filter((k): k is K => !!k && k.kind === "artifact");
+  return { name: a.name, known, unknown: names.filter(n => !known.some(k => k.name === n)) };
 }
 
 // Stat changes from fragments, read from Bungie's plug data by name.
@@ -78,7 +91,9 @@ export const statTotal = (s: Stats) => STAT_ORDER.reduce((t, k) => t + s[k], 0);
 export const pick = (kit: Set<string>, sub: Subclass, kind: K["kind"]) =>
   HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name));
 
-export const weaponParts = (ws: Weapon[]): Part[] => ws.flatMap(w => w.ks.map(k => ({ k })));
+// Each weapon also carries its element and frame as markers, so perks like Volatile Flow ("needs a Void weapon") can check.
+const marker = (name: string): K => ({ name, kind: "weapon", makes: [], uses: [], says: "" });
+export const weaponParts = (ws: Weapon[]): Part[] => ws.flatMap(w => [...w.ks.map(k => ({ k })), { k: marker(`__el:${w.element}`) }, { k: marker(`__type:${w.type}`) }]);
 
 export type CoreLike = Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic">;
 export function corePartsOf(b: CoreLike): Part[] {

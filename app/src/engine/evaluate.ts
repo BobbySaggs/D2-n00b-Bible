@@ -1,10 +1,10 @@
 import { ARMOR_SLOTS, type Slot } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
-import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
+import { byName, HUNTER, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
-import { scoreLoops, type Goal, type LoopReport } from "./loops";
+import { artifactKit, availableKit, corePartsOf, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
+import { ambient, scoreLoops, setAmbient, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, solve, type Solution } from "./solve";
 import { ownedMods, planArmorMods, type PieceMods } from "./mods";
 
@@ -40,11 +40,15 @@ export interface Ctx {
   kit: Map<Subclass, Set<string>>;
   wornIds: Set<string>;
   ownedMods: Map<number, Set<number>>;
+  artifact: ReturnType<typeof artifactKit>;
 }
 
 export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefined, defs: ItemDef[], characterId: string): Ctx {
   const ch = inv.characters.find(c => c.id === characterId)!;
+  const artifact = artifactKit(inv, defOf, characterId);
+  setAmbient(artifact.known);
   return {
+    artifact,
     inv, defOf, defs, characterId, light: ch.light,
     pieces: inv.items.map(i => readPiece(i, defOf)).filter((p): p is Piece => !!p),
     weapons: ownedWeapons(inv, defOf, 0),
@@ -74,6 +78,7 @@ export interface BuildView {
   armor?: Solution;
   stats: Stats;
   issues: string[]; // plain-words problems to fix (missing piece, too many fragments...)
+  artifactTips: { perk: K; gain: number; swap: boolean }[]; // artifact perks that would add the most to this build
 }
 
 const k = (n: string) => byName.get(n);
@@ -94,7 +99,8 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const weapons = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id));
   const core = { super: sup!, grenade: gr!, melee: me!, classAbility: ca!, aspects, fragments, exotic: exotic! };
   const parts = [sup, gr, me, ca, ...aspects, ...fragments, exotic].filter((x): x is K => !!x);
-  const loops = scoreLoops([...parts.map(x => ({ k: x })), ...weaponParts(weapons.filter((w): w is Weapon => !!w))], spec.goal);
+  const loopParts = [...parts.map(x => ({ k: x })), ...weaponParts(weapons.filter((w): w is Weapon => !!w))];
+  const loops = scoreLoops(loopParts, spec.goal);
   const bonus = fragmentBonus(fragments, ctx.defs);
 
   let armor: Solution | undefined;
@@ -108,7 +114,16 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   }
   void corePartsOf;
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
-  return { spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats), score: loops.score + statScore(stats), bonus, fragmentSlots: slots, armor, stats, issues };
+  return { artifactTips: artifactTips(loopParts, spec.goal, ctx.artifact.name), spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats), score: loops.score + statScore(stats), bonus, fragmentSlots: slots, armor, stats, issues };
+}
+
+// Artifact perks you don't have running that would add the most to this build. "swap" = it's on a different artifact.
+export function artifactTips(parts: { k: K }[], goal: Goal, current: string): BuildView["artifactTips"] {
+  const on = new Set(ambient().map(a => a.k.name));
+  const base = scoreLoops(parts, goal).score;
+  return HUNTER.filter(x => x.kind === "artifact" && !on.has(x.name))
+    .map(perk => ({ perk, gain: scoreLoops([...parts, { k: perk }], goal).score - base, swap: perk.artifact !== current }))
+    .filter(t => t.gain >= 2).sort((a, b) => b.gain - a.gain).slice(0, 3);
 }
 
 // What you're wearing right now, read from your equipped subclass, exotic and weapons.

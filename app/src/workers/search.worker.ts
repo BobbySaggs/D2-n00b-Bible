@@ -2,7 +2,8 @@
 // Runs the build search off the main thread so the page never freezes while Steeped thinks.
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory } from "../model/inventory";
-import { searchBuilds, type Require } from "../engine/builds";
+import { artifactKit, searchBuilds, type Require } from "../engine/builds";
+import { setAmbient } from "../engine/loops";
 import { specFromBuild, type BuildSpec } from "../engine/evaluate";
 import type { Goal } from "../engine/loops";
 import type { Subclass } from "../knowledge/hunter";
@@ -27,6 +28,7 @@ self.onmessage = (e: MessageEvent<SearchRequest>) => {
   const r = e.data, t = performance.now();
   try {
     if (!cache || cache.inv !== r.inv) cache = { inv: r.inv, defs: r.defs, map: new Map(r.defs.map(d => [d.hash, d])) };
+    setAmbient(artifactKit(r.inv, h => cache!.map.get(h), r.characterId).known);
     const builds = searchBuilds({
       inv: r.inv, defOf: h => cache!.map.get(h), defs: r.defs, characterId: r.characterId, goal: r.goal, top: r.top,
       onlySubclass: r.onlySubclass, onlyExotic: r.onlyExotic, pinnedWeapons: r.pinnedWeapons, require: r.require,

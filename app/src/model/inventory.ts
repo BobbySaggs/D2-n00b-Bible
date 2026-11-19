@@ -1,5 +1,5 @@
 import {
-  BUCKET, CLASS_NAME, DAMAGE, STAT_HASH, STAT_ORDER, VAULT_BUCKET,
+  BUCKET, CLASS_NAME, DAMAGE, STAT_HASH, STAT_ORDER, VAULT_BUCKET, ARTIFACT_BUCKET,
   type ClassName, type Slot, type StatKey,
 } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
@@ -48,6 +48,7 @@ export interface Inventory {
   collectibles: Record<number, number>; // collectible hash -> state (bit 1 = not acquired)
   vaultCount: number;
   loadedAt: number;
+  artifacts: Record<string, { name: string; perks: number[] }>; // character id -> equipped artifact and its active perk plugs
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -129,8 +130,17 @@ export function buildInventory(
       collectibles[Number(h)] = h in collectibles ? Math.min(collectibles[Number(h)], st) : st;
     }
 
+  // The seasonal artifact sits in its own equipment bucket; its sockets are the perks you picked.
+  const artifacts: Inventory["artifacts"] = {};
+  for (const cid of Object.keys(chars))
+    for (const it of P.characterEquipment?.data?.[cid]?.items ?? []) {
+      if (it.bucketHash !== ARTIFACT_BUCKET) continue;
+      const perks = (sockets[String(it.itemInstanceId ?? "")]?.sockets ?? []).map((x: any) => x.plugHash ?? 0).filter(Boolean);
+      artifacts[cid] = { name: defOf(it.itemHash)?.name ?? "Artifact", perks };
+    }
+
   return {
-    account, characters, items, collectibles,
+    account, characters, items, collectibles, artifacts,
     vaultCount: (P.profileInventory?.data?.items ?? []).filter((x: any) => x.bucketHash === VAULT_BUCKET).length,
     loadedAt: Date.now(),
   };
