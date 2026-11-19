@@ -1,6 +1,6 @@
 import { ARMOR_SLOTS, STAT_ORDER, type ClassName, type Slot, type StatKey } from "../bungie/config";
 import { zeroStats, type Stats } from "../model/inventory";
-import { pieceStats, type MwMode, type Piece } from "./armor";
+import { pieceStats, type MwMode, type Piece, type TuneOpt } from "./armor";
 
 // What a build wants from each stat. Value grows fastest up to 100 (ability cooldowns), slower 100 to 200
 // (the stat's bonus effect), and anything under the floor is punished hard so no ability gets dumped.
@@ -9,6 +9,7 @@ export interface StatWant {
   low: number; // value per point 0 to 100
   high: number; // value per point 100 to 200
   peak?: number; // "Most 100s": extra pull from 70 toward 100, plus a bonus for crossing it
+  hard?: boolean; // the player asked for this floor ("Keep at 100+"): falling short costs far more
 }
 export type StatPlan = Record<StatKey, StatWant>;
 
@@ -24,6 +25,7 @@ export interface SolveOptions {
   top?: number;
   locks?: Partial<Record<Slot, string>>; // item ids the player picked for a slot
   minPower?: number; // armor below this needs infusing: legendary pieces are skipped, exotic copies only if no better copy exists
+  tune?: boolean; // also try every tuning plug each piece can take
 }
 
 export interface Solution {
@@ -32,6 +34,7 @@ export interface Solution {
   stats: Stats;
   score: number;
   swaps: number;
+  tuning: Partial<Record<Slot, TuneOpt>>; // tuning changes Steeped suggests (only pieces whose tuning should change)
 }
 
 export const FLOOR_PENALTY = 6;
@@ -39,7 +42,8 @@ export const FLOOR_PENALTY = 6;
 export function statValue(v: number, w: StatWant): number {
   const c = Math.min(v, 200);
   // Monument of Triumph: cooldowns are nearly maxed at 70 (2.56x vs 2.75x at 100), so 70 to 100 is worth about half.
-  let t = w.low * Math.min(c, 70) + 0.5 * w.low * Math.min(30, Math.max(0, c - 70)) + w.high * Math.max(0, c - 100) - FLOOR_PENALTY * Math.max(0, w.floor - v);
+  const pen = FLOOR_PENALTY * (w.hard ? 6 : 1);
+  let t = w.low * Math.min(c, 70) + 0.5 * w.low * Math.min(30, Math.max(0, c - 70)) + w.high * Math.max(0, c - 100) - pen * Math.max(0, w.floor - v);
   if (w.peak) t += w.peak * (Math.min(30, Math.max(0, c - 70)) + (c >= 100 ? 12 : 0));
   return t;
 }
@@ -131,7 +135,7 @@ export function solve(all: Piece[], o: SolveOptions): Solution[] {
   // With "Most 100s" the value jumps at 100, so greedy mod placement can miss a two-mod crossing.
   // Fast pass: greedy for every combination; then exact placement (all 252 mod spreads) on the best 60.
   const peaks = STAT_ORDER.some(k => o.plan[k].peak);
-  const keep = peaks ? Math.max(60, top) : top;
+  const keep = peaks ? Math.max(60, top) : o.tune ? Math.max(25, top) : top;
   const out: Solution[] = [];
   const raw = zeroStats();
   const pick: Piece[] = [];
@@ -143,7 +147,7 @@ export function solve(all: Piece[], o: SolveOptions): Solution[] {
       const swaps = o.wornIds ? pick.filter(p => !o.wornIds!.has(p.item.id)).length : 0;
       const score = planValue(stats, o.plan) - swaps * 0.001;
       if (out.length < keep || score > out[out.length - 1].score) {
-        out.push({ pieces: Object.fromEntries(pick.map(p => [p.slot, p])) as Record<Slot, Piece>, mods, stats, score, swaps, raw: { ...raw } } as Solution);
+        out.push({ pieces: Object.fromEntries(pick.map(p => [p.slot, p])) as Record<Slot, Piece>, mods, stats, score, swaps, tuning: {}, raw: { ...raw } } as Solution);
         out.sort((a, b) => b.score - a.score);
         if (out.length > keep) out.pop();
       }
@@ -152,7 +156,36 @@ export function solve(all: Piece[], o: SolveOptions): Solution[] {
     for (const p of pools[i]) { pick.push(p); walk(i + 1); pick.pop(); }
   };
   walk(0);
-  if (peaks) {
+  // Tuning: for each leading set, try every tuning plug on each piece (a few passes, keeping any gain).
+  if (o.tune) {
+    for (const sol of out) {
+      const r = (sol as Solution & { raw: Stats }).raw;
+      const val = (raw2: Stats) => planValue(placeMods(raw2, o.plan, nMods, peaks).stats, o.plan);
+      let bestV = val(r);
+      for (let pass = 0; pass < 2; pass++) {
+        let changed = false;
+        for (const p of Object.values(sol.pieces)) {
+          const now = sol.tuning[p.slot] ? pieceStats(p, o.mw, sol.tuning[p.slot]) : statsOf.get(p)!;
+          let pick: { t: TuneOpt; r2: Stats; v: number } | undefined;
+          for (const t of p.tunings) {
+            const st = pieceStats(p, o.mw, t);
+            const r2 = { ...r };
+            for (const k of STAT_ORDER) r2[k] += st[k] - now[k];
+            const v = val(r2);
+            if (v > (pick?.v ?? bestV) + 0.01) pick = { t, r2, v };
+          }
+          if (pick) { bestV = pick.v; Object.assign(r, pick.r2); sol.tuning[p.slot] = pick.t; changed = true; }
+        }
+        if (!changed) break;
+      }
+      // Drop "changes" that land on the plug the piece already has.
+      for (const [s, t] of Object.entries(sol.tuning)) if (t && sol.pieces[s as Slot].item.plugs[sol.pieces[s as Slot].tuneSocket] === t.hash) delete sol.tuning[s as Slot];
+      const placed = placeMods(r, o.plan, nMods, peaks);
+      sol.stats = placed.stats; sol.mods = placed.mods; sol.score = planValue(placed.stats, o.plan) - sol.swaps * 0.001;
+    }
+    out.sort((a, b) => b.score - a.score);
+  }
+  if (peaks && !o.tune) {
     for (const sol of out) {
       const r = (sol as Solution & { raw: Stats }).raw;
       const { stats, mods } = placeMods(r, o.plan, nMods, true);

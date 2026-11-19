@@ -5,7 +5,7 @@ import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
 import { breakdown, currentSlotMods, evaluate, pointsByPiece, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import type { Require } from "../engine/builds";
-import { equipPlan } from "../engine/equip";
+import { clearUndo, equipPlan, loadUndo, restorePlan, saveUndo, snapshotWorn, type WornSnapshot } from "../engine/equip";
 import { EquipDialog } from "./EquipDialog";
 import { count100, lowest } from "../engine/solve";
 import type { Goal } from "../engine/loops";
@@ -13,6 +13,7 @@ import { runSearch } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
+import { StatTargetsBar, loadTargets } from "../ui/targets";
 
 export const GOALS: { value: Goal; label: string }[] = [
   { value: "whole", label: "Whole activity" },
@@ -42,7 +43,7 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const [goal, setGoal] = useState<Goal>(incoming?.spec.goal ?? "whole");
-  const [settings, setSettings] = useState<Settings>({ healthFloor: 70, mw: "asIs", style: "peaks" });
+  const [settings, setSettings] = useState<Settings>(() => ({ targets: loadTargets(), mw: "asIs", style: "peaks", tune: true }));
   const [pinned, setPinned] = useState<string[]>([]);
   const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
   const [busy, setBusy] = useState<[boolean, boolean]>([false, false]);
@@ -51,6 +52,8 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
   const [showWhere, setShowWhere] = useState(false);
   const [req, setReq] = useState<Require>({});
   const [equipping, setEquipping] = useState<Col | null>(null);
+  const [undo, setUndo] = useState<WornSnapshot | null>(loadUndo);
+  const [restoring, setRestoring] = useState(false);
   const [alts, setAlts] = useState<BuildSpec[]>([]); // Steeped's top builds for this goal, for Build B
   const [altIdx, setAltIdx] = useState(0); // on phones: compare Now with one build at a time
   const [best, setBest] = useState<BuildSpec | null>(null);
@@ -63,12 +66,12 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
     setErr("");
     try {
       const require = opts.require ?? (Object.keys(req).length ? req : undefined);
-      const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts, require }, inv, ctx.defs);
+      const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts, require, settings }, inv, ctx.defs);
       if (!found.length) setErr("No build fits everything you asked for. Try removing one of the Build around picks.");
       // The rating's yardstick is always the best build with nothing locked, so Build around can't move the goalposts.
       if (!require && !opts.onlySubclass && !opts.onlyExotic && found[0]) setBest(found[0]);
       else if (cols.length === 2 || !best) {
-        const free = await runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: [] }, inv, ctx.defs);
+        const free = await runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: [], settings }, inv, ctx.defs);
         if (free[0]) setBest(free[0]);
       }
       setSpecs(s => {
@@ -87,7 +90,7 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
     }
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { search([0, 1]); }, [ctx, goal, pinned.join(",")]);
+  useEffect(() => { search([0, 1]); }, [ctx, goal, pinned.join(","), JSON.stringify(settings.targets), settings.style, settings.tune]);
 
   const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal, settings]);
   const views = useMemo(() => specs.map(s => (s && ctx ? evaluate({ ...s, goal }, ctx, settings) : null)), [specs, ctx, goal, settings]);
@@ -113,18 +116,32 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
           <Segmented label="Masterwork" value={settings.mw} onChange={mw => setSettings(s => ({ ...s, mw }))}
             options={[{ value: "asIs", label: "Gear as is" }, { value: "full", label: "If masterworked" }]} />
           <label className="flex items-center gap-2 text-ink-dim">
-            Health at least
-            <Pick className="w-20" value={settings.healthFloor} onChange={e => setSettings(s => ({ ...s, healthFloor: Number(e.target.value) }))}>
-              {[40, 50, 60, 70, 80, 90, 100].map(v => <option key={v} value={v}>{v}</option>)}
-            </Pick>
+            <input type="checkbox" checked={settings.tune !== false} onChange={e => setSettings(s => ({ ...s, tune: e.target.checked }))} /> Use tuning mods
           </label>
         </div>
       </section>
+      <Card className="p-3"><StatTargetsBar targets={settings.targets} onChange={t => setSettings(s => ({ ...s, targets: t }))} /></Card>
       {err && <Card className="border-bad/40 text-bad">{err}</Card>}
       {equipping !== null && views[equipping] && (
         <EquipDialog title={`Build ${equipping ? "B" : "A"}: ${views[equipping]!.spec.subclass} + ${views[equipping]!.spec.exotic}`}
           steps={equipPlan(views[equipping]!, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }}
+          onStart={() => { const s = snapshotWorn(ctx); saveUndo(s); setUndo(s); }}
           onClose={() => setEquipping(null)} onDone={() => onRefresh?.()} />
+      )}
+      {restoring && undo && (
+        <EquipDialog title={`Undo: put back what you wore at ${new Date(undo.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`}
+          intro="This puts back the gear, subclass, mods, tuning and artifact perks you had on before your last Equip"
+          steps={restorePlan(undo, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }}
+          onClose={() => setRestoring(false)} onDone={() => { clearUndo(); setUndo(null); onRefresh?.(); }} />
+      )}
+      {undo && undo.characterId === ctx.characterId && !restoring && equipping === null && (
+        <Card className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm" data-testid="undo-card">
+          <span>Saved before your last Equip ({new Date(undo.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}): what you were wearing.</span>
+          <span className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setRestoring(true)}>Undo: put it back</Button>
+            <Button size="sm" variant="quiet" onClick={() => { clearUndo(); setUndo(null); }}>Dismiss</Button>
+          </span>
+        </Card>
       )}
 
       <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[1]} onApply={r => search([1], { require: r })} />

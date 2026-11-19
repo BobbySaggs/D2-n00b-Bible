@@ -257,23 +257,25 @@ export function searchBuilds(o: SearchInput): Build[] {
 
 // Stat plan: every stat keeps a floor (no dumping), and the stats the loop leans on are pushed.
 export type StatStyle = "peaks" | "even";
-export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, healthFloor?: number, style: StatStyle = "peaks"): StatPlan {
+// Targets: your minimum per stat (50 if you don't set one). 100 means "Keep at 100+", which the solver treats as a must.
+export type StatTargets = Partial<Record<StatKey, number>>;
+export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, targets: StatTargets = {}, style: StatStyle = "peaks"): StatPlan {
   const lean = statLean([...corePartsOf(b), ...weaponParts(b.weapons)], goal);
   const max = Math.max(...Object.values(lean), 0.01);
   const plan = {} as StatPlan;
   for (const k of STAT_ORDER) {
     const w = lean[k] / max; // 0..1
-    const floor = k === "health" ? (healthFloor ?? (goal === "survival" || goal === "bossDps" ? 70 : 60)) : 50;
+    const floor = targets[k] ?? 50, hard = (targets[k] ?? 0) >= 100;
     // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
     plan[k] = style === "peaks"
-      ? { floor, low: 0.5 + 0.7 * w, high: 0.2 + 0.4 * w, peak: 0.4 + 1.0 * w }
-      : { floor, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
+      ? { floor, hard, low: 0.5 + 0.7 * w, high: 0.2 + 0.4 * w, peak: 0.4 + 1.0 * w }
+      : { floor, hard, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
   }
   return plan;
 }
 
 export function fitArmor(b: Build, pieces: Piece[], o: { mw: "asIs" | "full"; wornIds?: Set<string>; minPower?: number; style?: StatStyle }) {
-  const plan = planFor(b, b.goal, undefined, o.style);
+  const plan = planFor(b, b.goal, {}, o.style);
   return solve(pieces, { cls: "Hunter", exotic: b.exotic.name, plan, bonus: b.bonus, mw: o.mw, wornIds: o.wornIds, top: 1, minPower: o.minPower })[0];
 }
 

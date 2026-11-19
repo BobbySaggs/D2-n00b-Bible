@@ -5,7 +5,7 @@ import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunte
 import type { ArtifactPerk } from "../knowledge/artifact";
 import { artifactsOf, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { availableKit, corePartsOf, subMarker, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
+import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, planValue, solve, statValue, type Solution, type StatPlan } from "./solve";
 import type { Part } from "./loops";
@@ -29,7 +29,8 @@ export interface BuildSpec {
 }
 
 export interface Settings {
-  healthFloor: number;
+  targets: StatTargets; // per-stat minimums; 100 = "Keep at 100+"
+  tune?: boolean; // let Steeped change armor tuning plugs
   mw: MwMode;
   style: StatStyle; // "peaks" = most stats at 100+ (nothing under the floor), "even" = spread evenly
 }
@@ -68,7 +69,9 @@ export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefine
 // "Most 100s" style reaching 100 earns a bonus. Without a plan (no armor) every point counts the same.
 export const STAT_SCALE = 0.3;
 export function statScore(st: Stats, plan?: StatPlan): number {
-  if (plan) return STAT_SCALE * planValue(st, plan);
+  // "Keep at 100+" is a must for the armor search, but in the rating a miss costs the normal amount, so a
+  // build that falls short reads as a bit lower, not as zero.
+  if (plan) return STAT_SCALE * planValue(st, Object.fromEntries(Object.entries(plan).map(([k, w]) => [k, { ...w, hard: false }])) as StatPlan);
   let t = 0;
   for (const v of Object.values(st)) t += 0.2 * Math.min(v, 100) + 0.1 * Math.max(0, Math.min(v, 200) - 100);
   return t;
@@ -120,12 +123,16 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
 
   let armor: Solution | undefined, plan: StatPlan | undefined;
   if (exotic && sup && gr && me && ca) {
-    plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.healthFloor, settings.style);
+    plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.targets, settings.style);
     armor = solve(ctx.pieces, {
       cls: "Hunter", exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
-      locks: spec.armorLocks, minPower: ctx.light - 60, top: 1,
+      locks: spec.armorLocks, minPower: ctx.light - 60, top: 1, tune: settings.tune,
     })[0];
     if (!armor) issues.push(`No armor fits: you don't own ${exotic.name}, or a locked piece conflicts.`);
+    else for (const k of STAT_ORDER) {
+      const t = settings.targets[k];
+      if (t && armor.stats[k] < t) issues.push(`${STAT_LABEL[k]} can't reach ${t >= 100 ? "100" : t} with this exotic and your armor: the most it gets here is ${armor.stats[k]}.`);
+    }
   }
   void corePartsOf;
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
@@ -279,7 +286,7 @@ export interface Breakdown { armor: Stats; mods: Stats; fragments: Stats; other:
 export function breakdown(v: BuildView, settings: Settings, isNow: boolean): Breakdown {
   const armor = zeroStats(), mods = zeroStats(), other = zeroStats();
   for (const p of Object.values(v.armor?.pieces ?? {})) {
-    const st = pieceStats(p, isNow ? "asIs" : settings.mw);
+    const st = pieceStats(p, isNow ? "asIs" : settings.mw, isNow ? "current" : v.armor?.tuning?.[p.slot] ?? "current");
     for (const k of ORDER) { armor[k] += st[k]; if (isNow) mods[k] += p.mod[k]; }
   }
   if (!isNow) for (const m of v.armor?.mods ?? []) mods[m] += 10;
@@ -317,6 +324,10 @@ export function stepsFrom(now: BuildView, v: BuildView, ctx: Ctx): Step[] {
   const pOut = b.artifact === a.artifact ? (a.artifactPerks ?? []).filter(x => !(b.artifactPerks ?? []).includes(x)) : [];
   const pIn = b.artifact === a.artifact ? (b.artifactPerks ?? []).filter(x => !(a.artifactPerks ?? []).includes(x)) : (b.artifactPerks ?? []);
   if (pIn.length) steps.push({ what: `Artifact perks: ${[...pOut.map(x => `remove ${x}`), ...pIn.map(x => `add ${x}`)].join(", ")}` });
+  for (const s of ARMOR_SLOTS) {
+    const t = v.armor?.tuning?.[s], p = v.armor?.pieces[s];
+    if (t && p) steps.push({ what: `${p.item.name}: set tuning to ${t.name}`, detail: `replaces ${ctx.defOf(p.item.plugs[p.tuneSocket])?.name ?? "current tuning"}` });
+  }
   const plan = modPlan(v);
   for (const s of ARMOR_SLOTS) {
     const m = plan[s], p = v.armor?.pieces[s];

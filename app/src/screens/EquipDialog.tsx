@@ -6,7 +6,7 @@ import { Button, Card, cn } from "../ui/kit";
 type Status = { state: "waiting" | "working" | "done" | "failed" | "manual"; note?: string };
 
 // Runs an equip plan step by step against Bungie and shows every result. Nothing happens until you press Start.
-export function EquipDialog({ title, steps, who, onClose, onDone }: { title: string; steps: EquipStep[]; who: Who; onClose: () => void; onDone: () => void }) {
+export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro }: { title: string; steps: EquipStep[]; who: Who; onClose: () => void; onDone: () => void; onStart?: () => void; intro?: string }) {
   const [status, setStatus] = useState<Status[]>(() => steps.map(s => ({ state: s.kind === "manual" ? "manual" : "waiting", note: s.kind === "manual" ? s.why : undefined })));
   const [phase, setPhase] = useState<"confirm" | "running" | "finished">("confirm");
   const [stopReason, setStopReason] = useState("");
@@ -27,6 +27,7 @@ export function EquipDialog({ title, steps, who, onClose, onDone }: { title: str
   }, [steps]);
 
   const run = async () => {
+    onStart?.();
     setPhase("running");
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
@@ -72,7 +73,7 @@ export function EquipDialog({ title, steps, who, onClose, onDone }: { title: str
           <div>
             <h3 className="text-xl">Equip {title}</h3>
             <p className="text-sm text-ink-dim">
-              {phase === "confirm" && <>This changes your Hunter's gear, subclass and mods: {steps.filter(s => s.kind !== "manual").length} steps. Stand in orbit or a social space first.</>}
+              {phase === "confirm" && <>{intro ?? "This changes your Hunter's gear, subclass and mods"}: {steps.filter(s => s.kind !== "manual").length} steps. Stand in orbit or a social space first.{!intro && " Steeped saves what you're wearing first, so you can undo this."}</>}
               {phase === "running" && "Working… keep the game where it is until this finishes."}
               {phase === "finished" && <span data-testid="equip-summary">{count("done")} done{count("failed") ? `, ${count("failed")} failed` : ""}{count("manual") ? `, ${count("manual")} to do in game` : ""}.</span>}
             </p>

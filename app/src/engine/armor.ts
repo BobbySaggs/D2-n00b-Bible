@@ -19,7 +19,10 @@ export interface Piece {
   tuning: Stats; // current tuning plug contribution
   mod: Stats; // current general stat mod contribution
   current: Stats; // what the game shows for this piece now
+  tuneSocket: number; // -1 if the piece has no tuning socket
+  tunings: TuneOpt[]; // tuning plugs this piece can take (Tier 5: Balanced, or +5 to its tuned stat / -5 to one other)
 }
+export interface TuneOpt { hash: number; name: string; stats: Stats }
 
 const BY_HASH = Object.fromEntries(STAT_ORDER.map(k => [STAT_HASH[k], k])) as Record<number, StatKey>;
 const plugStats = (d: ItemDef | undefined): Stats => {
@@ -35,7 +38,8 @@ const add = (a: Stats, b: Stats): Stats => {
 
 export function readPiece(item: Item, defOf: (h: number) => ItemDef | undefined): Piece | null {
   if (item.kind !== "armor" || !item.slot) return null;
-  let base = zeroStats(), tuning = zeroStats(), mod = zeroStats(), mwLevel = 0, archetype = "", statPlugs = 0;
+  let base = zeroStats(), tuning = zeroStats(), mod = zeroStats(), mwLevel = 0, archetype = "", statPlugs = 0, tuneSocket = -1;
+  item.plugs.forEach((h, i) => { if (defOf(h)?.plugCat.includes("armor_tiering.plugs.tuning")) tuneSocket = i; });
   for (const h of item.plugs) {
     const d = defOf(h);
     if (!d) continue;
@@ -68,7 +72,20 @@ export function readPiece(item: Item, defOf: (h: number) => ItemDef | undefined)
     mwLevel = 0;
   }
   if (item.masterworked && !legacy) mwLevel = 5;
-  return { item, slot: item.slot, exotic: item.exotic, tier: item.gearTier, archetype, base, mwLevel, legacy, tuning, mod, current: item.stats };
+  const p: Piece = { item, slot: item.slot, exotic: item.exotic, tier: item.gearTier, archetype, base, mwLevel, legacy, tuning, mod, current: item.stats, tuneSocket, tunings: [] };
+  // Tuning choices come from Bungie's list for that socket, so each piece only offers what it can really take.
+  if (tuneSocket >= 0 && !legacy && item.gearTier >= 5) {
+    for (const h of new Set([...(item.reusable[tuneSocket] ?? []), item.plugs[tuneSocket]])) {
+      const d = defOf(h);
+      if (!d || !d.plugCat.includes("armor_tiering.plugs.tuning") || /Empty/i.test(d.name)) continue;
+      const st = plugStats(d);
+      const balanced = STAT_ORDER.every(k => st[k] === 1);
+      const stats = zeroStats();
+      if (balanced) for (const k of offStats(p)) stats[k] = 1; else Object.assign(stats, st);
+      p.tunings.push({ hash: h, name: d.name, stats });
+    }
+  }
+  return p;
 }
 
 // The three stats a piece didn't roll get the masterwork bonus.
@@ -93,8 +110,8 @@ export function tuningStats(p: Piece, which: "current" | "balanced"): Stats {
   return { ...p.tuning };
 }
 
-// Piece stats before the general stat mod.
-export function pieceStats(p: Piece, mw: MwMode, tuning: "current" | "balanced" = "current"): Stats {
+// Piece stats before the general stat mod. Pass a tuning option to see the piece with that tuning instead.
+export function pieceStats(p: Piece, mw: MwMode, tuning: "current" | "balanced" | TuneOpt = "current"): Stats {
   const level = mw === "full" && p.tier >= 3 ? 5 : p.mwLevel;
-  return add(add(p.base, masterworkBonus(p, level)), tuningStats(p, tuning));
+  return add(add(p.base, masterworkBonus(p, level)), typeof tuning === "object" ? tuning.stats : tuningStats(p, tuning));
 }

@@ -116,6 +116,8 @@ export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
       const empty = socketPlugs(it, i, ctx).find(d => d.name === "Empty Mod Socket");
       if (empty) steps.push({ kind: "plug", group: "mods", label: `${it.name}: remove ${name(i)}`, item: it, socket: i, hash: empty.hash });
     }
+    const tune = v.armor?.tuning?.[pm.slot];
+    if (tune && pm.piece.tuneSocket >= 0) steps.push({ kind: "plug", group: "mods", label: `${it.name}: tuning ${tune.name}`, item: it, socket: pm.piece.tuneSocket, hash: tune.hash });
     if (pm.statMod && general !== undefined) {
       const statName = `${STAT_LABEL[pm.statMod.stat] === "Weapons" ? "Weapons" : STAT_LABEL[pm.statMod.stat]} Mod`;
       if (name(general) !== statName) {
@@ -129,6 +131,48 @@ export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
       if (i === undefined) { steps.push({ kind: "manual", group: "mods", label: `${it.name}: ${m.name}`, why: "No free socket. Slot it in game." }); return; }
       steps.push({ kind: "plug", group: "mods", label: `${it.name}: ${m.name}`, item: it, socket: i, hash: m.hash });
     });
+  }
+  return steps;
+}
+
+// ---------- Undo: what you wore before Equip, and the plan to put it back ----------
+export interface WornSnapshot { at: number; characterId: string; items: { id: string; name: string; exotic: boolean; plugs: number[] }[] }
+const UNDO_KEY = "steeped-undo";
+
+export function snapshotWorn(ctx: Ctx): WornSnapshot {
+  const items = ctx.inv.items.filter(i => i.owner === ctx.characterId && i.equipped && ["subclass", "armor", "weapon", "artifact"].includes(i.kind));
+  return { at: Date.now(), characterId: ctx.characterId, items: items.map(i => ({ id: i.id, name: i.name, exotic: i.exotic, plugs: [...i.plugs] })) };
+}
+export const saveUndo = (s: WornSnapshot) => { try { localStorage.setItem(UNDO_KEY, JSON.stringify(s)); } catch { /* storage unavailable */ } };
+export const loadUndo = (): WornSnapshot | null => { try { return JSON.parse(localStorage.getItem(UNDO_KEY) ?? "null") as WornSnapshot | null; } catch { return null; } };
+export const clearUndo = () => { try { localStorage.removeItem(UNDO_KEY); } catch { /* storage unavailable */ } };
+
+// Bring the saved items back, equip them, then set every socket back: first empty the sockets that changed
+// (frees fragment slots and armor energy), then put the old plugs in, in socket order.
+export function restorePlan(snap: WornSnapshot, ctx: Ctx): EquipStep[] {
+  const steps: EquipStep[] = [];
+  const cid = ctx.characterId;
+  const now = snap.items.map(s => ({ s, it: ctx.inv.items.find(i => i.id === s.id) }));
+  for (const { s, it } of now) if (!it) steps.push({ kind: "manual", group: "mods", label: `Find ${s.name}`, why: "It's no longer in your inventory or vault." });
+  const found = now.filter((x): x is { s: WornSnapshot["items"][number]; it: Item } => !!x.it);
+  for (const { it } of found) if (it.owner !== cid) steps.push({ kind: "move", label: `Move ${it.name} from ${it.owner === "vault" ? "your vault" : "another character"}`, item: it, via: it.owner === "vault" ? "direct" : "vault" });
+  const need = found.filter(x => !(x.it.owner === cid && x.it.equipped)).map(x => x.it);
+  const leg = need.filter(i => !i.exotic), exo = need.filter(i => i.exotic);
+  if (leg.length) steps.push({ kind: "equip", label: `Equip ${leg.map(i => i.name).join(", ")}`, items: leg });
+  if (exo.length) steps.push({ kind: "equip", label: `Equip ${exo.map(i => i.name).join(", ")}`, items: exo });
+  for (const { s, it } of found) {
+    if (it.kind === "weapon") continue;
+    const group: "subclass" | "mods" | "artifact" = it.kind === "subclass" ? "subclass" : it.kind === "artifact" ? "artifact" : "mods";
+    const changed = s.plugs.map((_, i) => i).filter(i => s.plugs[i] && it.plugs[i] !== s.plugs[i]);
+    for (const i of changed) {
+      const empty = socketPlugs(it, i, ctx).find(d => /^Empty/.test(d.name));
+      if (empty && it.plugs[i] !== empty.hash && !/^Empty/.test(ctx.defOf(it.plugs[i])?.name ?? "")) steps.push({ kind: "plug", group, label: `${it.name}: clear ${ctx.defOf(it.plugs[i])?.name ?? "socket"}`, item: it, socket: i, hash: empty.hash });
+    }
+    for (const i of changed) {
+      const d = ctx.defOf(s.plugs[i]);
+      if (d && /^Empty/.test(d.name) && steps.some(x => x.kind === "plug" && x.item.id === it.id && x.socket === i)) continue; // already cleared
+      steps.push({ kind: "plug", group, label: `${it.name}: ${d?.name ?? "previous plug"}`, item: it, socket: i, hash: s.plugs[i] });
+    }
   }
   return steps;
 }

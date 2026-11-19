@@ -6,7 +6,7 @@ import { defineConfig } from "vite";
 // Relative base so the same build works at /D2-n00b-Bible/beta/ and later at the site root.
 export default defineConfig({
   base: "./",
-  define: { __APP_VERSION__: JSON.stringify("b13 · " + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC") },
+  define: { __APP_VERSION__: JSON.stringify("b14 · " + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC") },
   worker: { format: "es" },
   plugins: [react(), tailwindcss()],
   build: { outDir: "dist", emptyOutDir: true },
