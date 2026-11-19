@@ -45,6 +45,7 @@ interface Option {
 interface Tried { o: Option; v: BuildView; gained: string[]; lost: string[]; nowIdle: string[]; nowFed: string[] }
 
 type Ref = { score: number; loop: number; stat: number };
+const BEST = new Map<string, BuildSpec | null>();
 export interface Sent { col: 0 | 1; spec: BuildSpec }
 
 // Browser storage: the Workshop build survives switching tabs, and named builds survive reloads. Storage can be
@@ -71,8 +72,11 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
   useEffect(() => {
     if (!ctx) return;
     setSpec(s => (s ? { ...s, goal } : readJSON<BuildSpec | null>(WS_KEY, null) ?? currentSpec(ctx, goal)));
+    // The 100 mark only changes when your gear or the goal does, so it's kept between tab switches.
+    const key = `${inv.loadedAt}|${goal}`;
+    if (BEST.has(key)) { setBest(BEST.get(key)!); return; }
     setBest(null);
-    runSearch({ characterId: ctx.characterId, goal, top: 1 }, inv, ctx.defs).then(f => setBest(f[0] ?? null)).catch(() => setBest(null));
+    runSearch({ characterId: ctx.characterId, goal, top: 1 }, inv, ctx.defs).then(f => { BEST.set(key, f[0] ?? null); setBest(f[0] ?? null); }).catch(() => setBest(null));
   }, [ctx, goal, inv]);
 
   useEffect(() => { if (spec) writeJSON(WS_KEY, spec); }, [spec]);
