@@ -7,7 +7,7 @@ import type { ArtifactPerk } from "../knowledge/artifact";
 import { breakdown, currentSpec, evaluate, evaluateNow, fragmentSlots, makeCtx, refitArtifact, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import { placePerks } from "../engine/artifact";
 import type { Goal } from "../engine/loops";
-import type { Weapon } from "../engine/builds";
+import type { Require, Weapon } from "../engine/builds";
 import { runSearch } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Segmented, Spinner } from "../ui/bits";
@@ -45,12 +45,23 @@ interface Option {
 interface Tried { o: Option; v: BuildView; gained: string[]; lost: string[]; nowIdle: string[]; nowFed: string[] }
 
 type Ref = { score: number; loop: number; stat: number };
+export interface Sent { col: 0 | 1; spec: BuildSpec }
+
+// Browser storage: the Workshop build survives switching tabs, and named builds survive reloads. Storage can be
+// missing or full, so every read and write is allowed to fail quietly.
+const WS_KEY = "steeped-workshop", SAVES_KEY = "steeped-saved-builds";
+interface Saved { name: string; goal: Goal; spec: BuildSpec; at: number }
+const readJSON = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
+const writeJSON = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } };
 const pct = (x: number, of: number) => (of > 0 ? Math.round((100 * x) / of) : 0);
 
-export function Workshop({ inv }: { inv: Inventory }) {
+export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) => void }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
-  const [goal, setGoal] = useState<Goal>("whole");
+  const [goal, setGoal] = useState<Goal>(() => readJSON<BuildSpec | null>(WS_KEY, null)?.goal ?? "whole");
+  const [locks, setLocks] = useState<Set<string>>(new Set());
+  const [saves, setSaves] = useState<Saved[]>(() => readJSON<Saved[]>(SAVES_KEY, []));
+  const [msg, setMsg] = useState("");
   const settings: Settings = { healthFloor: 50, mw: "asIs", style: "peaks" };
   const [spec, setSpec] = useState<BuildSpec | null>(null);
   const [best, setBest] = useState<BuildSpec | null>(null);
@@ -59,11 +70,12 @@ export function Workshop({ inv }: { inv: Inventory }) {
 
   useEffect(() => {
     if (!ctx) return;
-    setSpec(s => (s ? { ...s, goal } : currentSpec(ctx, goal)));
+    setSpec(s => (s ? { ...s, goal } : readJSON<BuildSpec | null>(WS_KEY, null) ?? currentSpec(ctx, goal)));
     setBest(null);
     runSearch({ characterId: ctx.characterId, goal, top: 1 }, inv, ctx.defs).then(f => setBest(f[0] ?? null)).catch(() => setBest(null));
   }, [ctx, goal, inv]);
 
+  useEffect(() => { if (spec) writeJSON(WS_KEY, spec); }, [spec]);
   const view = useMemo(() => (spec && ctx ? evaluate({ ...spec, goal }, ctx, settings) : null), [spec, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
   const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
   const bestView = useMemo(() => (best && ctx ? evaluate({ ...best, goal }, ctx, settings) : null), [best, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -99,6 +111,35 @@ export function Workshop({ inv }: { inv: Inventory }) {
     if (from === "tuned") setSpec(tuneCurrent(ctx, goal));
     if (from === "best") setSpec(best);
   };
+  const toggle = (id: SlotId) => setLocks(l => { const n = new Set(l); const k = slotKey(id); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  // "Fill the rest": everything locked stays exactly as it is; Steeped picks the best of everything else.
+  const fill = async () => {
+    const s = view.spec, has = (k: string) => locks.has(k);
+    const pp = perkSlots(view);
+    const req: Require = {
+      subclass: s.subclass,
+      ...(has("super") && { super: s.super }), ...(has("grenade") && { grenade: s.grenade }), ...(has("melee") && { melee: s.melee }),
+      ...(has("classAbility") && { classAbility: s.classAbility }), ...(has("exotic") && { exotic: s.exotic }),
+      aspects: [0, 1].filter(i => has(`aspect${i}`) && s.aspects[i]).map(i => s.aspects[i]),
+      fragments: s.fragments.filter((f, i) => has(`fragment${i}`) && f),
+      ...((has("artifact") || pp.some((p, i) => p && has(`perk${i}`))) && { artifact: view.artifact?.name }),
+      artifactPerks: pp.map((p, i) => (p && has(`perk${i}`) ? p.name : "")).filter(Boolean),
+    };
+    if (!has("subclass") && ![...locks].some(k => /^(super|grenade|melee|classAbility|aspect|fragment)/.test(k))) delete req.subclass;
+    const pinned = [0, 1, 2].filter(i => has(`weapon${i}`) && s.weapons[i]).map(i => s.weapons[i]);
+    setBusy("Filling the rest around your locks"); setMsg("");
+    try {
+      const f = await runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: pinned, require: req }, inv, ctx.defs);
+      if (f[0]) { setSpec(f[0]); setMsg(`Filled around ${locks.size} lock${locks.size === 1 ? "" : "s"}.`); }
+      else setMsg("Nothing fits all of your locks together. Unlock one and try again.");
+    } catch (e) { setMsg(e instanceof Error ? e.message : String(e)); } finally { setBusy(""); }
+  };
+  const save = (name: string) => {
+    const n = name.trim(); if (!n) return;
+    const next = [{ name: n, goal, spec: view.spec, at: Date.now() }, ...saves.filter(x => x.name !== n)];
+    setSaves(next); writeJSON(SAVES_KEY, next); setMsg(`Saved "${n}".`);
+  };
+  const remove = (name: string) => { const next = saves.filter(x => x.name !== name); setSaves(next); writeJSON(SAVES_KEY, next); };
   const switchSub = async (sub: Subclass) => {
     setBusy(`Building the best ${sub} around your exotic and weapons`);
     try {
@@ -132,29 +173,54 @@ export function Workshop({ inv }: { inv: Inventory }) {
         </div>}
       </Card>
       {busy && <Card><Spinner label={busy} /></Card>}
+      {msg && !busy && <Card className="text-sm" data-testid="ws-msg">{msg}</Card>}
+
+      <Card className="flex flex-wrap items-center gap-2 p-3" data-testid="ws-actions">
+        <Button size="sm" disabled={!!busy || !locks.size} onClick={fill}>{locks.size ? `Fill the rest (${locks.size} locked)` : "Lock slots, then fill the rest"}</Button>
+        {locks.size > 0 && <Button size="sm" variant="quiet" onClick={() => setLocks(new Set())}>Unlock all</Button>}
+        <span className="mx-1 h-6 w-px bg-line" />
+        <Button size="sm" variant="ghost" onClick={() => onSend({ col: 0, spec: { ...view.spec, goal } })}>Send to Build A</Button>
+        <Button size="sm" variant="ghost" onClick={() => onSend({ col: 1, spec: { ...view.spec, goal } })}>Send to Build B</Button>
+        <span className="text-xs text-ink-dim">Compare it in the Builder and use Equip in game there.</span>
+        <SaveBox onSave={save} />
+      </Card>
+      {saves.length > 0 && (
+        <Card className="space-y-1 p-3" data-testid="ws-saves">
+          <div className="text-xs font-semibold uppercase tracking-wider text-accent-hi">Saved builds (this browser)</div>
+          <ul className="space-y-1 text-sm">
+            {saves.map(x => (
+              <li key={x.name} className="flex flex-wrap items-center gap-2">
+                <b>{x.name}</b><span className="text-xs text-ink-dim">{x.spec.subclass} + {x.spec.exotic} · {GOALS.find(g => g.value === x.goal)?.label} · {new Date(x.at).toLocaleDateString()}</span>
+                <Button size="sm" variant="ghost" onClick={() => { setGoal(x.goal); setSpec({ ...x.spec, goal: x.goal }); setMsg(`Loaded "${x.name}".`); }}>Load</Button>
+                <Button size="sm" variant="quiet" onClick={() => remove(x.name)}>Delete</Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <Card className="space-y-1 p-3" data-testid="ws-slots">
           <SlotGroup title="Subclass">
-            <SlotRow id={{ kind: "subclass" }} sel={sel} setSel={setSel} label="Subclass" value={view.spec.subclass} />
-            <SlotRow id={{ kind: "super" }} sel={sel} setSel={setSel} label="Super" value={view.spec.super} icon={iconForName(view.spec.super)} />
-            <SlotRow id={{ kind: "grenade" }} sel={sel} setSel={setSel} label="Grenade" value={view.spec.grenade} icon={iconForName(view.spec.grenade)} />
-            <SlotRow id={{ kind: "melee" }} sel={sel} setSel={setSel} label="Melee" value={view.spec.melee} icon={iconForName(view.spec.melee)} />
-            <SlotRow id={{ kind: "classAbility" }} sel={sel} setSel={setSel} label="Class ability" value={view.spec.classAbility} icon={iconForName(view.spec.classAbility)} />
-            {[0, 1].map(i => <SlotRow key={i} id={{ kind: "aspect", i }} sel={sel} setSel={setSel} label={`Aspect ${i + 1}`} value={view.spec.aspects[i] ?? ""} icon={iconForName(view.spec.aspects[i] ?? "")} idle={isIdle(view, view.spec.aspects[i])} />)}
-            {Array.from({ length: view.fragmentSlots }, (_, i) => <SlotRow key={i} id={{ kind: "fragment", i }} sel={sel} setSel={setSel} label={`Fragment ${i + 1}`} value={view.spec.fragments[i] ?? ""} icon={iconForName(view.spec.fragments[i] ?? "")} idle={isIdle(view, view.spec.fragments[i])} />)}
+            <SlotRow id={{ kind: "subclass" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Subclass" value={view.spec.subclass} />
+            <SlotRow id={{ kind: "super" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Super" value={view.spec.super} icon={iconForName(view.spec.super)} />
+            <SlotRow id={{ kind: "grenade" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Grenade" value={view.spec.grenade} icon={iconForName(view.spec.grenade)} />
+            <SlotRow id={{ kind: "melee" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Melee" value={view.spec.melee} icon={iconForName(view.spec.melee)} />
+            <SlotRow id={{ kind: "classAbility" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Class ability" value={view.spec.classAbility} icon={iconForName(view.spec.classAbility)} />
+            {[0, 1].map(i => <SlotRow key={i} id={{ kind: "aspect", i }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label={`Aspect ${i + 1}`} value={view.spec.aspects[i] ?? ""} icon={iconForName(view.spec.aspects[i] ?? "")} idle={isIdle(view, view.spec.aspects[i])} />)}
+            {Array.from({ length: view.fragmentSlots }, (_, i) => <SlotRow key={i} id={{ kind: "fragment", i }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label={`Fragment ${i + 1}`} value={view.spec.fragments[i] ?? ""} icon={iconForName(view.spec.fragments[i] ?? "")} idle={isIdle(view, view.spec.fragments[i])} />)}
           </SlotGroup>
           <SlotGroup title="Gear">
-            <SlotRow id={{ kind: "exotic" }} sel={sel} setSel={setSel} label="Exotic" value={view.spec.exotic} icon={iconForName(view.spec.exotic)} idle={isIdle(view, view.spec.exotic)} />
+            <SlotRow id={{ kind: "exotic" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Exotic" value={view.spec.exotic} icon={iconForName(view.spec.exotic)} idle={isIdle(view, view.spec.exotic)} />
             {(["Kinetic", "Energy", "Heavy"] as const).map((l, i) => {
               const w = view.weapons[i];
-              return <SlotRow key={l} id={{ kind: "weapon", i }} sel={sel} setSel={setSel} label={l} value={w?.item.name ?? ""} icon={w ? DEFS.get(w.item.hash)?.icon : undefined} />;
+              return <SlotRow key={l} id={{ kind: "weapon", i }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label={l} value={w?.item.name ?? ""} icon={w ? DEFS.get(w.item.hash)?.icon : undefined} />;
             })}
           </SlotGroup>
           {view.artifact && (
             <SlotGroup title="Artifact">
-              <SlotRow id={{ kind: "artifact" }} sel={sel} setSel={setSel} label="Artifact" value={view.artifact.name} icon={DEFS.get(view.artifact.item.hash)?.icon} />
-              {perkSlots(view).map((p, i) => <SlotRow key={i} id={{ kind: "perk", i }} sel={sel} setSel={setSel} label={`Perk ${i + 1}`} value={p?.name ?? ""} icon={p ? DEFS.get(p.hash)?.icon : undefined} idle={isIdle(view, p?.name)} />)}
+              <SlotRow id={{ kind: "artifact" }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label="Artifact" value={view.artifact.name} icon={DEFS.get(view.artifact.item.hash)?.icon} />
+              {perkSlots(view).map((p, i) => <SlotRow key={i} id={{ kind: "perk", i }} sel={sel} setSel={setSel} locks={locks} toggle={toggle} label={`Perk ${i + 1}`} value={p?.name ?? ""} icon={p ? DEFS.get(p.hash)?.icon : undefined} idle={isIdle(view, p?.name)} />)}
             </SlotGroup>
           )}
           <div className="pt-2"><LoadoutFigure v={view} compact /></div>
@@ -202,16 +268,31 @@ function perkSlots(v: BuildView): (ArtifactPerk | undefined)[] {
 const SlotGroup = ({ title, children }: { title: string; children: ReactNode }) => (
   <div className="space-y-0.5"><div className="px-1 pt-2 text-xs font-semibold uppercase tracking-wider text-accent-hi">{title}</div>{children}</div>
 );
-function SlotRow({ id, sel, setSel, label, value, icon, idle }: { id: SlotId; sel: SlotId; setSel: (s: SlotId) => void; label: string; value: string; icon?: string; idle?: boolean }) {
-  const on = slotKey(id) === slotKey(sel);
+function SlotRow({ id, sel, setSel, label, value, icon, idle, locks, toggle }: { id: SlotId; sel: SlotId; setSel: (s: SlotId) => void; label: string; value: string; icon?: string; idle?: boolean; locks: Set<string>; toggle: (s: SlotId) => void }) {
+  const on = slotKey(id) === slotKey(sel), locked = locks.has(slotKey(id));
   return (
-    <button type="button" onClick={() => setSel(id)} data-testid={`ws-slot-${slotKey(id)}`}
-      className={cn("flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-panel", on && "bg-accent/20 ring-1 ring-accent/60")}>
-      <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-ink-dim">{label}</span>
-      {icon ? <GearIcon src={icon} size={22} title={value} /> : <span className="inline-block h-[22px] w-[22px]" />}
-      <span className={cn("truncate", !value && "text-ink-dim", idle && "text-warn")}>{value || "Empty"}</span>
-      {idle && <span className="ml-auto shrink-0 text-[11px] text-warn">idle</span>}
-    </button>
+    <div className={cn("flex items-center gap-1 rounded-md hover:bg-panel", on && "bg-accent/20 ring-1 ring-accent/60")}>
+      <button type="button" onClick={() => setSel(id)} data-testid={`ws-slot-${slotKey(id)}`} className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm">
+        <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-ink-dim">{label}</span>
+        {icon ? <GearIcon src={icon} size={22} title={value} /> : <span className="inline-block h-[22px] w-[22px]" />}
+        <span className={cn("truncate", !value && "text-ink-dim", idle && "text-warn")}>{value || "Empty"}</span>
+        {idle && <span className="ml-auto shrink-0 text-[11px] text-warn">idle</span>}
+      </button>
+      <button type="button" onClick={() => toggle(id)} aria-pressed={locked} aria-label={`${locked ? "Unlock" : "Lock"} ${label}`} data-testid={`ws-lock-${slotKey(id)}`}
+        title={locked ? "Locked: Fill the rest keeps this" : "Lock this so Fill the rest keeps it"}
+        className={cn("mr-1 shrink-0 rounded px-1.5 py-0.5 text-xs", locked ? "bg-accent text-white" : "text-ink-dim hover:text-ink")}>{locked ? "Locked" : "Lock"}</button>
+    </div>
+  );
+}
+
+function SaveBox({ onSave }: { onSave: (n: string) => void }) {
+  const [name, setName] = useState("");
+  return (
+    <form className="ml-auto flex items-center gap-2" onSubmit={e => { e.preventDefault(); onSave(name); setName(""); }}>
+      <input value={name} onChange={e => setName(e.target.value)} placeholder="Name this build" aria-label="Build name"
+        className="h-9 w-40 rounded-md border border-line bg-panel-2 px-2 text-sm text-ink placeholder:text-ink-dim" />
+      <Button size="sm" variant="ghost" type="submit" disabled={!name.trim()}>Save</Button>
+    </form>
   );
 }
 

@@ -38,10 +38,10 @@ const where = (i: Item, cid: string) =>
 
 type Col = 0 | 1;
 
-export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => void }) {
+export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inventory; onRefresh?: () => void; incoming?: { col: Col; spec: BuildSpec } | null; onIncomingUsed?: () => void }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
-  const [goal, setGoal] = useState<Goal>("whole");
+  const [goal, setGoal] = useState<Goal>(incoming?.spec.goal ?? "whole");
   const [settings, setSettings] = useState<Settings>({ healthFloor: 50, mw: "asIs", style: "peaks" });
   const [pinned, setPinned] = useState<string[]>([]);
   const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
@@ -53,7 +53,8 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
   const [equipping, setEquipping] = useState<Col | null>(null);
   const [alts, setAlts] = useState<BuildSpec[]>([]); // Steeped's top builds for this goal, for Build B
   const [altIdx, setAltIdx] = useState(0); // on phones: compare Now with one build at a time
-  const [best, setBest] = useState<BuildSpec | null>(null); // Steeped's best for this goal with nothing locked: the 100 mark
+  const [best, setBest] = useState<BuildSpec | null>(null);
+  const [fromWs, setFromWs] = useState<[boolean, boolean]>([false, false]); // column holds a build sent from the Workshop // Steeped's best for this goal with nothing locked: the 100 mark
   const [explain, setExplain] = useState(false);
 
   const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string; require?: Require } = {}) => {
@@ -74,6 +75,9 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
         const next = [...s];
         if (cols.length === 2) { next[0] = tuneCurrent(ctx, goal) ?? found[1] ?? null; next[1] = found[0] ?? null; setAlts(found); setAltIdx(0); }
         else next[cols[0]] = found[0] ?? next[cols[0]];
+        // A build sent from the Workshop takes its column once, after the first search fills the page.
+        setFromWs(f => [cols.includes(0) ? false : f[0], cols.includes(1) ? false : f[1]]);
+        if (incoming) { next[incoming.col] = { ...incoming.spec, goal }; setFromWs(f => { const n = [...f] as [boolean, boolean]; n[incoming.col] = true; return n; }); onIncomingUsed?.(); }
         return next;
       });
     } catch (e) {
@@ -128,7 +132,7 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
       <section className="grid gap-3 md:grid-cols-3">
         <ScoreCard title="Now" sub="What you're wearing" v={now} ref_={ref} onExplain={() => setExplain(!explain)} />
         {([0, 1] as Col[]).map(c => (
-          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]} ref_={ref} onExplain={() => setExplain(!explain)}
+          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={fromWs[c] ? "Sent from the Workshop" : c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]} ref_={ref} onExplain={() => setExplain(!explain)}
             note={c === 1 && Object.keys(req).length > 0 && bestView && views[1] ? lockCost(views[1], bestView, ref) : undefined}
             action={c === 0
               ? <div className="flex flex-wrap gap-2">
