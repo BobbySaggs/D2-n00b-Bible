@@ -1,0 +1,394 @@
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
+import { DEFS } from "../bungie/defs";
+import type { Inventory, Item } from "../model/inventory";
+import { HUNTER, byName, type K, type Subclass } from "../knowledge/hunter";
+import type { ArtifactPerk } from "../knowledge/artifact";
+import { breakdown, currentSpec, evaluate, evaluateNow, fragmentSlots, makeCtx, refitArtifact, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { placePerks } from "../engine/artifact";
+import type { Goal } from "../engine/loops";
+import type { Weapon } from "../engine/builds";
+import { runSearch } from "../workers/search";
+import { Badge, Button, Card, cn } from "../ui/kit";
+import { Delta, Segmented, Spinner } from "../ui/bits";
+import { GearIcon, LoadoutFigure, iconForName } from "../ui/gear";
+import { GOALS, HowItWorks, HowToPlay, word } from "./Builder";
+
+// The Workshop: you pick, Steeped explains. Click a slot and every option you own for it is tried in your build
+// and ranked by what it really does, with where each claim comes from.
+
+type SlotId =
+  | { kind: "super" | "grenade" | "melee" | "classAbility" | "exotic" | "artifact" | "subclass" }
+  | { kind: "aspect" | "fragment" | "weapon" | "perk"; i: number };
+const slotKey = (s: SlotId) => ("i" in s ? `${s.kind}${s.i}` : s.kind);
+
+type Source = "checked" | "bungie" | "frame" | "unrated";
+const SOURCE: Record<Source, { label: string; tone: "good" | "neutral" | "warn"; tip: string }> = {
+  checked: { label: "Checked", tone: "good", tip: "Claude wrote this rule from Bungie's own text and patch notes, and checked it by hand." },
+  bungie: { label: "From Bungie's text", tone: "neutral", tip: "Steeped read this from the item's own description. Bungie's words are shown so you can check the reading." },
+  frame: { label: "Weapon type only", tone: "warn", tip: "Steeped knows this weapon's type but not its perks, so only the frame counts." },
+  unrated: { label: "Not rated", tone: "warn", tip: "Steeped doesn't understand this yet, so it counts as neutral instead of guessing." },
+};
+
+interface Option {
+  key: string;
+  label: string;
+  icon?: string;
+  apply: (s: BuildSpec) => BuildSpec;
+  quick: boolean; // armor stays as it is (weapons, artifact perks): only the loops change
+  source: Source;
+  says?: string;
+  bungie?: string;
+  where?: string;
+  current: boolean;
+}
+interface Tried { o: Option; v: BuildView; gained: string[]; lost: string[]; nowIdle: string[]; nowFed: string[] }
+
+type Ref = { score: number; loop: number; stat: number };
+const pct = (x: number, of: number) => (of > 0 ? Math.round((100 * x) / of) : 0);
+
+export function Workshop({ inv }: { inv: Inventory }) {
+  const hunter = inv.characters.find(c => c.cls === "Hunter");
+  const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
+  const [goal, setGoal] = useState<Goal>("whole");
+  const settings: Settings = { healthFloor: 50, mw: "asIs", style: "peaks" };
+  const [spec, setSpec] = useState<BuildSpec | null>(null);
+  const [best, setBest] = useState<BuildSpec | null>(null);
+  const [sel, setSel] = useState<SlotId>({ kind: "grenade" });
+  const [busy, setBusy] = useState("");
+
+  useEffect(() => {
+    if (!ctx) return;
+    setSpec(s => (s ? { ...s, goal } : currentSpec(ctx, goal)));
+    setBest(null);
+    runSearch({ characterId: ctx.characterId, goal, top: 1 }, inv, ctx.defs).then(f => setBest(f[0] ?? null)).catch(() => setBest(null));
+  }, [ctx, goal, inv]);
+
+  const view = useMemo(() => (spec && ctx ? evaluate({ ...spec, goal }, ctx, settings) : null), [spec, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bestView = useMemo(() => (best && ctx ? evaluate({ ...best, goal }, ctx, settings) : null), [best, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ref: Ref | null = useMemo(() => {
+    if (!bestView) return null; // no rating until the 100 mark is known: a rating against nothing would mislead
+    const all = [bestView, now, view].filter((x): x is BuildView => !!x);
+    return all.length ? { score: Math.max(...all.map(x => x.score)), loop: Math.max(...all.map(x => x.loopScore)), stat: Math.max(...all.map(x => x.statScore)) } : null;
+  }, [bestView, now, view]);
+
+  const options = useMemo(() => (ctx && view ? optionsFor(sel, view, ctx) : []), [sel, view, ctx]);
+  const tried = useMemo<Tried[]>(() => {
+    if (!ctx || !view) return [];
+    const lockArmor = Object.fromEntries(ARMOR_SLOTS.map(s => [s, view.armor?.pieces[s]?.item.id]).filter(([, id]) => id)) as Partial<Record<Slot, string>>;
+    const combos = new Set(view.loops.combos.map(c => c.name)), idle = new Set(view.loops.unfed.map(u => u.name));
+    return options.map(o => {
+      const next = o.apply(view.spec);
+      const v = evaluate({ ...next, goal, armorLocks: o.quick ? lockArmor : next.armorLocks }, ctx, settings);
+      const after = new Set(v.loops.combos.map(c => c.name)), afterIdle = new Set(v.loops.unfed.map(u => u.name));
+      return {
+        o, v,
+        gained: [...after].filter(c => !combos.has(c)), lost: [...combos].filter(c => !after.has(c)),
+        nowIdle: [...afterIdle].filter(n => !idle.has(n)), nowFed: [...idle].filter(n => !afterIdle.has(n) && namesOf(v).has(n)),
+      };
+    }).sort((a, b) => b.v.score - a.v.score);
+  }, [options, view, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!hunter || !ctx) return <Card>The Workshop knows Hunters first.</Card>;
+  if (!spec || !view) return <Card><Spinner label="Reading your build" /></Card>;
+
+  const r = (v: BuildView) => (ref ? pct(v.score, ref.score) : 0);
+  const start = async (from: "now" | "tuned" | "best") => {
+    if (from === "now") setSpec(currentSpec(ctx, goal));
+    if (from === "tuned") setSpec(tuneCurrent(ctx, goal));
+    if (from === "best") setSpec(best);
+  };
+  const switchSub = async (sub: Subclass) => {
+    setBusy(`Building the best ${sub} around your exotic and weapons`);
+    try {
+      const f = await runSearch({ characterId: ctx.characterId, goal, top: 1, onlySubclass: sub, pinnedWeapons: spec.weapons.filter(Boolean) }, inv, ctx.defs);
+      if (f[0]) setSpec(f[0]);
+    } finally { setBusy(""); }
+  };
+
+  return (
+    <div className="space-y-5" data-testid="workshop">
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <Segmented label="What are you building for?" value={goal} options={GOALS} onChange={setGoal} />
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-ink-dim">Start from</span>
+          <Button size="sm" variant="ghost" onClick={() => start("now")}>What I'm wearing</Button>
+          <Button size="sm" variant="ghost" onClick={() => start("tuned")}>My build, tuned</Button>
+          <Button size="sm" variant="ghost" disabled={!best} onClick={() => start("best")}>{best ? "Steeped's best" : "Finding best…"}</Button>
+        </div>
+      </section>
+
+      <Card className="flex flex-wrap items-center justify-between gap-4" data-testid="ws-rating">
+        <div>
+          <div className="font-display text-xl">Your Workshop build</div>
+          <div className="text-sm"><span className="text-ink">{view.spec.subclass}</span> <span className="text-ink-dim">+</span> <span className="text-exotic">{view.spec.exotic || "no exotic"}</span>{view.artifact && <span className="text-ink-dim"> · {view.artifact.name}</span>}</div>
+          <div className="text-xs text-ink-dim">100 = the best build Steeped can make from your gear for this goal{bestView ? ` (${bestView.spec.subclass} + ${bestView.spec.exotic})` : ""}.</div>
+        </div>
+        {!ref ? <Spinner label="Finding the best build your gear can make (the 100 mark)" /> : <div className="text-right">
+          <div className="font-display leading-none"><span className="text-4xl" data-testid="ws-score">{Math.min(100, r(view))}</span><span className="text-sm text-ink-dim"> / 100</span></div>
+          <div className="text-xs text-ink-dim">vs what you're wearing {now && <Delta v={r(view) - r(now)} />}</div>
+          <div className="text-[11px] text-ink-dim">Synergy {Math.min(100, pct(view.loopScore, ref?.loop ?? 0))} · Stats {Math.min(100, pct(view.statScore, ref?.stat ?? 0))}</div>
+        </div>}
+      </Card>
+      {busy && <Card><Spinner label={busy} /></Card>}
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <Card className="space-y-1 p-3" data-testid="ws-slots">
+          <SlotGroup title="Subclass">
+            <SlotRow id={{ kind: "subclass" }} sel={sel} setSel={setSel} label="Subclass" value={view.spec.subclass} />
+            <SlotRow id={{ kind: "super" }} sel={sel} setSel={setSel} label="Super" value={view.spec.super} icon={iconForName(view.spec.super)} />
+            <SlotRow id={{ kind: "grenade" }} sel={sel} setSel={setSel} label="Grenade" value={view.spec.grenade} icon={iconForName(view.spec.grenade)} />
+            <SlotRow id={{ kind: "melee" }} sel={sel} setSel={setSel} label="Melee" value={view.spec.melee} icon={iconForName(view.spec.melee)} />
+            <SlotRow id={{ kind: "classAbility" }} sel={sel} setSel={setSel} label="Class ability" value={view.spec.classAbility} icon={iconForName(view.spec.classAbility)} />
+            {[0, 1].map(i => <SlotRow key={i} id={{ kind: "aspect", i }} sel={sel} setSel={setSel} label={`Aspect ${i + 1}`} value={view.spec.aspects[i] ?? ""} icon={iconForName(view.spec.aspects[i] ?? "")} idle={isIdle(view, view.spec.aspects[i])} />)}
+            {Array.from({ length: view.fragmentSlots }, (_, i) => <SlotRow key={i} id={{ kind: "fragment", i }} sel={sel} setSel={setSel} label={`Fragment ${i + 1}`} value={view.spec.fragments[i] ?? ""} icon={iconForName(view.spec.fragments[i] ?? "")} idle={isIdle(view, view.spec.fragments[i])} />)}
+          </SlotGroup>
+          <SlotGroup title="Gear">
+            <SlotRow id={{ kind: "exotic" }} sel={sel} setSel={setSel} label="Exotic" value={view.spec.exotic} icon={iconForName(view.spec.exotic)} idle={isIdle(view, view.spec.exotic)} />
+            {(["Kinetic", "Energy", "Heavy"] as const).map((l, i) => {
+              const w = view.weapons[i];
+              return <SlotRow key={l} id={{ kind: "weapon", i }} sel={sel} setSel={setSel} label={l} value={w?.item.name ?? ""} icon={w ? DEFS.get(w.item.hash)?.icon : undefined} />;
+            })}
+          </SlotGroup>
+          {view.artifact && (
+            <SlotGroup title="Artifact">
+              <SlotRow id={{ kind: "artifact" }} sel={sel} setSel={setSel} label="Artifact" value={view.artifact.name} icon={DEFS.get(view.artifact.item.hash)?.icon} />
+              {perkSlots(view).map((p, i) => <SlotRow key={i} id={{ kind: "perk", i }} sel={sel} setSel={setSel} label={`Perk ${i + 1}`} value={p?.name ?? ""} icon={p ? DEFS.get(p.hash)?.icon : undefined} idle={isIdle(view, p?.name)} />)}
+            </SlotGroup>
+          )}
+          <div className="pt-2"><LoadoutFigure v={view} compact /></div>
+        </Card>
+
+        <Card className="space-y-3 p-3" data-testid="ws-options">
+          {sel.kind === "subclass" ? (
+            <SubclassPicker ctx={ctx} current={view.spec.subclass} onPick={switchSub} busy={!!busy} />
+          ) : (
+            <>
+              <div>
+                <h3 className="text-lg">Options for {slotTitle(sel)}</h3>
+                <p className="text-xs text-ink-dim">Each option you own is tried in this build{sel.kind === "weapon" || sel.kind === "perk" ? " (armor kept as it is)" : " (armor and mods re-fit for it)"}, then ranked by the rating it would give. Click one to use it.</p>
+              </div>
+              {tried.length === 0 && <p className="text-sm text-ink-dim">Nothing else you own fits here.</p>}
+              <ol className="space-y-2">
+                {tried.map(t => <OptionRow key={t.o.key} t={t} base={view} r={r} onPick={() => setSpec(t.o.apply(view.spec))} />)}
+              </ol>
+              <Unrated sel={sel} view={view} ctx={ctx} />
+            </>
+          )}
+        </Card>
+      </div>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="space-y-3"><HowToPlay v={view} /><h4 className="font-display text-base">How it works</h4><HowItWorks v={view} /></Card>
+        <Card className="space-y-2"><h4 className="font-display text-base">Where every stat point comes from</h4><StatTable v={view} settings={settings} /></Card>
+      </section>
+    </div>
+  );
+}
+
+// ---------- slots ----------
+const namesOf = (v: BuildView) => new Set([...v.parts.map(p => p.name), ...v.artifactPerks.map(p => p.name), v.spec.exotic]);
+const isIdle = (v: BuildView, name?: string) => !!name && v.loops.unfed.some(u => u.name === name);
+const slotTitle = (s: SlotId) => ({ super: "Super", grenade: "Grenade", melee: "Melee", classAbility: "Class ability", exotic: "Exotic armor", artifact: "Artifact", subclass: "Subclass" } as Record<string, string>)[s.kind]
+  ?? (s.kind === "aspect" ? `Aspect ${("i" in s ? s.i : 0) + 1}` : s.kind === "fragment" ? `Fragment ${("i" in s ? s.i : 0) + 1}` : s.kind === "perk" ? `Artifact perk ${("i" in s ? s.i : 0) + 1}` : ["Kinetic", "Energy", "Heavy"][("i" in s ? s.i : 0)] + " weapon");
+
+function perkSlots(v: BuildView): (ArtifactPerk | undefined)[] {
+  if (!v.artifact) return [];
+  const placed = placePerks(v.artifact, v.spec.artifactPerks ?? []);
+  return v.artifact.sockets.map(s => placed.find(p => p.socket === s.index)?.perk);
+}
+
+const SlotGroup = ({ title, children }: { title: string; children: ReactNode }) => (
+  <div className="space-y-0.5"><div className="px-1 pt-2 text-xs font-semibold uppercase tracking-wider text-accent-hi">{title}</div>{children}</div>
+);
+function SlotRow({ id, sel, setSel, label, value, icon, idle }: { id: SlotId; sel: SlotId; setSel: (s: SlotId) => void; label: string; value: string; icon?: string; idle?: boolean }) {
+  const on = slotKey(id) === slotKey(sel);
+  return (
+    <button type="button" onClick={() => setSel(id)} data-testid={`ws-slot-${slotKey(id)}`}
+      className={cn("flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-panel", on && "bg-accent/20 ring-1 ring-accent/60")}>
+      <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-ink-dim">{label}</span>
+      {icon ? <GearIcon src={icon} size={22} title={value} /> : <span className="inline-block h-[22px] w-[22px]" />}
+      <span className={cn("truncate", !value && "text-ink-dim", idle && "text-warn")}>{value || "Empty"}</span>
+      {idle && <span className="ml-auto shrink-0 text-[11px] text-warn">idle</span>}
+    </button>
+  );
+}
+
+// ---------- options ----------
+const bungieText = (name: string) => [...DEFS.values()].find(d => d.name === name && d.desc && /hunter|shared|fragments|trinkets|totems|supers|grenades|melee|class_abilities|aspects/.test(d.plugCat))?.desc;
+const whereOf = (it: Item, cid: string) => (it.owner === "vault" ? "in your vault" : it.owner === cid ? "on your Hunter" : "on another character");
+
+function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
+  const s = v.spec, sub = s.subclass, cid = ctx.characterId;
+  const kit = ctx.kit.get(sub) ?? new Set<string>();
+  const ability = (kind: K["kind"], cur: string, set: (n: string) => Partial<BuildSpec>): Option[] =>
+    HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name)).map(k => ({
+      key: k.name, label: k.name, icon: iconForName(k.name), apply: sp => ({ ...sp, ...set(k.name) }), quick: false,
+      source: "checked", says: k.says, bungie: bungieText(k.name), current: k.name === cur,
+    }));
+  switch (sel.kind) {
+    case "super": return ability("super", s.super, n => ({ super: n }));
+    case "grenade": return ability("grenade", s.grenade, n => ({ grenade: n }));
+    case "melee": return ability("melee", s.melee, n => ({ melee: n }));
+    case "classAbility": return ability("classAbility", s.classAbility, n => ({ classAbility: n }));
+    case "aspect": {
+      const i = sel.i, other = s.aspects[1 - i];
+      return ability("aspect", s.aspects[i] ?? "", n => {
+        const aspects = [...s.aspects]; aspects[i] = n;
+        return { aspects, fragments: s.fragments.slice(0, fragmentSlots(aspects, sub)) };
+      }).filter(o => o.key !== other);
+    }
+    case "fragment": {
+      const i = sel.i, others = s.fragments.filter((_, j) => j !== i);
+      return ability("fragment", s.fragments[i] ?? "", n => { const f = [...s.fragments]; f[i] = n; return { fragments: f.filter(Boolean) }; })
+        .filter(o => !others.includes(o.key));
+    }
+    case "exotic": {
+      const names = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n));
+      return names.map(n => {
+        const k = byName.get(n)!;
+        const copies = ctx.pieces.filter(p => p.item.name === n && p.item.cls === "Hunter");
+        const bestCopy = copies.sort((a, b) => b.item.power - a.item.power)[0];
+        return {
+          key: n, label: n, icon: iconForName(n), quick: false, source: "checked" as Source, says: k.says, current: n === s.exotic,
+          where: bestCopy ? `${whereOf(bestCopy.item, cid)}, Tier ${bestCopy.tier}${bestCopy.mwLevel >= 5 ? ", masterworked" : ""}` : undefined,
+          apply: (sp: BuildSpec) => { const l = { ...sp.armorLocks }; for (const sl of ARMOR_SLOTS) if (ctx.pieces.find(p => p.item.id === l[sl])?.exotic) delete l[sl]; return { ...sp, exotic: n, armorLocks: l }; },
+        };
+      });
+    }
+    case "weapon": {
+      const slot = (["kinetic", "energy", "power"] as const)[sel.i];
+      const otherExotic = s.weapons.some((id, j) => j !== sel.i && ctx.weapons.find(w => w.item.id === id)?.item.exotic);
+      // One copy per weapon name (the highest Power), so the list is choices, not duplicates.
+      const byNameBest = new Map<string, Weapon>();
+      for (const w of ctx.weapons) if (w.item.slot === slot && !(w.item.exotic && otherExotic)) {
+        const cur = byNameBest.get(w.item.name);
+        if (!cur || w.item.id === s.weapons[sel.i] || (cur.item.id !== s.weapons[sel.i] && w.item.power > cur.item.power)) byNameBest.set(w.item.name, w);
+      }
+      return [...byNameBest.values()].map(w => {
+        const perks = w.ks.filter(k => k.name !== w.item.name && k.name !== w.type).map(k => k.name);
+        return {
+          key: w.item.id, label: w.item.name, icon: DEFS.get(w.item.hash)?.icon, quick: true,
+          source: (w.rated ? "checked" : w.ks.length ? "frame" : "unrated") as Source,
+          says: [w.element, w.type, perks.length ? `rated perks: ${perks.join(", ")}` : ""].filter(Boolean).join(" · "),
+          where: `${whereOf(w.item, cid)}, Power ${w.item.power}${w.item.masterworked ? ", masterworked" : ""}${w.item.power < ctx.light - 60 ? " (needs infusing before it's usable at your Power)" : ""}`,
+          current: w.item.id === s.weapons[sel.i],
+          apply: (sp: BuildSpec) => { const ws = [...sp.weapons]; ws[sel.i] = w.item.id; return { ...sp, weapons: ws }; },
+        };
+      });
+    }
+    case "artifact":
+      return ctx.artifacts.map(a => ({
+        key: a.name, label: a.name, icon: DEFS.get(a.item.hash)?.icon, quick: true, source: "bungie" as Source, current: a.name === v.artifact?.name,
+        says: "Perks picked for this build automatically. " + (DEFS.get(a.item.hash)?.desc ?? ""),
+        apply: (sp: BuildSpec) => ({ ...sp, ...refitArtifact(sp, ctx, a.name) }),
+      }));
+    case "perk": {
+      const art = v.artifact;
+      if (!art) return [];
+      const placed = perkSlots(v);
+      const sock = art.sockets[sel.i];
+      return sock.options.map(o => ({
+        key: o.name, label: o.name, icon: DEFS.get(o.hash)?.icon, quick: true, current: placed[sel.i]?.name === o.name,
+        source: (o.read === "checked" ? "checked" : "bungie") as Source, says: o.read === "checked" ? o.says : undefined, bungie: DEFS.get(o.hash)?.desc,
+        apply: (sp: BuildSpec) => {
+          const names = placed.map(p => p?.name);
+          const was = names.indexOf(o.name);
+          if (was >= 0) names[was] = names[sel.i]; // swap if it sits in another socket
+          names[sel.i] = o.name;
+          return { ...sp, artifactPerks: names.filter((n): n is string => !!n) };
+        },
+      }));
+    }
+  }
+  return [];
+}
+
+function OptionRow({ t, base, r, onPick }: { t: Tried; base: BuildView; r: (v: BuildView) => number; onPick: () => void }) {
+  const d = r(t.v) - r(base);
+  const src = SOURCE[t.o.source];
+  return (
+    <li className={cn("rounded-md border border-line p-2.5", t.o.current && "border-accent/70 bg-accent/10")} data-testid="ws-option">
+      <div className="flex items-start gap-2">
+        {t.o.icon ? <GearIcon src={t.o.icon} size={30} title={t.o.label} /> : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <b className="text-sm">{t.o.label}</b>
+            {t.o.current && <Badge>current</Badge>}
+            <span title={src.tip}><Badge tone={src.tone}>{src.label}</Badge></span>
+          </div>
+          {t.o.where && <div className="text-xs text-ink-dim">{t.o.where}</div>}
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="font-display text-lg leading-none">{r(t.v) ? Math.min(100, r(t.v)) : "…"}{r(t.v) > 100 && <span className="text-xs text-good"> new best</span>}</div>
+          <div className="text-xs">{t.o.current ? <span className="text-ink-dim">now</span> : <Delta v={d} />}</div>
+        </div>
+      </div>
+      {!t.o.current && (t.gained.length > 0 || t.lost.length > 0 || t.nowIdle.length > 0 || t.nowFed.length > 0) && (
+        <ul className="mt-1.5 space-y-0.5 text-xs">
+          {t.gained.length > 0 && <li className="text-good">Starts: {t.gained.join(", ")}</li>}
+          {t.nowFed.length > 0 && <li className="text-good">Wakes up: {t.nowFed.join(", ")}</li>}
+          {t.lost.length > 0 && <li className="text-bad">Breaks: {t.lost.join(", ")}</li>}
+          {t.nowIdle.length > 0 && <li className="text-warn">Leaves idle: {t.nowIdle.map(n => `${n} (needs ${word(t.v.loops.unfed.find(u => u.name === n)?.token ?? "")})`).join("; ")}</li>}
+        </ul>
+      )}
+      {(t.o.says || t.o.bungie) && (
+        <details className="mt-1 text-xs text-ink-dim">
+          <summary className="cursor-pointer">What it does</summary>
+          {t.o.says && <p className="mt-1"><span className="text-ink">Steeped:</span> {t.o.says}</p>}
+          {t.o.bungie && <p className="mt-1"><span className="text-ink">Bungie:</span> {t.o.bungie.replace(/\[[^\]]*\]/g, "")}</p>}
+        </details>
+      )}
+      {!t.o.current && <div className="mt-1.5"><Button size="sm" variant="ghost" onClick={onPick}>Use this</Button></div>}
+    </li>
+  );
+}
+
+// Things you own for this slot that Steeped has no rule for: listed, never guessed.
+function Unrated({ sel, view, ctx }: { sel: SlotId; view: BuildView; ctx: Ctx }) {
+  const kindOf: Partial<Record<SlotId["kind"], RegExp>> = { super: /supers/, grenade: /grenades/, melee: /melee/, classAbility: /class_abilities/, aspect: /aspects|totems/, fragment: /fragments|trinkets/ };
+  const re = kindOf[sel.kind];
+  if (!re) return null;
+  const sub = ctx.inv.items.find(i => i.kind === "subclass" && i.owner === ctx.characterId && i.name === view.spec.subclass);
+  if (!sub) return null;
+  const names = new Set<string>();
+  for (const list of Object.values(sub.options)) for (const h of list) { const d = DEFS.get(h); if (d?.name && re.test(d.plugCat) && !byName.has(d.name) && !/^Empty/.test(d.name)) names.add(d.name); }
+  if (!names.size) return null;
+  return (
+    <div className="space-y-1 border-t border-line pt-2 text-xs text-ink-dim">
+      <p><Badge tone="warn">Not rated</Badge> You have these, but Steeped has no rule for them yet, so it won't guess:</p>
+      <ul className="space-y-0.5">{[...names].map(n => <li key={n}><span className="text-ink">{n}</span>{bungieText(n) ? `: ${bungieText(n)!.replace(/\[[^\]]*\]/g, "")}` : ""}</li>)}</ul>
+    </div>
+  );
+}
+
+function SubclassPicker({ ctx, current, onPick, busy }: { ctx: Ctx; current: string; onPick: (s: Subclass) => void; busy: boolean }) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-lg">Subclass</h3>
+      <p className="text-xs text-ink-dim">Switching subclass changes every ability, so Steeped builds the best version of that subclass around your current weapons, then you can tweak it slot by slot.</p>
+      <div className="flex flex-wrap gap-2">
+        {[...ctx.kit.keys()].map(s => <Button key={s} size="sm" variant={s === current ? "primary" : "ghost"} disabled={busy || s === current} onClick={() => onPick(s)}>{s}</Button>)}
+      </div>
+    </div>
+  );
+}
+
+function StatTable({ v, settings }: { v: BuildView; settings: Settings }) {
+  const b = breakdown(v, settings, false);
+  return (
+    <table className="w-full text-sm">
+      <thead><tr className="text-left text-xs text-ink-dim"><th className="py-1">Stat</th><th>Armor</th><th>Mods</th><th>Fragments</th><th>Total</th></tr></thead>
+      <tbody>
+        {STAT_ORDER.map(k => (
+          <tr key={k} className="border-t border-line/60">
+            <td className="py-1">{STAT_LABEL[k]}</td><td>{b.armor[k]}</td><td>{b.mods[k] ? `+${b.mods[k]}` : 0}</td><td>{b.fragments[k] > 0 ? `+${b.fragments[k]}` : b.fragments[k]}</td>
+            <td className={cn("font-semibold", b.total[k] >= 100 ? "text-good" : b.total[k] < 50 ? "text-warn" : "")}>{b.total[k]}</td>
+          </tr>
+        ))}
+      </tbody>
+      <tfoot><tr><td colSpan={5} className="pt-2 text-xs text-ink-dim">Armor includes masterwork and tuning. 70 is where cooldowns are nearly maxed; past 100 adds damage.</td></tr></tfoot>
+    </table>
+  );
+}

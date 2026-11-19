@@ -14,7 +14,7 @@ import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
 
-const GOALS: { value: Goal; label: string }[] = [
+export const GOALS: { value: Goal; label: string }[] = [
   { value: "whole", label: "Whole activity" },
   { value: "abilities", label: "Ability spam" },
   { value: "bossDps", label: "Raid boss" },
@@ -31,7 +31,7 @@ const WORDS: Record<string, string> = {
   kGrenade: "grenade kills", kPrecision: "precision kills", kSuper: "super kills", dodge: "dodges", heal: "healing", dr: "damage resistance",
   suppress: "suppress", tangle: "Tangles", bossDmg: "boss damage", teamBuff: "team buffs", reload: "reloads", restoration: "restoration", cure: "cure",
 };
-const word = (t: string) => t.split(" or ").map(x => WORDS[x] ?? x).join(" or ");
+export const word = (t: string) => t.split(" or ").map(x => WORDS[x] ?? x).join(" or ");
 
 const where = (i: Item, cid: string) =>
   i.owner === cid && i.equipped ? "Worn" : i.owner === cid ? "On character" : i.owner === "vault" ? "Vault" : "Other character";
@@ -685,7 +685,7 @@ function DoThis({ steps }: { steps: { what: string; detail?: string }[] }) {
 }
 
 // The playbook: what to actually do in a fight, built from the signature combos this build has.
-function HowToPlay({ v }: { v: BuildView }) {
+export function HowToPlay({ v }: { v: BuildView }) {
   const idle = v.artifactPerks.filter(p => v.loops.unfed.some(u => u.name === p.name));
   const active = v.artifactPerks.filter(p => !idle.includes(p));
   return (
@@ -709,7 +709,7 @@ function HowToPlay({ v }: { v: BuildView }) {
   );
 }
 
-function HowItWorks({ v }: { v: BuildView }) {
+export function HowItWorks({ v }: { v: BuildView }) {
   const ab: Record<string, string> = { grenade: "Your grenade", melee: "Your melee", classAbility: "Your dodge", super: "Your super" };
   return (
     <div className="space-y-2 text-sm">

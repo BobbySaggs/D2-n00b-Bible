@@ -6,6 +6,7 @@ import { downloadSnapshot } from "./snapshot";
 import { SignIn } from "./screens/SignIn";
 import { Roster } from "./screens/Roster";
 import { Builder } from "./screens/Builder";
+import { Workshop } from "./screens/Workshop";
 import { Segmented } from "./ui/bits";
 import { Button, Card, Logo } from "./ui/kit";
 
@@ -27,7 +28,7 @@ function ago(t: number, now: number) {
 export default function App() {
   const [st, setSt] = useState<State>({ at: "start" });
   const [now, setNow] = useState(Date.now());
-  const [screen, setScreen] = useState<"builder" | "roster">("builder");
+  const [screen, setScreen] = useState<"builder" | "workshop" | "roster">("builder");
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
 
   const load = useCallback(async () => {
@@ -81,9 +82,10 @@ export default function App() {
         </Card>
       )}
       {st.at === "ready" && (
-        <nav className="mb-5"><Segmented label="Screen" value={screen} onChange={setScreen} options={[{ value: "builder", label: "Builder" }, { value: "roster", label: "My roster" }]} /></nav>
+        <nav className="mb-5"><Segmented label="Screen" value={screen} onChange={setScreen} options={[{ value: "builder", label: "Builder" }, { value: "workshop", label: "Workshop" }, { value: "roster", label: "My roster" }]} /></nav>
       )}
       {st.at === "ready" && screen === "builder" && <Builder inv={st.data.inventory} onRefresh={load} />}
+      {st.at === "ready" && screen === "workshop" && <Workshop inv={st.data.inventory} />}
       {st.at === "ready" && screen === "roster" && (
         <Roster
           inv={st.data.inventory}
