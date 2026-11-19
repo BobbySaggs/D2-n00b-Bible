@@ -53,6 +53,8 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
   const [equipping, setEquipping] = useState<Col | null>(null);
   const [alts, setAlts] = useState<BuildSpec[]>([]); // Steeped's top builds for this goal, for Build B
   const [altIdx, setAltIdx] = useState(0); // on phones: compare Now with one build at a time
+  const [best, setBest] = useState<BuildSpec | null>(null); // Steeped's best for this goal with nothing locked: the 100 mark
+  const [explain, setExplain] = useState(false);
 
   const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string; require?: Require } = {}) => {
     if (!ctx) return;
@@ -62,6 +64,12 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
       const require = opts.require ?? (Object.keys(req).length ? req : undefined);
       const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts, require }, inv, ctx.defs);
       if (!found.length) setErr("No build fits everything you asked for. Try removing one of the Build around picks.");
+      // The rating's yardstick is always the best build with nothing locked, so Build around can't move the goalposts.
+      if (!require && !opts.onlySubclass && !opts.onlyExotic && found[0]) setBest(found[0]);
+      else if (cols.length === 2 || !best) {
+        const free = await runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: [] }, inv, ctx.defs);
+        if (free[0]) setBest(free[0]);
+      }
       setSpecs(s => {
         const next = [...s];
         if (cols.length === 2) { next[0] = tuneCurrent(ctx, goal) ?? found[1] ?? null; next[1] = found[0] ?? null; setAlts(found); setAltIdx(0); }
@@ -79,6 +87,13 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
 
   const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal, settings]);
   const views = useMemo(() => specs.map(s => (s && ctx ? evaluate({ ...s, goal }, ctx, settings) : null)), [specs, ctx, goal, settings]);
+  const bestView = useMemo(() => (best && ctx ? evaluate({ ...best, goal }, ctx, settings) : null), [best, ctx, goal, settings]);
+  // 100 = the strongest build Steeped can make from your gear for this goal (or whichever shown build beats it).
+  const ref = useMemo(() => {
+    const all = [bestView, now, ...views].filter((x): x is BuildView => !!x);
+    if (!all.length) return null;
+    return { score: Math.max(...all.map(x => x.score)), loop: Math.max(...all.map(x => x.loopScore)), stat: Math.max(...all.map(x => x.statScore)) };
+  }, [bestView, now, views]);
   const full = useMemo(() => specs.map(s => (s && ctx && settings.mw === "asIs" ? evaluate({ ...s, goal }, ctx, { ...settings, mw: "full" }) : null)), [specs, ctx, goal, settings]);
 
   if (!hunter || !ctx) return <Card>The builder knows Hunters first. Titan and Warlock are next.</Card>;
@@ -111,9 +126,10 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
       <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[1]} onApply={r => search([1], { require: r })} />
 
       <section className="grid gap-3 md:grid-cols-3">
-        <ScoreCard title="Now" sub="What you're wearing" v={now} />
+        <ScoreCard title="Now" sub="What you're wearing" v={now} ref_={ref} onExplain={() => setExplain(!explain)} />
         {([0, 1] as Col[]).map(c => (
-          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]}
+          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]} ref_={ref} onExplain={() => setExplain(!explain)}
+            note={c === 1 && Object.keys(req).length > 0 && bestView && views[1] ? lockCost(views[1], bestView, ref) : undefined}
             action={c === 0
               ? <div className="flex flex-wrap gap-2">
                   <Button size="sm" disabled={!views[0]?.armor} onClick={() => setEquipping(0)}>Equip in game</Button>
@@ -126,6 +142,8 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
                 </div>} />
         ))}
       </section>
+
+      {explain && <RatingHelp onClose={() => setExplain(false)} best={bestView} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-dim">
@@ -168,7 +186,43 @@ export function Builder({ inv, onRefresh }: { inv: Inventory; onRefresh?: () => 
   );
 }
 
-function ScoreCard({ title, sub, v, base, busy, action }: { title: string; sub: string; v: BuildView | null; base?: BuildView | null; busy?: boolean; action?: ReactNode }) {
+type Ref = { score: number; loop: number; stat: number } | null;
+const pct = (x: number, of: number) => (of > 0 ? Math.max(0, Math.min(100, Math.round((100 * x) / of))) : 0);
+export const rating = (v: BuildView, r: Ref) => (r ? pct(v.score, r.score) : 0);
+
+// What the Build around picks cost, compared with Steeped's best when nothing is locked.
+function lockCost(v: BuildView, best: BuildView, r: Ref): string | undefined {
+  const lost = 100 - rating(v, r);
+  if (lost <= 0) return undefined;
+  const diffs: string[] = [];
+  const a = v.spec, b = best.spec;
+  if (a.subclass !== b.subclass) diffs.push(`${a.subclass} instead of ${b.subclass}`);
+  if (a.exotic !== b.exotic) diffs.push(`${a.exotic} instead of ${b.exotic}`);
+  for (const [k, label] of [["super", "super"], ["grenade", "grenade"], ["melee", "melee"], ["classAbility", "class ability"]] as const)
+    if (a.subclass === b.subclass && a[k] !== b[k]) diffs.push(`${a[k]} as ${label}`);
+  const asp = a.aspects.filter(x => !b.aspects.includes(x));
+  if (asp.length) diffs.push(`${asp.join(" and ")} as aspect${asp.length > 1 ? "s" : ""}`);
+  if (a.artifact && a.artifact !== b.artifact) diffs.push(`${a.artifact} as artifact`);
+  return `Your Build around picks cost ${lost} point${lost === 1 ? "" : "s"}${diffs.length ? `: ${diffs.join(", ")}` : ""}. Steeped's best with nothing locked scores 100.`;
+}
+
+function RatingHelp({ onClose, best }: { onClose: () => void; best: BuildView | null }) {
+  return (
+    <Card className="space-y-2 text-sm" data-testid="rating-help">
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-lg">What the rating means</h3>
+        <Button size="sm" variant="quiet" onClick={onClose}>Close</Button>
+      </div>
+      <p><b>100 is the strongest build Steeped can make from the gear you own</b>, for the goal you picked{best ? <> (right now: {best.spec.subclass} + {best.spec.exotic})</> : null}. Every other build is rated against it, so 90 means it gets 90% of the way there. It is not a community tier list: it only knows your inventory.</p>
+      <p><b>Synergy</b> is how well the pieces feed each other: abilities refilling abilities, combos like Glacier + Shatterdive turning frozen enemies into kills, artifact perks that actually trigger. Pieces that do nothing in the build earn nothing.</p>
+      <p><b>Stats</b> is how well your stats fit the build. Cooldowns are nearly maxed at 70, so 70 to 100 counts half, and points past 100 count for the damage bonus they add.</p>
+      <p className="text-ink-dim">Both sub-ratings are against the best shown for that part, so a build can have 100 Synergy and 92 Stats. Change the goal and the 100 changes with it. Get a new exotic or weapon and your 100 can go up.</p>
+    </Card>
+  );
+}
+
+function ScoreCard({ title, sub, v, base, busy, action, ref_, onExplain, note }: { title: string; sub: string; v: BuildView | null; base?: BuildView | null; busy?: boolean; action?: ReactNode; ref_: Ref; onExplain: () => void; note?: string }) {
+  const r = v ? rating(v, ref_) : 0;
   return (
     <Card className={cn("space-y-2", title !== "Now" && "border-accent/40")} data-testid={`card-${title}`}>
       <div className="flex items-start justify-between gap-2">
@@ -178,14 +232,17 @@ function ScoreCard({ title, sub, v, base, busy, action }: { title: string; sub: 
         </div>
         {busy ? <Spinner label="Thinking" /> : v && (
           <div className="text-right">
-            <div className="font-display text-3xl leading-none" data-testid={`score-${title}`}>{Math.round(v.score)}</div>
-            <div className="text-xs text-ink-dim">build score {base && <Delta v={Math.round(v.score - base.score)} />}</div>
-            <div className="text-[11px] text-ink-dim" data-testid={`parts-${title}`}>loops {Math.round(v.loopScore)}{base && <Delta className="ml-0.5" v={Math.round(v.loopScore - base.loopScore)} />} · stats {Math.round(v.statScore)}{base && <Delta className="ml-0.5" v={Math.round(v.statScore - base.statScore)} />}</div>
+            <div className="font-display leading-none"><span className="text-3xl" data-testid={`score-${title}`}>{r}</span><span className="text-sm text-ink-dim"> / 100</span></div>
+            <button type="button" onClick={onExplain} className="text-xs text-ink-dim underline decoration-dotted underline-offset-2 hover:text-ink">rating {base && <Delta v={r - rating(base, ref_)} />} <span aria-hidden>ⓘ</span></button>
+            <div className="text-[11px] text-ink-dim" data-testid={`parts-${title}`}>Synergy {pct(v.loopScore, ref_?.loop ?? 0)} · Stats {pct(v.statScore, ref_?.stat ?? 0)}</div>
           </div>
         )}
       </div>
       {v && (
         <>
+          {!busy && r < 100 && !note && <div className="text-xs text-ink-dim">{100 - r} points from the best build your gear can make.</div>}
+          {!busy && r === 100 && <div className="text-xs text-good">The best build Steeped found with your gear.</div>}
+          {!busy && note && <div className="text-xs text-warn">{note}</div>}
           <div className="text-sm"><span className="text-ink">{v.spec.subclass}</span> <span className="text-ink-dim">+</span> <span className="text-exotic">{v.spec.exotic || "no exotic"}</span></div>
           <LoadoutFigure v={v} compact />
           <div className="flex flex-wrap gap-2">
