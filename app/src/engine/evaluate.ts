@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type Slot } from "../bungie/config";
+import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
 import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
@@ -7,7 +7,8 @@ import { artifactsOf, fitArtifact, perkByName, type ArtifactChoice } from "./art
 import { readPiece, type MwMode, type Piece } from "./armor";
 import { availableKit, corePartsOf, subMarker, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
-import { count100, lowest, solve, type Solution } from "./solve";
+import { count100, lowest, planValue, solve, statValue, type Solution, type StatPlan } from "./solve";
+import type { Part } from "./loops";
 import { ownedMods, planArmorMods, type PieceMods } from "./mods";
 
 // A build the player can edit: everything by name or item id, so it is easy to store, compare and send to a worker.
@@ -62,14 +63,21 @@ export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefine
   };
 }
 
-// Stats are part of the score: points up to 100 (ability speed) and past 100 (each stat's bonus effect).
-export function statScore(st: Stats): number {
+// Stats are part of the score, valued exactly the way the armor solver values them for this build: the stats the
+// build leans on count more, points under your floor (Health minimum) cost a lot, 70 to 100 counts half, and in
+// "Most 100s" style reaching 100 earns a bonus. Without a plan (no armor) every point counts the same.
+export const STAT_SCALE = 0.3;
+export function statScore(st: Stats, plan?: StatPlan): number {
+  if (plan) return STAT_SCALE * planValue(st, plan);
   let t = 0;
   for (const v of Object.values(st)) t += 0.2 * Math.min(v, 100) + 0.1 * Math.max(0, Math.min(v, 200) - 100);
   return t;
 }
 
 export interface BuildView {
+  plan?: StatPlan;
+  coreParts: Part[]; // subclass picks, exotic and subclass marker
+  perkParts: Part[]; // artifact perks
   spec: BuildSpec;
   loopScore: number;
   statScore: number;
@@ -110,9 +118,9 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const loops = scoreLoops(loopParts, spec.goal);
   const bonus = fragmentBonus(fragments, ctx.defs);
 
-  let armor: Solution | undefined;
+  let armor: Solution | undefined, plan: StatPlan | undefined;
   if (exotic && sup && gr && me && ca) {
-    const plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.healthFloor, settings.style);
+    plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.healthFloor, settings.style);
     armor = solve(ctx.pieces, {
       cls: "Hunter", exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
       locks: spec.armorLocks, minPower: ctx.light - 60, top: 1,
@@ -121,7 +129,29 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   }
   void corePartsOf;
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
-  return { artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats), score: loops.score + statScore(stats), bonus, fragmentSlots: slots, armor, stats, issues };
+  const coreParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass)], perkParts = artifactPerks.map(k => ({ k }));
+  return { plan, coreParts, perkParts, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, plan), score: loops.score + statScore(stats, plan), bonus, fragmentSlots: slots, armor, stats, issues };
+}
+
+// Where the points come from. A piece is worth what the build would lose without it, so pieces that only work
+// together each show the full value of the pairing (the numbers overlap on purpose).
+export interface PiecePoints { name: string; group: "Weapons" | "Exotic" | "Subclass" | "Artifact" | "Stats"; points: number; detail?: string }
+export function pointsByPiece(v: BuildView): PiecePoints[] {
+  const goal = v.spec.goal, ws = v.weapons.filter((w): w is Weapon => !!w);
+  const score = (core: Part[], weps: Weapon[], perks: Part[]) => scoreLoops([...core, ...weaponParts(weps), ...perks], goal).score;
+  const base = score(v.coreParts, ws, v.perkParts);
+  const out: PiecePoints[] = [];
+  for (const w of ws) out.push({ name: w.item.name, group: "Weapons", points: base - score(v.coreParts, ws.filter(x => x !== w), v.perkParts), detail: w.ks.filter(x => x.name !== w.item.name).map(x => x.name).join(", ") || undefined });
+  for (const p of v.coreParts) {
+    if (p.k.name.startsWith("__")) continue;
+    out.push({ name: p.k.name, group: p.k.kind === "exotic" ? "Exotic" : "Subclass", points: base - score(v.coreParts.filter(x => x !== p), ws, v.perkParts) });
+  }
+  for (const p of v.perkParts) out.push({ name: p.k.name, group: "Artifact", points: base - score(v.coreParts, ws, v.perkParts.filter(x => x !== p)) });
+  if (v.plan) for (const k of STAT_ORDER) {
+    const w = v.plan[k];
+    out.push({ name: STAT_LABEL[k], group: "Stats", points: STAT_SCALE * statValue(v.stats[k], w), detail: `${v.stats[k]}${v.stats[k] < w.floor ? `, under your minimum of ${w.floor}` : ""}` });
+  }
+  return out;
 }
 
 // What you're wearing right now, read from your equipped subclass, exotic and weapons.
@@ -153,7 +183,7 @@ export function evaluateNow(ctx: Ctx, goal: Goal, settings: Settings): BuildView
   const v = evaluate(spec, ctx, { ...settings, mw: "asIs" });
   const ch = ctx.inv.characters.find(c => c.id === ctx.characterId)!;
   v.stats = { ...ch.stats };
-  v.statScore = statScore(v.stats);
+  v.statScore = statScore(v.stats, v.plan);
   v.score = v.loopScore + v.statScore;
   if (v.armor) v.armor = { ...v.armor, stats: { ...ch.stats } };
   v.issues = v.issues.filter(i => !i.startsWith("No armor"));

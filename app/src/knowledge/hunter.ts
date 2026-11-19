@@ -175,7 +175,7 @@ export const HUNTER: K[] = [
   { name: "Thread of Ascent", kind: "fragment", subs: STRAND, makes: ["reload"], uses: ["gEn"], says: "Grenades reload your weapon." },
 
   // ---------- Exotic armor (Tyler owns all of these) ----------
-  { name: "Star-Eater Scales", kind: "exotic", makes: ["sEn:2", "bossDmg:3", "heal", "overshield"], uses: ["orb:2", "orbPickup"], wants: { super: 1 }, role: ["bossDps"], says: "Orbs overcharge your super for a huge damage boost. The boss-damage exotic for any Hunter super." },
+  { name: "Star-Eater Scales", kind: "exotic", makes: ["sEn:2", "heal", "overshield"], uses: ["orb:2", "orbPickup"], wants: { super: 1 }, role: ["bossDps"], says: "Orbs overcharge your super: more super energy and a big boost to your next super's damage. Only worth boss damage when your super is a boss super." },
   { name: "Celestial Nighthawk", kind: "exotic", makes: ["bossDmg:3", "sEn"], uses: ["kPrecision"], wants: { super: 1 }, role: ["bossDps"], needs: ["Golden Gun: Marksman", "Golden Gun: Deadshot"], says: "Golden Gun becomes one massive shot." },
   { name: "Shards of Galanor", kind: "exotic", makes: ["sEn:2"], uses: ["kSuper"], wants: { super: 1 }, role: ["bossDps"], needs: ["Blade Barrage"], says: "Blade Barrage refunds super; knife kills too." },
   { name: "Orpheus Rig", kind: "exotic", makes: ["sEn", "gEn", "mEn", "cEn"], uses: ["suppress|weaken"], role: ["team"], needs: ["Shadowshot: Deadfall", "Shadowshot: Moebius Quiver"], says: "Deadfall tethers refund your abilities." },
@@ -283,7 +283,9 @@ export const COMBOS: Combo[] = [
   { name: "Gnawing Hunger loop", wants: { weapons: 1 }, all: ["Gnawing Hunger", "Volatile Flow|Destabilizing Rounds|Gyrfalcon's Hauberk"], makes: ["multikill:2", "dmg", "bossDmg"], play: "Gnawing Hunger with volatile rounds melts packs and majors. Kill, reload for Kill Clip, keep shooting. It also does real damage to bosses between heavy ammo." },
   { name: "Breach overshield", all: ["Unto the Breach", "Protective Breach", "@volatile|weaken|suppress"], makes: ["overshield", "dr"], play: "Volatile kills leave Void Breaches. Walk over them for an overshield." },
   { name: "Frost Armor tank", wants: { health: 0.5 }, all: ["Grim Harvest|Rimestealer|Fr0st-EE5|Wind Chill", "Whisper of Rime|Whisper of Chains"], makes: ["dr:2"], play: "Keep Frost Armor stacked: at 5 stacks you take about 35% less damage, and stacks now melt one at a time." },
-  { name: "Orb engine", wants: { super: 1 }, all: ["Star-Eater Scales", "@orb"], makes: ["bossDmg:2"], play: "Pick up orbs before your super to overcharge it, then fire it on the boss." },
+  // Star-Eater's damage boost goes into your super, so it is boss damage only when the super hits bosses hard.
+  { name: "Orb engine", wants: { super: 1 }, all: ["Star-Eater Scales", "@orb", "Golden Gun: Marksman|Golden Gun: Deadshot|Blade Barrage|Shadowshot: Moebius Quiver|Shadowshot: Deadfall|Gathering Storm|Storm's Edge"], makes: ["bossDmg:4"], play: "Pick up orbs before your super to overcharge it, then fire it on the boss." },
+  { name: "Overcharged storm", wants: { super: 1 }, all: ["Star-Eater Scales", "Silence and Squall|Spectral Blades|Arc Staff|Silkstrike"], makes: ["multikill", "sEn"], play: "Star-Eater makes your crowd-clearing super bigger and come back sooner. It does not turn it into boss damage." },
 ];
 
 // Weapon types: what the frame of weapon is good for, before its perks.

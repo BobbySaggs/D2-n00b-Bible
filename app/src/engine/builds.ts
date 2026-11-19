@@ -266,7 +266,7 @@ export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbi
     const floor = k === "health" ? (healthFloor ?? (goal === "survival" || goal === "bossDps" ? 70 : 60)) : 50;
     // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
     plan[k] = style === "peaks"
-      ? { floor, low: 0.6 + 0.4 * w, high: 0.25 + 0.3 * w, peak: 1 + 0.5 * w }
+      ? { floor, low: 0.5 + 0.7 * w, high: 0.2 + 0.4 * w, peak: 0.4 + 1.0 * w }
       : { floor, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
   }
   return plan;

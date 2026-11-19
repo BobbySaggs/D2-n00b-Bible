@@ -12,7 +12,7 @@ import { runSearch } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, iconForName } from "../ui/gear";
-import { GOALS, HowItWorks, HowToPlay, word } from "./Builder";
+import { GOALS, HowItWorks, HowToPlay, PointsPanel, word } from "./Builder";
 
 // The Workshop: you pick, Steeped explains. Click a slot and every option you own for it is tried in your build
 // and ranked by what it really does, with where each claim comes from.
@@ -63,7 +63,8 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
   const [locks, setLocks] = useState<Set<string>>(new Set());
   const [saves, setSaves] = useState<Saved[]>(() => readJSON<Saved[]>(SAVES_KEY, []));
   const [msg, setMsg] = useState("");
-  const settings: Settings = { healthFloor: 50, mw: "asIs", style: "peaks" };
+  const [healthFloor, setHealthFloor] = useState(70);
+  const settings: Settings = { healthFloor, mw: "asIs", style: "peaks" };
   const [spec, setSpec] = useState<BuildSpec | null>(null);
   const [best, setBest] = useState<BuildSpec | null>(null);
   const [sel, setSel] = useState<SlotId>({ kind: "grenade" });
@@ -80,9 +81,9 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
   }, [ctx, goal, inv]);
 
   useEffect(() => { if (spec) writeJSON(WS_KEY, spec); }, [spec]);
-  const view = useMemo(() => (spec && ctx ? evaluate({ ...spec, goal }, ctx, settings) : null), [spec, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
-  const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bestView = useMemo(() => (best && ctx ? evaluate({ ...best, goal }, ctx, settings) : null), [best, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const view = useMemo(() => (spec && ctx ? evaluate({ ...spec, goal }, ctx, settings) : null), [spec, ctx, goal, healthFloor]); // eslint-disable-line react-hooks/exhaustive-deps
+  const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal, healthFloor]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bestView = useMemo(() => (best && ctx ? evaluate({ ...best, goal }, ctx, settings) : null), [best, ctx, goal, healthFloor]); // eslint-disable-line react-hooks/exhaustive-deps
   const ref: Ref | null = useMemo(() => {
     if (!bestView) return null; // no rating until the 100 mark is known: a rating against nothing would mislead
     const all = [bestView, now, view].filter((x): x is BuildView => !!x);
@@ -104,7 +105,7 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
         nowIdle: [...afterIdle].filter(n => !idle.has(n)), nowFed: [...idle].filter(n => !afterIdle.has(n) && namesOf(v).has(n)),
       };
     }).sort((a, b) => b.v.score - a.v.score);
-  }, [options, view, ctx, goal]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [options, view, ctx, goal, healthFloor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!hunter || !ctx) return <Card>The Workshop knows Hunters first.</Card>;
   if (!spec || !view) return <Card><Spinner label="Reading your build" /></Card>;
@@ -157,6 +158,11 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
       <section className="flex flex-wrap items-center justify-between gap-3">
         <Segmented label="What are you building for?" value={goal} options={GOALS} onChange={setGoal} />
         <div className="flex flex-wrap items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-ink-dim">Health at least
+            <select className="h-9 rounded-md border border-line bg-panel-2 px-2 text-ink" value={healthFloor} onChange={e => setHealthFloor(Number(e.target.value))} aria-label="Health at least">
+              {[40, 50, 60, 70, 80, 90, 100].map(x => <option key={x} value={x}>{x}</option>)}
+            </select>
+          </label>
           <span className="text-ink-dim">Start from</span>
           <Button size="sm" variant="ghost" onClick={() => start("now")}>What I'm wearing</Button>
           <Button size="sm" variant="ghost" onClick={() => start("tuned")}>My build, tuned</Button>
@@ -250,7 +256,7 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
       </div>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="space-y-3"><HowToPlay v={view} /><h4 className="font-display text-base">How it works</h4><HowItWorks v={view} /></Card>
+        <Card className="space-y-3"><HowToPlay v={view} />{ref && <PointsPanel v={view} base={now} refScore={ref.score} open />}<h4 className="font-display text-base">How it works</h4><HowItWorks v={view} /></Card>
         <Card className="space-y-2"><h4 className="font-display text-base">Where every stat point comes from</h4><StatTable v={view} settings={settings} /></Card>
       </section>
     </div>

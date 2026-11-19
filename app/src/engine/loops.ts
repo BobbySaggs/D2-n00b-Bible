@@ -107,7 +107,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   // Pass 1 decides which pieces get triggered; pass 2 counts an untriggered piece's effects at 40%.
   const first = buildMade(() => 1);
   const triggered = new Set(live.filter(p => { const tr = triggers(p); return !tr.length || tr.some(([t]) => sourceFor(first, t, p.k.name)); }).map(p => p.k.name));
-  const made = buildMade(p => (triggered.has(p.k.name) ? 1 : 0.4));
+  const made = buildMade(p => (triggered.has(p.k.name) ? 1 : p.k.kind === "artifact" ? 0 : 0.4)); // an idle artifact perk does nothing at all
 
   const W = GOAL_WEIGHTS[goal];
   let score = 0;

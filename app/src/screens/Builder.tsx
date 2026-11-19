@@ -3,7 +3,7 @@ import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
-import { breakdown, currentSlotMods, evaluate, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { breakdown, currentSlotMods, evaluate, pointsByPiece, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import type { Require } from "../engine/builds";
 import { equipPlan } from "../engine/equip";
 import { EquipDialog } from "./EquipDialog";
@@ -42,7 +42,7 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
   const hunter = inv.characters.find(c => c.cls === "Hunter");
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const [goal, setGoal] = useState<Goal>(incoming?.spec.goal ?? "whole");
-  const [settings, setSettings] = useState<Settings>({ healthFloor: 50, mw: "asIs", style: "peaks" });
+  const [settings, setSettings] = useState<Settings>({ healthFloor: 70, mw: "asIs", style: "peaks" });
   const [pinned, setPinned] = useState<string[]>([]);
   const [specs, setSpecs] = useState<(BuildSpec | null)[]>([null, null]);
   const [busy, setBusy] = useState<[boolean, boolean]>([false, false]);
@@ -169,6 +169,7 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
             <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}</h3>
             {now && <DoThis steps={[...stepsFrom(now, views[c]!, ctx), ...modSteps(views[c]!, ctx)]} />}
             <HowToPlay v={views[c]!} />
+            {ref && <PointsPanel v={views[c]!} base={now} refScore={ref.score} />}
             <h4 className="font-display text-base">How it works</h4>
             <HowItWorks v={views[c]!} />
             <Stronger v={views[c]!} full={full[c]} ctx={ctx} />
@@ -689,6 +690,42 @@ function DoThis({ steps }: { steps: { what: string; detail?: string }[] }) {
 }
 
 // The playbook: what to actually do in a fight, built from the signature combos this build has.
+// Where the rating comes from, piece by piece, in rating points (the same scale as the 0 to 100 rating).
+export function PointsPanel({ v, base, refScore, open }: { v: BuildView; base?: BuildView | null; refScore: number; open?: boolean }) {
+  const rows = pointsByPiece(v), was = base ? new Map(pointsByPiece(base).map(p => [p.name, p.points])) : null;
+  const rp = (x: number) => (100 * x) / refScore;
+  const fmt = (x: number) => { const y = rp(x); return Math.abs(y) < 0.05 ? "0" : `${y > 0 ? "+" : ""}${y.toFixed(1)}`; };
+  const groups = ["Weapons", "Exotic", "Artifact", "Subclass", "Stats"] as const;
+  return (
+    <details className="rounded-md border border-line p-3 text-sm" open={open} data-testid="points">
+      <summary className="cursor-pointer font-display text-base">Where the rating comes from</summary>
+      <p className="mt-1 text-xs text-ink-dim">Each piece shows how many rating points this build would lose without it. Pieces that only work together (Glacier and Shatterdive) each show the whole pairing, so the numbers overlap and don't add up to the total.{was ? " The right column is the same piece in what you're wearing now." : ""}</p>
+      {groups.map(g => {
+        const list = rows.filter(r => r.group === g).sort((a, b) => b.points - a.points);
+        if (!list.length) return null;
+        const sum = list.reduce((t, r) => t + r.points, 0);
+        return (
+          <div key={g} className="mt-2">
+            <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-accent-hi"><span>{g}</span>{g === "Stats" && <span>{fmt(sum)} total</span>}</div>
+            <table className="w-full text-xs">
+              <tbody>
+                {list.map(r => (
+                  <tr key={r.name} className="border-t border-line/50">
+                    <td className="py-1 pr-2"><span className={cn(r.points <= 0.05 && g !== "Stats" && "text-warn")}>{r.name}</span>{r.detail && <span className="text-ink-dim"> · {r.detail}</span>}{r.points <= 0.05 && g !== "Stats" && <span className="text-warn"> · adds nothing here</span>}</td>
+                    <td className="w-14 text-right font-semibold">{fmt(r.points)}</td>
+                    {was && <td className="w-14 text-right text-ink-dim">{was.has(r.name) ? fmt(was.get(r.name)!) : "new"}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+      <p className="mt-2 text-xs text-ink-dim">Stats are valued the way this build uses them: stats it leans on count more, anything under your minimum costs points, 70 to 100 counts half, and with Most 100s reaching 100 earns a bonus. Raise "Health at least" if you want Health protected.</p>
+    </details>
+  );
+}
+
 export function HowToPlay({ v }: { v: BuildView }) {
   const idle = v.artifactPerks.filter(p => v.loops.unfed.some(u => u.name === p.name));
   const active = v.artifactPerks.filter(p => !idle.includes(p));
