@@ -1,4 +1,4 @@
-import { createStore, getMany, setMany } from "idb-keyval";
+import { clear, createStore, getMany, setMany } from "idb-keyval";
 import { api } from "./api";
 
 // Trimmed DestinyInventoryItemDefinition. Cached forever in this browser (IndexedDB).
@@ -65,6 +65,25 @@ export function trim(d: any, hash: number): ItemDef {
 
 const store = typeof indexedDB !== "undefined" ? createStore("steeped", "defs") : null;
 export const DEFS = new Map<number, ItemDef>();
+
+// Bungie bumps the manifest version whenever a patch changes item or perk text. Saved definitions from an
+// older version are dropped so descriptions are always the current ones. If the check fails, keep going.
+const VERSION_KEY = "steeped-manifest-version";
+export async function syncManifestVersion(): Promise<"same" | "changed" | "unknown"> {
+  try {
+    const m: any = await api("/Destiny2/Manifest/");
+    const v = String(m?.version ?? "");
+    if (!v) return "unknown";
+    const was = localStorage.getItem(VERSION_KEY);
+    localStorage.setItem(VERSION_KEY, v);
+    if (was && was !== v) {
+      DEFS.clear();
+      if (store) await clear(store).catch(() => undefined);
+      return "changed";
+    }
+    return "same";
+  } catch { return "unknown"; }
+}
 
 // Loads definitions for every hash, from cache first, then Bungie (a few at a time).
 export async function loadDefs(hashes: number[], onProgress?: (done: number, total: number) => void) {

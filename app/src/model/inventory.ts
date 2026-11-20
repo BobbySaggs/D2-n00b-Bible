@@ -36,6 +36,7 @@ export interface Item {
   gearTier: number; // Armor 3.0 / weapon tier, 0 if Bungie didn't send it
   energy: number; // armor energy capacity
   stats: Stats; // armor: current stats incl. mods
+  wstats?: Record<number, number>; // weapons: Bungie's stat values for this roll (range, handling...) by stat hash
   plugs: number[]; // plugged hash per socket index (0 = empty)
   reusable: Record<number, number[]>; // socket index -> plugs you can swap in (weapons; Bungie's list)
   options: Record<number, number[]>; // socket index -> unlocked plugs from your plug sets (subclasses, armor mods)
@@ -116,6 +117,7 @@ export function buildInventory(
       gearTier: ins.gearTier ?? 0,
       energy: ins.energy?.energyCapacity ?? 0,
       stats: kind === "armor" ? statsFrom(stats[id]?.stats) : zeroStats(),
+      wstats: kind === "weapon" ? Object.fromEntries(Object.entries(stats[id]?.stats ?? {}).map(([h, v]: [string, any]) => [Number(h), v?.value ?? 0])) : undefined,
       plugs: (sockets[id]?.sockets ?? []).map((s: any) => s.plugHash ?? 0),
       reusable: reu,
       options,

@@ -3,9 +3,10 @@ import type { ItemDef } from "../bungie/defs";
 import { zeroStats, type Inventory, type Item, type Stats } from "../model/inventory";
 import { byName, ELEMENT, HUNTER, MAX_FRAGMENTS, SUBCLASSES, WEAPON_TYPE, type K, type Subclass } from "../knowledge/hunter";
 import { readPiece, type Piece } from "./armor";
-import { scoreLoops, statLean, type Goal, type LoopReport, type Part } from "./loops";
+import { isPvp, scoreLoops, statLean, type Goal, type LoopReport, type Part } from "./loops";
 import { solve, type Solution, type StatPlan } from "./solve";
 import { artifactsOf, bestArtifact, type ArtifactFit } from "./artifact";
+import { DUEL_SLOT, PVP_PAST_100, WEAPON_STAT, duelRating, type WeaponStats } from "../knowledge/pvp";
 
 export interface Weapon {
   item: Item;
@@ -14,6 +15,8 @@ export interface Weapon {
   ammo: number; // 1 primary, 2 special, 3 heavy
   type: string; // Auto Rifle, Hand Cannon...
   rated: boolean; // Steeped knows this weapon or one of its perks (otherwise it only knows the frame)
+  duel?: number; // 0-10: how well its own Bungie stats suit PvP duels for its type (Steeped's weights)
+  wstats: WeaponStats;
 }
 
 export interface Build {
@@ -62,7 +65,8 @@ export function ownedWeapons(inv: Inventory, defOf: DefOf, minPower = 400): Weap
       const typeName = defOf(item.hash)?.type ?? "";
       const type = WEAPON_TYPE[typeName];
       if (type) ks.push(type);
-      return { item, ks, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated };
+      const wstats: WeaponStats = Object.fromEntries(Object.entries(WEAPON_STAT).map(([k, h]) => [k, item.wstats?.[h] ?? 0])) as WeaponStats;
+      return { item, ks, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated, wstats, duel: duelRating(typeName, wstats) };
     });
 }
 
@@ -95,7 +99,14 @@ export const pick = (kit: Set<string>, sub: Subclass, kind: K["kind"]) =>
 
 // Each weapon also carries its element and frame as markers, so perks like Volatile Flow ("needs a Void weapon") can check.
 const marker = (name: string): K => ({ name, kind: "weapon", makes: [], uses: [], says: "" });
-export const weaponParts = (ws: Weapon[]): Part[] => ws.flatMap(w => [...w.ks.map(k => ({ k })), { k: marker(`__el:${w.element}`) }, { k: marker(`__type:${w.type}`) }]);
+// In PvP goals each gun also brings its duel rating, weighted by slot (primary counts most, heavy least).
+// You only fight with one primary at a time, so a second primary adds little next to a special for finishing.
+export const weaponParts = (ws: Weapon[]): Part[] => {
+  const firstOfAmmo = new Map<number, Weapon>();
+  for (const w of [...ws].sort((a, b) => (b.duel ?? 0) - (a.duel ?? 0))) if (!firstOfAmmo.has(w.ammo)) firstOfAmmo.set(w.ammo, w);
+  return ws.flatMap(w => [...w.ks.map(k => ({ k })), { k: marker(`__el:${w.element}`) }, { k: marker(`__type:${w.type}`) },
+    ...(w.duel ? [{ k: { ...marker(`${w.item.name} (duel stats)`), makes: [`duel:${Math.round(w.duel * (DUEL_SLOT[w.ammo] ?? 0.5) * (firstOfAmmo.get(w.ammo) === w ? 1 : 0.35) * 10) / 10}`] } }] : [])]);
+};
 
 export type CoreLike = Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic"> & { subclass?: Subclass };
 // The subclass rides along as a marker so perks like "while your Void subclass is equipped" can check it.
@@ -218,7 +229,7 @@ export function searchBuilds(o: SearchInput): Build[] {
   }
   out.sort((a, b) => b.score - a.score);
   // Stage 3: the leading builds pick an artifact and its perks (all seven artifacts, every perk Bungie offers).
-  const arts = artifactsOf(o.inv, o.defOf, o.characterId);
+  const arts = o.goal === "trials" ? [] : artifactsOf(o.inv, o.defOf, o.characterId); // artifacts are off in Trials and Competitive
   if (arts.length) {
     const pinned = new Set(o.pinnedWeapons ?? []);
     for (const b of out.slice(0, 15)) {
@@ -266,10 +277,11 @@ export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbi
   for (const k of STAT_ORDER) {
     const w = lean[k] / max; // 0..1
     const floor = targets[k] ?? 50, hard = (targets[k] ?? 0) >= 100;
+    const past = isPvp(goal) ? PVP_PAST_100[k] ?? 0.3 : 1; // past 100 is mostly PvE damage; worth less against players
     // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
     plan[k] = style === "peaks"
-      ? { floor, hard, low: 0.5 + 0.7 * w, high: 0.2 + 0.4 * w, peak: 0.4 + 1.0 * w }
-      : { floor, hard, low: 0.7 + 0.6 * w, high: 0.35 + 0.4 * w };
+      ? { floor, hard, low: 0.5 + 0.7 * w, high: past * (0.2 + 0.4 * w), peak: (isPvp(goal) ? 0.6 : 1) * (0.4 + 1.0 * w) }
+      : { floor, hard, low: 0.7 + 0.6 * w, high: past * (0.35 + 0.4 * w) };
   }
   return plan;
 }

@@ -2,7 +2,7 @@ import { ARMOR_SLOTS, type Slot, type StatKey } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Piece } from "./armor";
 import type { BuildView } from "./evaluate";
-import type { Goal } from "./loops";
+import { isPvp, type Goal } from "./loops";
 
 // Armor mod planner: fills every non-stat mod slot on every piece from the mods you've unlocked, within energy,
 // and says why each one is there. Rules are written from Bungie's mod text (Nov 18, 2026 snapshot).
@@ -34,7 +34,25 @@ function needs(v: BuildView): Need {
 }
 
 // Value of a mod for this build, and the plain-words reason. Orb users only count when the build makes orbs.
+// PvP (Steeped's judgment, from what each mod says it does): aim, flinch, handling and reload win duels, special
+// ammo matters more than heavy, and damage resistance mods only work against PvE enemies ("combatants").
+function ratePvp(name: string, v: BuildView, superEl: string): [number, string] | undefined {
+  const el = name.includes("Harmonic") ? superEl : ELS.find(x => name.includes(x));
+  const prim = v.weapons[0]?.element, energy = v.weapons[1]?.element;
+  const onGun = !!el && (el === prim || el === energy);
+  if (/Targeting$/.test(name)) return [onGun ? 1.8 : 0, `better aim and faster aiming on your ${el} gun`];
+  if (/^Unflinching/.test(name)) return [onGun ? 1.6 : 0, `less flinch when you're shot while aiming your ${el} gun`];
+  if (/Dexterity$/.test(name)) return [onGun ? 1.4 : 0, `faster ready and stow on your ${el} gun`];
+  if (/Loader$/.test(name)) return [onGun ? 1 : 0, `faster reloads on your ${el} gun`];
+  if (name === "Special Ammo Finder") return [v.weapons.some(w => w?.ammo === 2) ? 2.2 : 0, "more special ammo, your finisher in duels"];
+  if (name === "Heavy Ammo Finder") return [0.3, "heavy ammo is rare in the Crucible"];
+  if (/Resistance$|Dampener$/.test(name)) return [0, "damage resistance mods only work against PvE enemies"];
+  if (/Siphon$/.test(name)) return [0.3, "rapid weapon kills are rare against players"];
+  return undefined;
+}
+
 function rate(name: string, n: Need, orbs: boolean, v: BuildView): [number, string] {
+  if (isPvp(n.goal)) { const r = ratePvp(name, v, n.superEl); if (r) return r; }
   const el = ELS.find(x => name.startsWith(x + " "));
   const primaryEl = v.weapons[0]?.element, energyEl = v.weapons[1]?.element, heavyEl = v.weapons[2]?.element;
   const ammo = (w?: { ammo: number }) => w?.ammo ?? 0;

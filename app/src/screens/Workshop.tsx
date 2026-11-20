@@ -6,7 +6,8 @@ import { HUNTER, byName, type K, type Subclass } from "../knowledge/hunter";
 import type { ArtifactPerk } from "../knowledge/artifact";
 import { breakdown, currentSpec, evaluate, evaluateNow, fragmentSlots, makeCtx, refitArtifact, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import { placePerks } from "../engine/artifact";
-import type { Goal } from "../engine/loops";
+import { isPvp, type Goal } from "../engine/loops";
+import { WSTAT_LABEL } from "../knowledge/pvp";
 import type { Require, Weapon } from "../engine/builds";
 import { runSearch } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
@@ -23,12 +24,13 @@ type SlotId =
   | { kind: "aspect" | "fragment" | "weapon" | "perk"; i: number };
 const slotKey = (s: SlotId) => ("i" in s ? `${s.kind}${s.i}` : s.kind);
 
-type Source = "checked" | "bungie" | "frame" | "unrated";
+type Source = "checked" | "bungie" | "frame" | "unrated" | "stats";
 const SOURCE: Record<Source, { label: string; tone: "good" | "neutral" | "warn"; tip: string }> = {
   checked: { label: "Checked", tone: "good", tip: "Claude wrote this rule from Bungie's own text and patch notes, and checked it by hand." },
   bungie: { label: "From Bungie's text", tone: "neutral", tip: "Steeped read this from the item's own description. Bungie's words are shown so you can check the reading." },
   frame: { label: "Weapon type only", tone: "warn", tip: "Steeped knows this weapon's type but not its perks, so only the frame counts." },
   unrated: { label: "Not rated", tone: "warn", tip: "Steeped doesn't understand this yet, so it counts as neutral instead of guessing." },
+  stats: { label: "Bungie's stats", tone: "good", tip: "Rated for duels from this roll's own stats from Bungie (range, handling, stability, aim assist, airborne, reload). How much each stat matters per weapon type is Steeped's judgment." },
 };
 
 interface Option {
@@ -361,8 +363,10 @@ function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
         const perks = w.ks.filter(k => k.name !== w.item.name && k.name !== w.type).map(k => k.name);
         return {
           key: w.item.id, label: w.item.name, icon: DEFS.get(w.item.hash)?.icon, quick: true,
-          source: (w.rated ? "checked" : w.ks.length ? "frame" : "unrated") as Source,
-          says: [w.element, w.type, perks.length ? `rated perks: ${perks.join(", ")}` : ""].filter(Boolean).join(" · "),
+          source: (isPvp(s.goal) ? (w.duel !== undefined ? "stats" : "unrated") : w.rated ? "checked" : w.ks.length ? "frame" : "unrated") as Source,
+          says: isPvp(s.goal)
+            ? `${w.element} ${w.type} · duel rating ${w.duel?.toFixed(1) ?? "n/a"} / 10 · ` + (["range", "handling", "stability", "aim", "airborne", "reload"] as const).map(k => `${WSTAT_LABEL[k]} ${w.wstats[k] ?? 0}`).join(", ")
+            : [w.element, w.type, perks.length ? `rated perks: ${perks.join(", ")}` : ""].filter(Boolean).join(" · "),
           where: `${whereOf(w.item, cid)}, Power ${w.item.power}${w.item.masterworked ? ", masterworked" : ""}${w.item.power < ctx.light - 60 ? " (needs infusing before it's usable at your Power)" : ""}`,
           current: w.item.id === s.weapons[sel.i],
           apply: (sp: BuildSpec) => { const ws = [...sp.weapons]; ws[sel.i] = w.item.id; return { ...sp, weapons: ws }; },

@@ -14,9 +14,13 @@ import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
 import { StatTargetsBar, loadTargets } from "../ui/targets";
+import { MODE_NOTES, PVP_NOTES, WSTAT_LABEL } from "../knowledge/pvp";
+import { isPvp } from "../engine/loops";
 
 export const GOALS: { value: Goal; label: string }[] = [
   { value: "whole", label: "Whole activity" },
+  { value: "crucible", label: "Crucible" },
+  { value: "trials", label: "Trials / Comp" },
   { value: "abilities", label: "Ability spam" },
   { value: "bossDps", label: "Raid boss" },
   { value: "survival", label: "Hard content" },
@@ -623,6 +627,7 @@ const ArtName = ({ a }: { a: { name: string; item: { hash: number } } }) => (
 
 // An artifact's perks: idle ones (nothing in the build sets them off) are flagged, and new ones are marked.
 function PerkList({ v, was }: { v: BuildView; was?: string[] }) {
+  if (v.spec.goal === "trials") return <span className="text-ink-dim">Off in Trials and Competitive (Bungie turns artifacts off there)</span>;
   if (!v.artifactPerks.length) return <span className="text-ink-dim">No perks picked</span>;
   const idle = new Map(v.loops.unfed.map(u => [u.name, u.token]));
   return (
@@ -743,6 +748,31 @@ export function PointsPanel({ v, base, refScore, open }: { v: BuildView; base?: 
   );
 }
 
+// Crucible: mode rules, Bungie's PvP changes for pieces in this build, and how each gun rates for duels.
+function PvpNotes({ v }: { v: BuildView }) {
+  const names = [v.spec.super, v.spec.grenade, v.spec.melee, v.spec.classAbility, ...v.spec.aspects, ...v.spec.fragments, v.spec.exotic];
+  const notes = names.filter(n => PVP_NOTES[n]).map(n => ({ n, t: PVP_NOTES[n] }));
+  const guns = v.weapons.filter((w): w is NonNullable<typeof w> => !!w);
+  return (
+    <div className="space-y-1.5 border-t border-line pt-2 text-xs text-ink-dim" data-testid="pvp-notes">
+      <p><b className="text-ink">Mode:</b> {MODE_NOTES[v.spec.goal === "trials" ? "trials" : "crucible"]}</p>
+      {notes.map(x => <p key={x.n}><b className="text-ink">{x.n}:</b> {x.t} <span className="text-ink-dim">(Bungie patch notes)</span></p>)}
+      {guns.length > 0 && (
+        <div>
+          <p><b className="text-ink">Duel ratings</b> (this roll's stats from Bungie, weighted by Steeped's view of what wins duels for each weapon type):</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {guns.map(w => (
+              <li key={w.item.id}><span className="text-ink">{w.item.name}</span> ({w.type}): {w.duel !== undefined ? <b className="text-ink">{w.duel.toFixed(1)} / 10</b> : "not rated for this type"}
+                {" · "}{(["range", "handling", "stability", "aim", "airborne", "reload"] as const).map(k => `${WSTAT_LABEL[k]} ${w.wstats[k] ?? 0}`).join(", ")}{w.wstats.rpm ? `, ${w.wstats.rpm} RPM` : ""}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p>Not planned yet: Font mods (they depend on Armor Charge, which Steeped doesn't model). Weapon perks that only work in certain moments (like Opening Shot) are not rated for PvP yet.</p>
+    </div>
+  );
+}
+
 export function HowToPlay({ v }: { v: BuildView }) {
   const idle = v.artifactPerks.filter(p => v.loops.unfed.some(u => u.name === p.name));
   const active = v.artifactPerks.filter(p => !idle.includes(p));
@@ -753,8 +783,9 @@ export function HowToPlay({ v }: { v: BuildView }) {
         <ol className="list-decimal space-y-1.5 pl-5">
           {v.loops.combos.map(c => <li key={c.name}><b>{c.name}.</b> {c.play}</li>)}
         </ol>
-      ) : <p className="text-ink-dim">No signature combo in this build yet: its pieces work on their own rather than feeding each other.</p>}
-      {v.artifact && (
+      ) : <p className="text-ink-dim">{isPvp(v.spec.goal) ? "In the Crucible, Steeped rates how your abilities kill, lock down or save you, and how your guns duel. The PvE combos don't apply." : "No signature combo in this build yet: its pieces work on their own rather than feeding each other."}</p>}
+      {isPvp(v.spec.goal) && <PvpNotes v={v} />}
+      {v.artifact && v.spec.goal !== "trials" && (
         <div className="space-y-1 border-t border-line pt-2 text-xs text-ink-dim" data-testid="artifact-play">
           <p><b className="text-ink">Artifact: {v.artifact.name}.</b></p>
           <ul className="space-y-0.5">

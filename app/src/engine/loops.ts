@@ -2,17 +2,29 @@ import type { StatKey } from "../bungie/config";
 import { COMBOS, type Combo, type K, type Kind, type Subclass } from "../knowledge/hunter";
 
 // ---------- Goals: what you want the build to be good at ----------
-export type Goal = "whole" | "abilities" | "bossDps" | "survival" | "team";
+export type Goal = "whole" | "abilities" | "bossDps" | "survival" | "team" | "crucible" | "trials";
+export const isPvp = (g: Goal) => g === "crucible" || g === "trials";
 export const GOAL_LABEL: Record<Goal, string> = {
   whole: "Whole activity (clear rooms and still hurt the boss)",
   abilities: "Ability loop (general PvE)",
   bossDps: "Boss damage (raids)",
   survival: "Survival (hard content)",
   team: "Team support (raids)",
+  crucible: "Crucible (Quickplay, Control, Iron Banner)",
+  trials: "Trials and Competitive (no artifact)",
 };
 
 // How much each made token is worth for a goal. Unlisted tokens are worth 0.3.
+// PvP (Steeped's judgment): winning duels is the weapons' stats ("duel") plus abilities that kill, lock down or
+// save you. Pack-clearing, boss damage and champions are worth nothing against players.
+const PVP: Record<string, number> = {
+  duel: 2, gEn: 2.5, mEn: 2.5, cEn: 2.5, sEn: 1.5, kGrenade: 2, kMelee: 2, kAbility: 1.5, kPrecision: 1.5, kWeapon: 1, freeze: 2, slow: 1.5,
+  suppress: 1.5, blind: 1.5, invis: 1, jolt: 1, scorch: 1, weaken: 1, sever: 1, overshield: 2, heal: 2, restoration: 2, dr: 1.5, woven: 1.5, frost: 1.5,
+  radiant: 1.5, amplified: 1.2, reload: 1, dmg: 1, shatter: 1, crystal: 0.5, multikill: 0.3, volatile: 0.3, ignite: 0.5, orb: 0.5, ammo: 0.5, teamBuff: 0.8,
+  bossDmg: 0, champion: 0, breach: 0.2,
+};
 const GOAL_WEIGHTS: Record<Goal, Record<string, number>> = {
+  crucible: PVP, trials: PVP,
   // Kill power counts most; control (freeze, slow, crystals) only matters once something turns it into kills.
   whole: { multikill: 4, bossDmg: 3, gEn: 2.5, mEn: 2, cEn: 2, sEn: 1.5, dmg: 2, kGrenade: 1.5, kAbility: 1.5, kMelee: 1.2, kWeapon: 1.5, shatter: 1.5, ignite: 1.5, volatile: 1.5, orb: 1.2, frost: 1.5, overshield: 1.5, heal: 1.5, dr: 1.5, weaken: 1.5, radiant: 1.5, reload: 0.8, ammo: 1, champion: 1, freeze: 0.5, slow: 0.4, crystal: 0.5 },
   abilities: { multikill: 3, gEn: 3, mEn: 3, cEn: 2.5, kAbility: 1.5, kGrenade: 1.5, kMelee: 1.5, freeze: 0.6, slow: 0.6, shatter: 1.2, crystal: 0.6, ignite: 1.2, jolt: 1, sever: 1, volatile: 1, weaken: 1, orb: 1, frost: 1, invis: 1, heal: 1, dr: 1, overshield: 1, dmg: 1 },
@@ -103,7 +115,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   const has = (cond: string, made: Map<string, unknown>) => cond.split("|").some(c => (c.startsWith("@") ? made.has(c.slice(1)) : names.has(c) && !dead.has(c)));
   let combos: Combo[] = [];
   const pre = buildMade(() => 1);
-  combos = COMBOS.filter(c => c.all.every(cond => has(cond, pre)));
+  combos = COMBOS.filter(c => !(c.pve && isPvp(goal)) && c.all.every(cond => has(cond, pre)));
   // Pass 1 decides which pieces get triggered; pass 2 counts an untriggered piece's effects at 40%.
   const first = buildMade(() => 1);
   const triggered = new Set(live.filter(p => { const tr = triggers(p); return !tr.length || tr.some(([t]) => sourceFor(first, t, p.k.name)); }).map(p => p.k.name));
@@ -113,7 +125,8 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   let score = 0;
   // Capped so one effect can't carry a build; the goal's main effects get more room to separate good from great.
   // Past the cap an effect still counts, at a quarter, so stacking more kill power is never worth zero.
-  for (const [t, m] of made) { const cap = (W[t] ?? 0) >= 3 ? 10 : 3; score += (W[t] ?? 0.3) * (Math.min(m.total, cap) + 0.25 * Math.max(0, m.total - cap)); }
+  // Duel ratings add up per gun (0-10 each), so they get a wider cap; PvE goals ignore them entirely.
+  for (const [t, m] of made) { const cap = t === "duel" ? 30 : (W[t] ?? 0) >= 3 ? 10 : 3; score += (t === "duel" && !(t in W) ? 0 : (W[t] ?? 0.3)) * (Math.min(m.total, cap) + 0.25 * Math.max(0, m.total - cap)); }
 
   const links: LoopReport["links"] = [];
   const unfed: LoopReport["unfed"] = [];
@@ -161,5 +174,7 @@ export function statLean(parts: Part[], goal: Goal): Record<StatKey, number> {
   if (goal === "whole") { lean.weapons += 1; }
   if (goal === "survival") { lean.health += 2; }
   if (goal === "team") { lean.class += 1; lean.super += 1; }
+  // PvP: reload and handling (Weapons), dodge (Class) and flinch resistance plus shield recharge (Health) matter in every duel.
+  if (isPvp(goal)) { lean.weapons += 1.2; lean.class += 0.8; lean.health += 0.8; }
   return lean;
 }

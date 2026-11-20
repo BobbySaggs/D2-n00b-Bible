@@ -1,6 +1,6 @@
 import { api, BungieError } from "./api";
 import { COMPONENTS } from "./config";
-import { DEFS, def, loadDefs, type ItemDef } from "./defs";
+import { DEFS, def, loadDefs, syncManifestVersion, type ItemDef } from "./defs";
 import { buildInventory, itemHashes, plugHashes, plugSetHashes, type Inventory } from "../model/inventory";
 
 export interface LoadResult {
@@ -23,6 +23,8 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
     membershipId: String(mem.membershipId),
   };
 
+  progress("Checking for Destiny updates");
+  await syncManifestVersion();
   progress("Downloading your characters and vault");
   const P: any = await api(`/Destiny2/${mem.membershipType}/Profile/${mem.membershipId}/?components=${COMPONENTS}`);
 

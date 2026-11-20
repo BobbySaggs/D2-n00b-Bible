@@ -116,7 +116,8 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const core = { super: sup!, grenade: gr!, melee: me!, classAbility: ca!, aspects, fragments, exotic: exotic! };
   const parts = [sup, gr, me, ca, ...aspects, ...fragments, exotic].filter((x): x is K => !!x);
   const artifact = ctx.artifacts.find(a => a.name === spec.artifact) ?? ctx.artifacts.find(a => a.equipped);
-  const artifactPerks = (spec.artifactPerks ?? []).map(n => ctx.perks.get(n)).filter((x): x is ArtifactPerk => !!x);
+  // Bungie switches artifacts off in Trials and Competitive, so their perks count for nothing there.
+  const artifactPerks = spec.goal === "trials" ? [] : (spec.artifactPerks ?? []).map(n => ctx.perks.get(n)).filter((x): x is ArtifactPerk => !!x);
   const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(weapons.filter((w): w is Weapon => !!w)), ...artifactPerks.map(k => ({ k }))];
   const loops = scoreLoops(loopParts, spec.goal);
   const bonus = fragmentBonus(fragments, ctx.defs);
