@@ -2,9 +2,11 @@ import { api, BungieError } from "./api";
 import { COMPONENTS } from "./config";
 import { DEFS, def, loadDefs, syncManifestVersion, type ItemDef } from "./defs";
 import { buildInventory, itemHashes, plugHashes, plugSetHashes, type Inventory } from "../model/inventory";
+import { readQuests, type Quest } from "./quests";
 
 export interface LoadResult {
   inventory: Inventory;
+  quests: Quest[]; // quest items on each character with live objective progress
   // Kept so the snapshot export can hand Claude the exact same inputs the app used.
   raw: unknown;
 }
@@ -31,9 +33,11 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
   await loadDefs(itemHashes(P), (d, t) => progress(`Reading your gear (${d} of ${t} new items)`));
   await loadDefs([...plugHashes(P), ...plugSetHashes(P, def)], (d, t) => progress(`Reading perks, mods and subclass options (${d} of ${t} new)`));
 
+  progress("Reading your quests");
+  const quests = await readQuests(P).catch(() => [] as Quest[]);
   progress("Putting it together");
   const inventory = buildInventory(P, def, account);
-  return { inventory, raw: P };
+  return { inventory, quests, raw: P };
 }
 
 // Everything Claude needs to test the engine on your real gear. No sign-in token is included.
@@ -48,6 +52,7 @@ export function makeSnapshot(r: LoadResult) {
     account: r.inventory.account,
     profile: r.raw,
     defs,
+    quests: r.quests,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
