@@ -122,6 +122,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const artifactPerks = spec.goal === "trials" ? [] : (spec.artifactPerks ?? []).map(n => ctx.perks.get(n)).filter((x): x is ArtifactPerk => !!x);
   const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(weapons.filter((w): w is Weapon => !!w)), ...artifactPerks.map(k => ({ k }))];
   const loops = scoreLoops(loopParts, spec.goal);
+  for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. Add a healing source or damage resistance (Frost Armor, overshield, invisibility).`);
   const bonus = fragmentBonus(fragments, ctx.defs);
 
   let armor: Solution | undefined, plan: StatPlan | undefined;

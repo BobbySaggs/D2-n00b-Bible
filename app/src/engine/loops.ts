@@ -5,7 +5,7 @@ import { COMBOS, type Combo, type K, type Kind, type Subclass } from "../knowled
 export type Goal = "whole" | "abilities" | "bossDps" | "survival" | "team" | "crucible" | "trials";
 export const isPvp = (g: Goal) => g === "crucible" || g === "trials";
 export const GOAL_LABEL: Record<Goal, string> = {
-  whole: "Whole activity (clear rooms and still hurt the boss)",
+  whole: "Max Hunter (clear rooms, hurt bosses, stay alive solo)",
   abilities: "Ability loop (general PvE)",
   bossDps: "Boss damage (raids)",
   survival: "Survival (hard content)",
@@ -26,7 +26,7 @@ const PVP: Record<string, number> = {
 const GOAL_WEIGHTS: Record<Goal, Record<string, number>> = {
   crucible: PVP, trials: PVP,
   // Kill power counts most; control (freeze, slow, crystals) only matters once something turns it into kills.
-  whole: { multikill: 4, bossDmg: 3, gEn: 2.5, mEn: 2, cEn: 2, sEn: 1.5, dmg: 2, kGrenade: 1.5, kAbility: 1.5, kMelee: 1.2, kWeapon: 1.5, shatter: 1.5, ignite: 1.5, volatile: 1.5, orb: 1.2, frost: 1.5, overshield: 1.5, heal: 1.5, dr: 1.5, weaken: 1.5, radiant: 1.5, reload: 0.8, ammo: 1, champion: 1, freeze: 0.5, slow: 0.4, crystal: 0.5 },
+  whole: { multikill: 4, bossDmg: 3, gEn: 2.5, mEn: 2, cEn: 2, sEn: 1.5, dmg: 2, kGrenade: 1.5, kAbility: 1.5, kMelee: 1.2, kWeapon: 1.5, shatter: 1.5, ignite: 1.5, volatile: 1.5, orb: 1.2, frost: 1.5, overshield: 2, heal: 2, dr: 2, cure: 1.5, restoration: 1.5, invis: 1.2, woven: 1.5, weaken: 1.5, radiant: 1.5, reload: 0.8, ammo: 1, champion: 1, freeze: 0.5, slow: 0.4, crystal: 0.5 },
   abilities: { multikill: 3, gEn: 3, mEn: 3, cEn: 2.5, kAbility: 1.5, kGrenade: 1.5, kMelee: 1.5, freeze: 0.6, slow: 0.6, shatter: 1.2, crystal: 0.6, ignite: 1.2, jolt: 1, sever: 1, volatile: 1, weaken: 1, orb: 1, frost: 1, invis: 1, heal: 1, dr: 1, overshield: 1, dmg: 1 },
   bossDps: { bossDmg: 4, sEn: 2.5, radiant: 2, weaken: 2, teamBuff: 1.5, dmg: 1.5, orb: 1.5, heal: 0.8, dr: 0.8, overshield: 0.8, frost: 0.6, reload: 0.8 },
   survival: { heal: 3, dr: 3, frost: 2.5, overshield: 2.5, invis: 2.5, woven: 2.5, restoration: 2.5, cure: 2, slow: 1.5, freeze: 1.5, weaken: 1.5, suppress: 1.5, blind: 1.5, cEn: 1.5, gEn: 1.2, mEn: 1.2, dmg: 1 },
@@ -52,6 +52,7 @@ export interface LoopReport {
   links: { from: string; to: string; token: string }[];
   energy: { kind: Kind; ability: string; refills: string[] }[];
   unfed: { name: string; token: string }[];
+  survives: string[]; // Max Hunter: what the build is missing to survive solo (empty = solo-ready)
 }
 
 // "__el:Void" -> "a Void weapon", "__sub:Void" -> "a Void subclass", "__type:Auto Rifle" -> "an Auto Rifle".
@@ -144,6 +145,13 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
       else if (p.k.kind !== "weapon") unfed.push({ name: p.k.name, token: t.split("|").join(" or ") });
     }
   }
+  // Max Hunter is solo-ready: a build must be able to heal and to soak damage, or it can't win, however hard it hits.
+  const survives: string[] = [];
+  if (goal === "whole") {
+    const has = (ts: string[]) => ts.some(t => (made.get(t)?.total ?? 0) > 0);
+    if (!has(["heal", "cure", "restoration", "devour"])) { score -= 25; survives.push("no way to heal"); }
+    if (!has(["dr", "overshield", "frost", "invis", "woven"])) { score -= 25; survives.push("nothing that cuts the damage you take"); }
+  }
   const isArtifact = (n: string) => parts.find(p => p.k.name === n)?.k.kind === "artifact";
   // Artifact perks are always on, so an idle one costs nothing; it just shows as a missed chance.
   score -= 1.2 * unfed.filter(u => !isArtifact(u.name)).length;
@@ -163,7 +171,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
       score += (W[t] ?? 1) * Math.min(refills.length, 3);
     }
   }
-  return { score, combos, made, links, energy, unfed };
+  return { score, combos, made, links, energy, unfed, survives };
 }
 
 // Which stats this build leans on, from what its pieces want and which abilities it refills.
