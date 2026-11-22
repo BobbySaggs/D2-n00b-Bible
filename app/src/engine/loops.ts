@@ -32,6 +32,7 @@ const GOAL_WEIGHTS: Record<Goal, Record<string, number>> = {
   survival: { heal: 3, dr: 3, frost: 2.5, overshield: 2.5, invis: 2.5, woven: 2.5, restoration: 2.5, cure: 2, slow: 1.5, freeze: 1.5, weaken: 1.5, suppress: 1.5, blind: 1.5, cEn: 1.5, gEn: 1.2, mEn: 1.2, dmg: 1 },
   team: { teamBuff: 3, radiant: 2.5, weaken: 2.5, heal: 2, restoration: 2, invis: 1.5, dr: 1.5, bossDmg: 1.5, sEn: 1, orb: 1.5 },
 };
+export const weightOf = (goal: Goal, token: string) => GOAL_WEIGHTS[goal][token] ?? 0.3;
 const ENERGY: Record<string, Kind> = { gEn: "grenade", mEn: "melee", cEn: "classAbility", sEn: "super" };
 const DEBUFFS = ["slow", "freeze", "weaken", "scorch", "jolt", "sever", "suppress", "blind", "volatile", "unravel", "suspend", "ignite"];
 // Things you can always do, so they never count as missing.

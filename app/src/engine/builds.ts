@@ -3,7 +3,7 @@ import type { ItemDef } from "../bungie/defs";
 import { zeroStats, type Inventory, type Item, type Stats } from "../model/inventory";
 import { byName, ELEMENT, HUNTER, MAX_FRAGMENTS, SUBCLASSES, WEAPON_TYPE, type K, type Subclass } from "../knowledge/hunter";
 import { readPiece, type Piece } from "./armor";
-import { isPvp, scoreLoops, statLean, type Goal, type LoopReport, type Part } from "./loops";
+import { isPvp, scoreLoops, weightOf, statLean, type Goal, type LoopReport, type Part } from "./loops";
 import { solve, type Solution, type StatPlan } from "./solve";
 import { artifactsOf, bestArtifact, type ArtifactFit } from "./artifact";
 import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
@@ -175,7 +175,55 @@ function tunePerks(w: Weapon, score: (w: Weapon) => number): { w: Weapon; score:
   return { w: cur, score: best };
 }
 
-function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K, goal: Goal, pinned: Set<string> = new Set()): Weapon[] {
+// Weapons that would score exactly alike (same slot, element, frame, perks and perk options) collapse to the best copy:
+// higher tier, then higher Power. Same answers, a fraction of the work.
+const DISTINCT = new WeakMap<Weapon[], Weapon[]>();
+export function distinct(weapons: Weapon[], pinned: Set<string>): Weapon[] {
+  const hit = DISTINCT.get(weapons);
+  if (hit && !pinned.size) return hit;
+  const best = new Map<string, Weapon>();
+  for (const w of weapons) {
+    const sig = [w.item.slot, w.element, w.type, w.item.exotic ? w.item.name : "", Math.round(w.duel ?? 0), ...w.base.map(k => k.name), ...w.cols.map(c => c.options.map(o => o.name).sort().join("/"))].join("|");
+    const cur = best.get(sig);
+    if (!cur || w.tier > cur.tier || (w.tier === cur.tier && w.item.power > cur.item.power)) best.set(sig, w);
+  }
+  const out = [...best.values(), ...weapons.filter(w => pinned.has(w.item.id) && !best.has(w.item.id))];
+  const uniq = [...new Set(out)];
+  if (!pinned.size) DISTINCT.set(weapons, uniq);
+  return uniq;
+}
+
+// A quick read of what a gun could bring on its own (its best perk per column, discounted when only read from
+// Bungie's text), so the full loop scoring only runs on the guns that could matter.
+const POTENTIAL = new Map<string, Map<Weapon, number>>();
+const amount = (t: string) => { const m = /:(\d+)$/.exec(t); return m ? Number(m[1]) : 1; };
+const tok = (t: string) => t.replace(/:\d+$/, "");
+function potential(w: Weapon, goal: Goal): number {
+  let byGoal = POTENTIAL.get(goal);
+  if (!byGoal) { byGoal = new Map(); POTENTIAL.set(goal, byGoal); }
+  const hit = byGoal.get(w);
+  if (hit !== undefined) return hit;
+  const val = (k: K) => ((k as { read?: string }).read === "description" ? 0.35 : 1) * k.makes.reduce((t, m) => t + weightOf(goal, tok(m)) * amount(m), 0);
+  const v = w.base.reduce((t, k) => t + val(k), 0) + w.cols.reduce((t, c) => t + Math.max(0, ...c.options.map(val)), 0);
+  byGoal.set(w, v);
+  return v;
+}
+const SHORTLIST = 24;
+
+// quick: a fast first pass (short shortlist, slotted perks only) for ranking many builds; the leaders get the full pick.
+function chooseWeapons(base: Part[], allWeapons: Weapon[], sub: Subclass, exotic: K, goal: Goal, pinned: Set<string> = new Set(), quick = false): Weapon[] {
+  const short = quick ? 8 : SHORTLIST;
+  const pool = distinct(allWeapons, pinned);
+  // Guns a build piece asks for by element or frame (Volatile Flow wants a Void gun) always make the shortlist.
+  const asked = base.flatMap(p => p.k.needs ?? []).join(" ");
+  const wanted = (w: Weapon) => asked.includes(`__el:${w.element}`) || asked.includes(`__type:${w.type}`) || byName.get(w.item.name) !== undefined;
+  const weapons = (["kinetic", "energy", "power"] as const).flatMap(sl => {
+    const inSlot = pool.filter(w => w.item.slot === sl);
+    const ranked = inSlot.map(w => ({ w, p: potential(w, goal) + weaponFit(w, sub, exotic, goal) })).sort((a, b) => b.p - a.p);
+    const keep = new Set(ranked.slice(0, short).map(x => x.w));
+    for (const w of inSlot) if (pinned.has(w.item.id) || (wanted(w) && keep.size < short * 2)) keep.add(w);
+    return [...keep];
+  });
   const slots: ("kinetic" | "energy" | "power")[] = ["kinetic", "energy", "power"];
   const chosen: Weapon[] = [];
   for (const slot of slots) {
@@ -186,13 +234,15 @@ function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K
     // Rank on the slotted perks, then let the leaders try the other perks in their columns.
     const ranked = cands.map(w => ({ w, sc: scoreOf(w) })).sort((a, b) => b.sc - a.sc);
     let best: Weapon | undefined, bestScore = -Infinity;
-    for (const { w, sc } of ranked.slice(0, 8)) {
+    for (const { w, sc } of ranked.slice(0, quick ? 1 : 8)) {
+      if (quick) { best = w; break; }
       const tuned = tunePerks(w, x => scoreOf(x));
       const s2 = Math.max(sc, tuned.score);
       if (s2 > bestScore) { bestScore = s2; best = tuned.score > sc ? tuned.w : w; }
     }
     if (best) chosen.push(best);
   }
+  if (quick) return chosen;
   // One more pass with all three guns on: a gun that pairs with the heavy (or the heavy with it) can now win its slot.
   const total = (ws: Weapon[]) => scoreLoops([...base, ...weaponParts(ws)], goal).score + ws.reduce((t, w) => t + weaponFit(w, sub, exotic, goal), 0);
   for (let i = 0; i < chosen.length; i++) {
@@ -279,7 +329,7 @@ export function searchBuilds(o: SearchInput): Build[] {
       chosen.push(best);
     }
     const core = { ...c, fragments: chosen };
-    const ws = chooseWeapons(corePartsOf(core), weapons, c.subclass, c.exotic, o.goal, new Set(o.pinnedWeapons ?? []));
+    const ws = chooseWeapons(corePartsOf(core), weapons, c.subclass, c.exotic, o.goal, new Set(o.pinnedWeapons ?? []), true);
     const parts = [...corePartsOf(core), ...weaponParts(ws)];
     const loops = scoreLoops(parts, o.goal);
     const key = `${c.subclass}|${c.exotic.name}`;
@@ -289,11 +339,18 @@ export function searchBuilds(o: SearchInput): Build[] {
     void seen; void key;
   }
   out.sort((a, b) => b.score - a.score);
+  // Stage 2b: the leaders get the full weapon pick (more guns, free perk switches, a second pass).
+  for (const b of out.slice(0, 40)) {
+    b.weapons = chooseWeapons(corePartsOf(b), weapons, b.subclass, b.exotic, o.goal, new Set(o.pinnedWeapons ?? []));
+    b.loops = scoreLoops([...corePartsOf(b), ...weaponParts(b.weapons)], o.goal);
+    b.score = b.loops.score + STAT_POINT * statTotal(b.bonus);
+  }
+  out.sort((a, b) => b.score - a.score);
   // Stage 3: the leading builds pick an artifact and its perks (all seven artifacts, every perk Bungie offers).
   const arts = o.goal === "trials" ? [] : artifactsOf(o.inv, o.defOf, o.characterId); // artifacts are off in Trials and Competitive
   if (arts.length) {
     const pinned = new Set(o.pinnedWeapons ?? []);
-    for (const b of out.slice(0, 15)) {
+    for (const b of out.slice(0, 8)) {
       // Artifact and weapons shape each other (Volatile Flow wants a Void gun), so for each artifact: fit perks,
       // re-pick weapons with those perks in play, then fit perks again for the final weapons.
       let best: { fit: NonNullable<ReturnType<typeof bestArtifact>>; ws: Weapon[]; score: number } | undefined;
@@ -312,18 +369,23 @@ export function searchBuilds(o: SearchInput): Build[] {
         for (const seed of seeds) {
           const first = bestArtifact([...corePartsOf(b), ...weaponParts(b.weapons)], o.goal, [a], undefined, seed);
           if (!first) continue;
-          const ws = chooseWeapons([...corePartsOf(b), ...first.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned);
+          const ws = chooseWeapons([...corePartsOf(b), ...first.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned, true);
           const fit = bestArtifact([...corePartsOf(b), ...weaponParts(ws)], o.goal, [a], undefined, lock)!;
           if (!best || fit.score > best.score) best = { fit, ws, score: fit.score };
         }
       }
       if (!best) continue;
+      // The winning artifact's perks in play, the full weapon pick, then the perks fitted to those final guns.
+      const art = arts.find(a => a.name === best!.fit.artifact.name);
+      const full = chooseWeapons([...corePartsOf(b), ...best.fit.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned);
+      const refit = art ? bestArtifact([...corePartsOf(b), ...weaponParts(full)], o.goal, [art], undefined, o.require?.artifactPerks ?? []) : undefined;
+      if (refit && refit.score >= best.score - 1e-6) best = { fit: refit, ws: full, score: refit.score };
       b.artifact = best.fit;
       b.weapons = best.ws;
       b.loops = scoreLoops([...corePartsOf(b), ...weaponParts(best.ws), ...best.fit.perks.map(p => ({ k: p.perk }))], o.goal);
       b.score = b.loops.score + STAT_POINT * statTotal(b.bonus);
     }
-    out.splice(15);
+    out.splice(8);
     out.sort((a, b) => b.score - a.score);
   }
   // Keep one build per subclass + exotic so the list shows real alternatives.

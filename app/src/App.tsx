@@ -8,8 +8,13 @@ import { Roster } from "./screens/Roster";
 import { Builder } from "./screens/Builder";
 import { Workshop, type Sent } from "./screens/Workshop";
 import { Path } from "./screens/Path";
+import { Home } from "./screens/Home";
+import { Inventory } from "./screens/Inventory";
 import { Segmented } from "./ui/bits";
 import { Button, Card, Logo } from "./ui/kit";
+
+type Screen = "home" | "inventory" | "builder" | "workshop" | "path" | "roster";
+const ADVANCED: Screen[] = ["builder", "workshop", "path", "roster"];
 
 type State =
   | { at: "start" }
@@ -29,7 +34,8 @@ function ago(t: number, now: number) {
 export default function App() {
   const [st, setSt] = useState<State>({ at: "start" });
   const [now, setNow] = useState(Date.now());
-  const [screen, setScreen] = useState<"builder" | "workshop" | "path" | "roster">("builder");
+  // A link can open a screen directly (…/beta/#builder).
+  const [screen, setScreen] = useState<Screen>(() => { const h = location.hash.slice(1) as Screen; return (["home", "inventory", ...ADVANCED] as Screen[]).includes(h) ? h : "home"; });
   const [sent, setSent] = useState<Sent | null>(null); // a Workshop build on its way to a Builder column
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
 
@@ -84,8 +90,17 @@ export default function App() {
         </Card>
       )}
       {st.at === "ready" && (
-        <nav className="mb-5"><Segmented label="Screen" value={screen} onChange={setScreen} options={[{ value: "builder", label: "Builder" }, { value: "workshop", label: "Workshop" }, { value: "path", label: "Path" }, { value: "roster", label: "My roster" }]} /></nav>
+        <nav className="mb-5 flex flex-wrap items-center gap-3">
+          <Segmented label="Screen" value={ADVANCED.includes(screen) ? "advanced" : screen} onChange={v => setScreen(v === "advanced" ? "builder" : v)}
+            options={[{ value: "home", label: "Home" }, { value: "inventory", label: "Inventory" }, { value: "advanced", label: "Advanced" }]} />
+          {ADVANCED.includes(screen) && (
+            <Segmented label="Advanced tools" value={screen} onChange={setScreen}
+              options={[{ value: "builder", label: "Builder" }, { value: "workshop", label: "Workshop" }, { value: "path", label: "Campaigns" }, { value: "roster", label: "My roster" }]} />
+          )}
+        </nav>
       )}
+      {st.at === "ready" && screen === "home" && <Home inv={st.data.inventory} catalog={st.data.catalog ?? []} onInventory={() => setScreen("inventory")} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builder"); }} />}
+      {st.at === "ready" && screen === "inventory" && <Inventory inv={st.data.inventory} />}
       {st.at === "ready" && screen === "builder" && <Builder inv={st.data.inventory} onRefresh={load} incoming={sent} onIncomingUsed={() => setSent(null)} />}
       {st.at === "ready" && screen === "path" && <Path inv={st.data.inventory} quests={st.data.quests ?? []} />}
       {st.at === "ready" && screen === "workshop" && <Workshop inv={st.data.inventory} onSend={x => { setSent(x); setScreen("builder"); }} />}
