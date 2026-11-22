@@ -5,7 +5,7 @@ import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunte
 import type { ArtifactPerk } from "../knowledge/artifact";
 import { artifactsOf, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
+import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, withPerks, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, planValue, solve, statValue, type Solution, type StatPlan } from "./solve";
 import type { Part } from "./loops";
@@ -23,6 +23,7 @@ export interface BuildSpec {
   fragments: string[];
   exotic: string;
   weapons: string[]; // weapon instance ids, kinetic / energy / power ("" = empty)
+  weaponPerks?: Record<string, string[]>; // weapon id -> the perk picked in each column (free to switch in game)
   armorLocks: Partial<Record<Slot, string>>; // armor the player picked; other slots are filled by the solver
   artifact?: string; // artifact name ("" or missing = keep whatever is equipped)
   artifactPerks?: string[];
@@ -57,7 +58,7 @@ export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefine
     artifacts, perks: perkByName(artifacts),
     inv, defOf, defs, characterId, light: ch.light,
     pieces: inv.items.map(i => readPiece(i, defOf)).filter((p): p is Piece => !!p),
-    weapons: ownedWeapons(inv, defOf, 0),
+    weapons: ownedWeapons(inv, defOf, ch.light),
     kit: availableKit(inv, defOf, characterId),
     wornIds: new Set(inv.items.filter(i => i.owner === characterId && i.equipped).map(i => i.id)),
     ownedMods: ownedMods(inv.items, defOf),
@@ -112,7 +113,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   let fragments = spec.fragments.map(k).filter((x): x is K => !!x);
   if (fragments.length > slots) { issues.push(`Your aspects open ${slots} fragment slots; only the first ${slots} fragments count.`); fragments = fragments.slice(0, slots); }
   const exotic = k(spec.exotic);
-  const weapons = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id));
+  const weapons = spec.weapons.map(id => weaponOf(ctx, spec, id));
   const core = { super: sup!, grenade: gr!, melee: me!, classAbility: ca!, aspects, fragments, exotic: exotic! };
   const parts = [sup, gr, me, ca, ...aspects, ...fragments, exotic].filter((x): x is K => !!x);
   const artifact = ctx.artifacts.find(a => a.name === spec.artifact) ?? ctx.artifacts.find(a => a.equipped);
@@ -162,6 +163,15 @@ export function pointsByPiece(v: BuildView): PiecePoints[] {
   return out;
 }
 
+// A spec's weapon, with the perks it picked in each column.
+export function weaponOf(ctx: Ctx, spec: Pick<BuildSpec, "weaponPerks">, id: string): Weapon | undefined {
+  const w = ctx.weapons.find(x => x.item.id === id);
+  const names = w && spec.weaponPerks?.[id];
+  if (!w || !names) return w;
+  return withPerks(w, w.cols.map((c, i) => Math.max(0, c.options.findIndex(o => o.name === names[i]))));
+}
+export const perkNames = (w: Weapon) => w.ks.slice(w.base.length).map(k => k.name);
+
 // What you're wearing right now, read from your equipped subclass, exotic and weapons.
 export function currentSpec(ctx: Ctx, goal: Goal): BuildSpec | null {
   const worn = ctx.inv.items.filter(i => i.owner === ctx.characterId && i.equipped);
@@ -210,7 +220,7 @@ export function tuneCurrent(ctx: Ctx, goal: Goal): BuildSpec | null {
   const quick = (frags: string[]) => {
     const fr = frags.map(k).filter((x): x is K => !!x);
     const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, spec.exotic].map(k).filter((x): x is K => !!x);
-    const ws = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id)).filter((w): w is Weapon => !!w);
+    const ws = spec.weapons.map(id => weaponOf(ctx, spec, id)).filter((w): w is Weapon => !!w);
     return scoreLoops([...[...parts, ...fr].map(x => ({ k: x })), ...weaponParts(ws)], goal).score + 0.2 * statTotal(fragmentBonus(fr, ctx.defs));
   };
   let frags = spec.fragments.slice(0, slots);
@@ -231,7 +241,7 @@ export function tuneCurrent(ctx: Ctx, goal: Goal): BuildSpec | null {
   let artifactPerks = spec.artifactPerks;
   if (art) {
     const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, ...frags, spec.exotic].map(k).filter((x): x is K => !!x).map(x => ({ k: x }));
-    const ws = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id)).filter((w): w is Weapon => !!w);
+    const ws = spec.weapons.map(id => weaponOf(ctx, spec, id)).filter((w): w is Weapon => !!w);
     artifactPerks = fitArtifact([...parts, subMarker(sub), ...weaponParts(ws)], goal, art).perks.map(p => p.perk.name);
   }
   return { ...base, fragments: frags, artifactPerks };
@@ -242,7 +252,7 @@ export function refitArtifact(spec: BuildSpec, ctx: Ctx, name: string): Partial<
   const art = ctx.artifacts.find(a => a.name === name);
   if (!art) return { artifact: name, artifactPerks: [] };
   const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, ...spec.fragments, spec.exotic].map(k).filter((x): x is K => !!x).map(x => ({ k: x }));
-  const ws = spec.weapons.map(id => ctx.weapons.find(w => w.item.id === id)).filter((w): w is Weapon => !!w);
+  const ws = spec.weapons.map(id => weaponOf(ctx, spec, id)).filter((w): w is Weapon => !!w);
   return { artifact: name, artifactPerks: fitArtifact([...parts, subMarker(spec.subclass), ...weaponParts(ws)], spec.goal, art).perks.map(p => p.perk.name) };
 }
 
@@ -251,6 +261,7 @@ export function specFromBuild(b: Build): BuildSpec {
     goal: b.goal, subclass: b.subclass, super: b.super.name, grenade: b.grenade.name, melee: b.melee.name,
     classAbility: b.classAbility.name, aspects: b.aspects.map(a => a.name), fragments: b.fragments.map(f => f.name),
     exotic: b.exotic.name, weapons: ["kinetic", "energy", "power"].map(s => b.weapons.find(w => w.item.slot === s)?.item.id ?? ""), armorLocks: {},
+    weaponPerks: Object.fromEntries(b.weapons.map(w => [w.item.id, perkNames(w)])),
     artifact: b.artifact?.artifact.name ?? "", artifactPerks: b.artifact?.perks.map(p => p.perk.name) ?? [],
   };
 }
@@ -314,8 +325,14 @@ export function stepsFrom(now: BuildView, v: BuildView, ctx: Ctx): Step[] {
   b.weapons.forEach((id, i) => {
     if (id && id !== a.weapons[i]) {
       const w = ctx.weapons.find(x => x.item.id === id);
-      if (w) steps.push({ what: `${slotName[i]}: equip ${w.item.name}`, detail: `${w.element}, Power ${w.item.power}, ${where(w.item, ctx.characterId)}` });
+      if (w) steps.push({ what: `${slotName[i]}: equip ${w.item.name}`, detail: `${w.element}, ${w.tier ? `Tier ${w.tier}, ` : ""}Power ${w.item.power}, ${where(w.item, ctx.characterId)}` });
     }
+    const w = id ? weaponOf(ctx, b, id) : undefined;
+    if (w?.infuse) steps.push({ what: `Infuse ${w.item.name} first`, detail: `It's Power ${w.item.power}. Equipped as-is it would pull your Power down, so infuse it up to your level.` });
+    if (w) w.cols.forEach((c, j) => {
+      const pick = w.ks[w.base.length + j];
+      if (pick && pick.name !== c.options[0].name) steps.push({ what: `${w.item.name}: switch ${c.options[0].name} to ${pick.name}`, detail: "Free to swap in the weapon's perk column" });
+    });
   });
   for (const s of ARMOR_SLOTS) {
     const p = v.armor?.pieces[s], q = now.armor?.pieces[s];

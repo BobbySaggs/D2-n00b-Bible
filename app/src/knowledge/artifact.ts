@@ -36,9 +36,9 @@ const USES: [RegExp, string][] = [
 
 export interface ArtifactPerk extends K { hash: number; read: "checked" | "description" }
 
-export function perkKnowledge(hash: number, name: string, desc: string): ArtifactPerk {
+export function perkKnowledge(hash: number, name: string, desc: string, kind: "artifact" | "weapon" = "artifact"): ArtifactPerk {
   const hand = byName.get(name);
-  if (hand && hand.kind === "artifact") return { ...hand, hash, read: "checked" };
+  if (hand && hand.kind === kind) return { ...hand, hash, read: "checked" };
   const text = desc.replace(/\[[^\]]*\]/g, " ");
   const makes = new Set<string>(), uses = new Set<string>();
   // A perk's trigger usually comes first ("Defeating X ... grants Y"); split on the first "grants/creates/gives".
@@ -60,7 +60,7 @@ export function perkKnowledge(hash: number, name: string, desc: string): Artifac
   if (makes.has("multikill")) role.push("adClear");
   if (makes.has("dr") || makes.has("overshield") || makes.has("heal")) role.push("survival");
   return {
-    name, kind: "artifact", makes: [...makes], uses: [...uses], needs: needs.length ? needs : undefined, role,
+    name, kind, makes: [...makes], uses: [...uses], needs: needs.length ? needs : undefined, role,
     says: desc.replace(/\[[^\]]*\]/g, "").replace(/\s+/g, " ").trim(), hash, read: "description",
   };
 }

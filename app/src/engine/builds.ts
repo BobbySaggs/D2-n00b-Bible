@@ -6,6 +6,7 @@ import { readPiece, type Piece } from "./armor";
 import { isPvp, scoreLoops, statLean, type Goal, type LoopReport, type Part } from "./loops";
 import { solve, type Solution, type StatPlan } from "./solve";
 import { artifactsOf, bestArtifact, type ArtifactFit } from "./artifact";
+import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
 import { DUEL_SLOT, PVP_PAST_100, WEAPON_STAT, duelRating, type WeaponStats } from "../knowledge/pvp";
 
 export interface Weapon {
@@ -17,6 +18,11 @@ export interface Weapon {
   rated: boolean; // Steeped knows this weapon or one of its perks (otherwise it only knows the frame)
   duel?: number; // 0-10: how well its own Bungie stats suit PvP duels for its type (Steeped's weights)
   wstats: WeaponStats;
+  tier: number; // gear tier 1-5 (0 for exotics and old gear)
+  infuse: boolean; // below your Power: needs infusing before it's worth equipping
+  // Perk columns you can switch between for free (Tier 3+ drops with 2-3 per column). cols[i][0] is what's slotted.
+  cols: { socket: number; options: ArtifactPerk[] }[];
+  base: K[]; // the weapon's own knowledge and type (not its column perks)
 }
 
 export interface Build {
@@ -54,21 +60,38 @@ export function availableKit(inv: Inventory, defOf: DefOf, characterId: string):
   return out;
 }
 
-export function ownedWeapons(inv: Inventory, defOf: DefOf, minPower = 400): Weapon[] {
+export function ownedWeapons(inv: Inventory, defOf: DefOf, power = 0): Weapon[] {
+  // Every weapon counts, whatever its Power: one below yours just needs infusing first.
   return inv.items
-    .filter(i => i.kind === "weapon" && i.power >= minPower)
+    .filter(i => i.kind === "weapon")
     .map(item => {
-      const names = new Set<string>([item.name]);
-      for (const h of item.plugs) { const d = defOf(h); if (d?.name) names.add(d.name); }
-      const ks = [...names].map(n => byName.get(n)).filter((k): k is K => !!k && k.kind === "weapon");
-      const rated = ks.length > 0;
+      const base: K[] = [];
+      const own = byName.get(item.name);
+      if (own && own.kind === "weapon") base.push(own);
+      const cols: Weapon["cols"] = [];
+      item.plugs.forEach((h, socket) => {
+        const d = defOf(h);
+        if (!d?.name) return;
+        const trait = d.plugCat === "frames" || d.plugCat === "origins" || (item.exotic && d.plugCat === "intrinsics" && !own);
+        if (!trait) { const k = byName.get(d.name); if (k && k.kind === "weapon" && !base.includes(k)) base.push(k); return; }
+        const hashes = [h, ...(item.reusable[socket] ?? []).filter(x => x !== h)];
+        const options = hashes.map(x => defOf(x)).filter((x): x is ItemDef => !!x?.name)
+          .map(x => perkKnowledge(x.hash, x.name, x.desc ?? "", "weapon"));
+        cols.push({ socket, options });
+      });
       const typeName = defOf(item.hash)?.type ?? "";
       const type = WEAPON_TYPE[typeName];
-      if (type) ks.push(type);
+      if (type) base.push(type);
+      const ks = [...base, ...cols.map(c => c.options[0])];
+      const rated = base.some(k => k !== type) || cols.some(c => c.options[0].read === "checked");
       const wstats: WeaponStats = Object.fromEntries(Object.entries(WEAPON_STAT).map(([k, h]) => [k, item.wstats?.[h] ?? 0])) as WeaponStats;
-      return { item, ks, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated, wstats, duel: duelRating(typeName, wstats) };
+      return { item, ks, base, cols, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated, wstats,
+        duel: duelRating(typeName, wstats), tier: item.gearTier ?? 0, infuse: power > 0 && item.power < power - 10 };
     });
 }
+
+// The same weapon with other perks picked in its columns (free to switch in game).
+export const withPerks = (w: Weapon, picks: number[]): Weapon => ({ ...w, ks: [...w.base, ...w.cols.map((c, i) => c.options[picks[i]] ?? c.options[0])] });
 
 // Your equipped artifact's perks, matched to what Steeped knows. Unknown perks are returned by name so the page can show them.
 export function artifactKit(inv: Inventory, defOf: DefOf, characterId: string): { name: string; known: K[]; unknown: string[] } {
@@ -104,7 +127,10 @@ const marker = (name: string): K => ({ name, kind: "weapon", makes: [], uses: []
 export const weaponParts = (ws: Weapon[]): Part[] => {
   const firstOfAmmo = new Map<number, Weapon>();
   for (const w of [...ws].sort((a, b) => (b.duel ?? 0) - (a.duel ?? 0))) if (!firstOfAmmo.has(w.ammo)) firstOfAmmo.set(w.ammo, w);
-  return ws.flatMap(w => [...w.ks.map(k => ({ k })), { k: marker(`__el:${w.element}`) }, { k: marker(`__type:${w.type}`) },
+  // The same perk on two guns counts once: you only fire one gun at a time.
+  const seen = new Set<string>();
+  const once = (k: K) => { if (k.makes.length === 0 && k.uses.length === 0) return true; if (seen.has(k.name)) return false; seen.add(k.name); return true; };
+  return ws.flatMap(w => [...w.ks.filter(k => WEAPON_TYPE[w.type] === k || once(k)).map(k => ({ k })), { k: marker(`__el:${w.element}`) }, { k: marker(`__type:${w.type}`) },
     ...(w.duel ? [{ k: { ...marker(`${w.item.name} (duel stats)`), makes: [`duel:${Math.round(w.duel * (DUEL_SLOT[w.ammo] ?? 0.5) * (firstOfAmmo.get(w.ammo) === w ? 1 : 0.35) * 10) / 10}`] } }] : [])]);
 };
 
@@ -128,8 +154,25 @@ function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
     // The heavy weapon is the boss-damage weapon: judge it on its own damage perks, not the build's loops.
     for (const k of w.ks) for (const m of k.makes) { const [t, n] = m.split(":"); if (t === "bossDmg") s += 3 * Number(n ?? 1); }
   }
-  s += w.item.power / 1000; // prefer higher Power copies
+  // Higher gear tiers carry enhanced perks, barrels and magazines and a bigger masterwork bonus.
+  s += 0.3 * w.tier;
+  s += w.item.power / 10000; // last tiebreak: higher Power copies (no infusing needed)
   return s;
+}
+
+// Pick the best perk in each column, one column at a time.
+function tunePerks(w: Weapon, score: (w: Weapon) => number): { w: Weapon; score: number } {
+  const picks = w.cols.map(() => 0);
+  let cur = w, best = score(w);
+  w.cols.forEach((c, i) => {
+    for (let j = 1; j < c.options.length; j++) {
+      const trial = picks.map((p, k) => (k === i ? j : p));
+      const t = withPerks(w, trial);
+      const sc = score(t);
+      if (sc > best + 1e-6) { best = sc; cur = t; picks[i] = j; }
+    }
+  });
+  return { w: cur, score: best };
 }
 
 function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K, goal: Goal, pinned: Set<string> = new Set()): Weapon[] {
@@ -139,10 +182,14 @@ function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K
     const pin = weapons.find(w => w.item.slot === slot && pinned.has(w.item.id));
     if (pin) { chosen.push(pin); continue; }
     const cands = weapons.filter(w => w.item.slot === slot && !(w.item.exotic && chosen.some(c => c.item.exotic)));
+    const scoreOf = (w: Weapon) => scoreLoops([...base, ...weaponParts([...chosen, w])], goal).score + weaponFit(w, sub, exotic, goal);
+    // Rank on the slotted perks, then let the leaders try the other perks in their columns.
+    const ranked = cands.map(w => ({ w, sc: scoreOf(w) })).sort((a, b) => b.sc - a.sc);
     let best: Weapon | undefined, bestScore = -Infinity;
-    for (const w of cands) {
-      const sc = scoreLoops([...base, ...weaponParts([...chosen, w])], goal).score + weaponFit(w, sub, exotic, goal);
-      if (sc > bestScore) { bestScore = sc; best = w; }
+    for (const { w, sc } of ranked.slice(0, 8)) {
+      const tuned = tunePerks(w, x => scoreOf(x));
+      const s2 = Math.max(sc, tuned.score);
+      if (s2 > bestScore) { bestScore = s2; best = tuned.score > sc ? tuned.w : w; }
     }
     if (best) chosen.push(best);
   }
@@ -184,7 +231,7 @@ export function searchBuilds(o: SearchInput): Build[] {
     .map(n => byName.get(n)).filter((k): k is K => !!k && k.kind === "exotic")
     .filter(k => !o.onlyExotic || k.name === o.onlyExotic)
     .filter(k => !o.require?.exotic || k.name === o.require.exotic);
-  const weapons = ownedWeapons(o.inv, o.defOf);
+  const weapons = ownedWeapons(o.inv, o.defOf, o.inv.characters.find(c => c.id === o.characterId)?.light ?? 0);
 
   // Stage 1: every core (super, grenade, melee, dodge, two aspects, exotic) scored on its loops.
   type Core = Omit<Build, "loops" | "score" | "armor" | "bonus" | "goal" | "weapons">;
@@ -295,12 +342,15 @@ export function searchBuilds(o: SearchInput): Build[] {
 export type StatStyle = "peaks" | "even";
 // Targets: your minimum per stat (50 if you don't set one). 100 means "Keep at 100+", which the solver treats as a must.
 export type StatTargets = Partial<Record<StatKey, number>>;
+const STAT_BUDGET = 2.4;
 export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, targets: StatTargets = {}, style: StatStyle = "peaks"): StatPlan {
   const lean = statLean([...corePartsOf(b), ...weaponParts(b.weapons)], goal);
-  const max = Math.max(...Object.values(lean), 0.01);
+  // Every build gets the same stat budget: its weights are scaled so they add up to STAT_BUDGET. Before, a build
+  // that leaned on many stats earned more stat points for the same numbers, which skewed the ranking across subclasses.
+  const sum = Math.max(Object.values(lean).reduce((t, v) => t + Math.max(0, v), 0), 0.01);
   const plan = {} as StatPlan;
   for (const k of STAT_ORDER) {
-    const w = lean[k] / max; // 0..1
+    const w = Math.min(1, (Math.max(0, lean[k]) / sum) * STAT_BUDGET); // 0..1
     const floor = targets[k] ?? 50, hard = (targets[k] ?? 0) >= 100;
     const past = isPvp(goal) ? PVP_PAST_100[k] ?? 0.3 : 1; // past 100 is mostly PvE damage; worth less against players
     // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
