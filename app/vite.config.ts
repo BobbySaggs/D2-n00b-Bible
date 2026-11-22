@@ -7,7 +7,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "./",
   // Clarity data stays off until Clarity approves the partnership: build with VITE_CLARITY=on to turn it on.
-  define: { __CLARITY__: JSON.stringify(process.env.VITE_CLARITY === "on"), __APP_VERSION__: JSON.stringify("b21 · " + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC") },
+  define: { __CLARITY__: JSON.stringify(process.env.VITE_CLARITY === "on"), __APP_VERSION__: JSON.stringify("b22 · " + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC") },
   worker: { format: "es" },
   plugins: [react(), tailwindcss()],
   build: { outDir: "dist", emptyOutDir: true },

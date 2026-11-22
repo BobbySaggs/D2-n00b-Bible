@@ -1,6 +1,7 @@
 import type { ItemDef } from "../bungie/defs";
 import type { CatalogEntry } from "../bungie/catalog";
 import type { Inventory } from "../model/inventory";
+import { STAT_LABEL, STAT_ORDER, type StatKey } from "../bungie/config";
 import type { Goal } from "./loops";
 import { searchBuilds } from "./builds";
 import { evaluate, evaluateNow, makeCtx, specFromBuild, type BuildView, type Settings } from "./evaluate";
@@ -26,6 +27,11 @@ export interface Report {
   cost: string[]; // what it takes to run it at full strength
   view: BuildView;
 }
+export type Grade = "Great" | "Good" | "Needs work";
+// Grades for what you wear, against the best Steeped found for that job: 90%+ Great, 75%+ Good.
+export const gradeOf = (ratio: number): Grade => (ratio >= 0.9 ? "Great" : ratio >= 0.75 ? "Good" : "Needs work");
+export interface Possible { role: string; view: BuildView; steps: { what: string; why: string; kind: "get" | "gear" | "power" }[]; sameCore: boolean }
+export interface Target { title: string; why: string; where: string; tag: string }
 export interface MaxHunter {
   pct: number;
   pillars: { power: number; gear: number; builds: number };
@@ -36,13 +42,21 @@ export interface MaxHunter {
   best: { role: string; view: BuildView }[];
   path: PathStep[];
   reports: Report[];
-  now?: { rating: number; spec: BuildView["spec"] }; // what you're wearing, rated against your best Max Hunter build (same yardstick as the Builder)
+  now?: { rating: number; spec: BuildView["spec"]; grades: Record<"clear" | "boss" | "survive", Grade>; notes: Record<"clear" | "boss" | "survive", string> }; // what you're wearing, rated against your best Max Hunter build (same yardstick as the Builder)
+  possible: Possible[]; // per role: the strongest Hunter possible (any exotic in the game, everything masterworked) and how to get there
+  targets: Target[]; // gear to chase next
 }
 
 type DefOf = (h: number) => ItemDef | undefined;
 
+const CTX = new WeakMap<Inventory, ReturnType<typeof makeCtx>>();
+function ctxFor(inv: Inventory, defOf: DefOf, defs: ItemDef[], characterId: string) {
+  let c = CTX.get(inv);
+  if (!c || c.characterId !== characterId) { c = makeCtx(inv, defOf, defs, characterId); CTX.set(inv, c); }
+  return c;
+}
 function bestBuild(inv: Inventory, defOf: DefOf, defs: ItemDef[], characterId: string, goal: Goal, settings: Settings): BuildView | undefined {
-  const ctx = makeCtx(inv, defOf, defs, characterId);
+  const ctx = ctxFor(inv, defOf, defs, characterId);
   const found = searchBuilds({ inv, defOf, defs, characterId, goal, top: 5 }).map(specFromBuild);
   return found.map(sp => evaluate({ ...sp, goal }, ctx, settings))
     .sort((a, b) => a.issues.length - b.issues.length || b.score - a.score)[0];
@@ -149,10 +163,58 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
 
   const nowView = evaluateNow(ctx, "whole", settings);
   const bestScore = Math.max(...kit.filter(k => k.goal === "whole").map(k => k.view.score), nowView?.score ?? 0);
-  const now = nowView && bestScore > 0 ? { rating: Math.max(0, Math.min(100, Math.round((100 * nowView.score) / bestScore))), spec: nowView.spec } : undefined;
+  let now: MaxHunter["now"];
+  if (nowView && bestScore > 0) {
+    const rating = Math.max(0, Math.min(100, Math.round((100 * nowView.score) / bestScore)));
+    const graded = Object.fromEntries(jobs.map(([j, g]) => {
+      const v = evaluateNow(ctx, g, settings);
+      const gr = gradeOf((v?.score ?? 0) / top[j]);
+      // A build that can't heal or soak damage can't survive solo, whatever its score says.
+      return [j, j === "survive" && v?.loops.survives.length ? "Needs work" : gr];
+    })) as Record<"clear" | "boss" | "survive", Grade>;
+    const notes = {
+      clear: `${rating} of 100 next to your best build`,
+      boss: graded.boss === "Great" ? "Strong on bosses as it is" : "Swap to your Boss build for damage phases",
+      survive: nowView.loops.survives.length ? `Missing ${nowView.loops.survives.join(" and ")}` : graded.survive === "Great" ? "Heals and soaks damage solo" : "Heals and soaks damage, but your best build does it better",
+    };
+    now = { rating, spec: nowView.spec, grades: graded, notes };
+  }
+
+  // Best possible per role, perfected: the strongest build with any exotic in the game, every piece masterworked.
+  const possible: Possible[] = [];
+  for (const { role, goal, view: mine } of kit) {
+    const pick = best.find(b => b.role === role)?.view ?? mine;
+    const pctx = hasStandIn(pick) ? ctxFor(wc.inv, defOf, defs, characterId) : ctx;
+    // Same core as your build: keep the exact pieces and masterwork them, so "perfected" never trades a stat away.
+    const same = pick === mine || (pick.spec.exotic === mine.spec.exotic && pick.spec.subclass === mine.spec.subclass);
+    const locks = same ? Object.fromEntries(Object.entries(mine.armor?.pieces ?? {}).map(([sl, p]) => [sl, p.item.id])) : {};
+    const perfected = evaluate({ ...pick.spec, goal, armorLocks: { ...pick.spec.armorLocks, ...locks } }, pctx, { ...settings, mw: "full" });
+    const steps: Possible["steps"] = [];
+    for (const it of [...perfected.weapons.filter(Boolean).map(w => w!.item), ...Object.values(perfected.armor?.pieces ?? {}).map(p => p.item)].filter(isStandIn)) {
+      const src = standInSource(it.id);
+      steps.push({ kind: "get", what: src?.acquired ? `Pull ${it.name} from Collections` : `Get ${it.name}`, why: src?.source ? `Source: ${src.source}` : "Not in your collection yet" });
+    }
+    const notMw = Object.values(perfected.armor?.pieces ?? {}).filter(p => !p.item.masterworked && !isStandIn(p.item)).map(p => p.item.name);
+    if (notMw.length) steps.push({ kind: "gear", what: `Masterwork ${notMw.join(", ")}`, why: "Full stats on every piece" });
+    for (const w of perfected.weapons) if (w?.infuse) steps.push({ kind: "gear", what: `Infuse ${w.item.name}`, why: `It's Power ${w.item.power}` });
+    for (const w of perfected.weapons) if (w && !w.item.exotic && w.tier > 0 && w.tier < 5) steps.push({ kind: "gear", what: `Upgrade ${w.item.name} to Tier 5`, why: "Weapon Tier Upgrading unlocks its enhanced perks" });
+    if (power < POWER_CAP) steps.push({ kind: "power", what: "Reach Power 550", why: "Solo Ops at Grade A or better" });
+    possible.push({ role, view: perfected, steps, sameCore: pick.spec.exotic === mine.spec.exotic && pick.spec.subclass === mine.spec.subclass });
+  }
+
+  // Gear to target: your lowest slot, the stats holding your main build back, weapon upgrades, and exotics to get.
+  const targets: Target[] = [];
+  if (power < POWER_CAP) targets.push({ title: `Tier 5 ${lowest.slot} ${["kinetic", "energy", "power"].includes(lowest.slot) ? "weapon" : "armor"}`, why: `Your lowest Power slot (${lowest.power}). Raising it lifts your Power the most.`, where: "Solo Ops at Grade A or better", tag: "Power" });
+  const main = possible.find(p => p.role === "Max Hunter")?.view ?? kit[0]?.view;
+  if (main?.ratingPlan) {
+    const short = STAT_ORDER.filter(k => (main.ratingPlan![k]?.low ?? 0) >= 0.9 && main.stats[k] < 100) as StatKey[];
+    if (short.length) targets.push({ title: `Armor with high ${short.map(k => STAT_LABEL[k]).join(" or ")} rolls`, why: `${short.map(k => `${STAT_LABEL[k]} ${main.stats[k]}`).join(", ")} in your best build even when perfected. Keep Tier 5 pieces that roll high here.`, where: "Any Grade A+ activity", tag: "Stats" });
+  }
+  for (const p of path.filter(x => x.what.startsWith("Upgrade "))) targets.push({ title: p.what.replace("Upgrade ", ""), why: p.why, where: "Weapon Tier Upgrading", tag: "Upgrade" });
+  for (const p of path.filter(x => x.kind === "farm")) targets.push({ title: p.what.replace(/^(Get|Pull) /, "").replace(/ from Collections$/, ""), why: p.why, where: p.why.split("Source: ")[1] ?? "Collections", tag: "Exotic" });
 
   const pct = 100 * (WEIGHT.power * powerPct + WEIGHT.gear * gearPct + WEIGHT.builds * buildsPct);
-  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now };
+  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now, possible, targets };
 }
 
 const hasStandIn = (v: BuildView) => [...v.weapons.filter(Boolean).map(w => w!.item), ...Object.values(v.armor?.pieces ?? {}).map(p => p.item)].some(isStandIn);

@@ -62,4 +62,5 @@ export const COMPONENTS = [
   308, // item plug states
   310, // item reusable plugs
   800, // collectibles
+  900, // records (exotic catalysts)
 ].join(",");

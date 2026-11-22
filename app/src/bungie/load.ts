@@ -3,13 +3,15 @@ import { COMPONENTS } from "./config";
 import { DEFS, def, loadDefs, syncManifestVersion, type ItemDef } from "./defs";
 import { buildInventory, itemHashes, plugHashes, plugSetHashes, type Inventory } from "../model/inventory";
 import { readQuests, type Quest } from "./quests";
-import { loadCatalog, type CatalogEntry } from "./catalog";
+import { loadCatalog, readCatalysts, type CatalogEntry, type Catalyst } from "./catalog";
 import { loadClarity, CLARITY_ON } from "./clarity";
 
 export interface LoadResult {
   inventory: Inventory;
   quests: Quest[]; // quest items on each character with live objective progress
   catalog: CatalogEntry[]; // every Hunter-usable exotic in the game, owned or not (for "best possible")
+  catalysts: Catalyst[]; // every exotic catalyst and whether it's done
+  artifact?: { level: number; cap: number }; // seasonal artifact level
   // Kept so the snapshot export can hand Claude the exact same inputs the app used.
   raw: unknown;
 }
@@ -42,7 +44,10 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
   if (CLARITY_ON) { progress("Reading Clarity's tested perk values"); await loadClarity(); }
   progress("Putting it together");
   const inventory = buildInventory(P, def, account);
-  return { inventory, quests, catalog, raw: P };
+  const catalysts = readCatalysts(P);
+  const ap = P?.profileProgression?.data?.seasonalArtifact?.pointProgression;
+  const artifact = ap ? { level: ap.level ?? 0, cap: ap.levelCap ?? 0 } : undefined;
+  return { inventory, quests, catalog, catalysts, artifact, raw: P };
 }
 
 // Everything Claude needs to test the engine on your real gear. No sign-in token is included.
@@ -60,6 +65,7 @@ export function makeSnapshot(r: LoadResult) {
     defs,
     quests: r.quests,
     catalog: r.catalog,
+    catalysts: r.catalysts,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

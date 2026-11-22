@@ -16,6 +16,44 @@ const store = typeof indexedDB !== "undefined" ? createStore("steeped-catalog", 
 let CATALOG: CatalogEntry[] = [];
 export const getCatalog = () => CATALOG;
 
+// Exotic catalysts: Bungie tracks each one as a record under Collections/Triumphs "Exotic Catalysts".
+export interface CatalystDef { record: number; name: string }
+export interface Catalyst { record: number; name: string; weapon: string; done: boolean; progress: string }
+let CATALYST_DEFS: CatalystDef[] = [];
+export function readCatalysts(profile: any): Catalyst[] {
+  const recs: Record<string, any> = { ...(profile?.profileRecords?.data?.records ?? {}) };
+  for (const c of Object.values(profile?.characterRecords?.data ?? {}) as any[]) for (const [h, v] of Object.entries(c.records ?? {})) if (!(h in recs)) recs[h] = v;
+  return CATALYST_DEFS.map(d => {
+    const r = recs[d.record];
+    const objs: any[] = r?.objectives ?? r?.intervalObjectives ?? [];
+    const done = r ? (r.state & 4) === 0 : false; // 4 = objective not completed
+    const progress = objs.length && !done ? objs.map(o => `${o.progress ?? 0} of ${o.completionValue ?? "?"}`).join(", ") : "";
+    return { record: d.record, name: d.name, weapon: d.name.replace(/\s*Catalyst$/i, ""), done, progress };
+  });
+}
+function catalystRecords(nodes: Record<string, any>): number[] {
+  const name = (h: number | string) => String(nodes[h]?.displayProperties?.name ?? "").trim();
+  const roots = Object.keys(nodes).filter(h => /^(exotic )?catalysts$/i.test(name(h)));
+  const out = new Set<number>();
+  const walk = (h: number | string, depth: number) => {
+    const n = nodes[h];
+    if (!n || depth > 5) return;
+    for (const r of n.children?.records ?? []) out.add(r.recordHash);
+    for (const c of n.children?.presentationNodes ?? []) walk(c.presentationNodeHash, depth + 1);
+  };
+  for (const r of roots) walk(r, 0);
+  return [...out];
+}
+async function catalystDefs(hashes: number[], progress?: (m: string) => void): Promise<CatalystDef[]> {
+  const out: CatalystDef[] = [];
+  for (let i = 0; i < hashes.length; i += 12) {
+    progress?.(`Reading exotic catalysts (${Math.min(i + 12, hashes.length)} of ${hashes.length})`);
+    const got = await Promise.all(hashes.slice(i, i + 12).map(h => api<any>(`/Destiny2/Manifest/DestinyRecordDefinition/${h}/`).catch(() => null)));
+    for (const d of got) if (d?.hash && d.displayProperties?.name) out.push({ record: d.hash, name: d.displayProperties.name });
+  }
+  return out;
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function table(path: string): Promise<Record<string, any>> {
   const r = await fetch(BNET + path);
@@ -43,8 +81,9 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
   const m: any = await api("/Destiny2/Manifest/");
   const version = String(m?.version ?? "");
   if (store) {
-    const cached = await get<{ version: string; entries: CatalogEntry[] }>("catalog", store).catch(() => undefined);
-    if (cached && cached.version === version && cached.entries.length) {
+    const cached = await get<{ version: string; entries: CatalogEntry[]; catalysts?: CatalystDef[] }>("catalog", store).catch(() => undefined);
+    if (cached && cached.version === version && cached.entries.length && cached.catalysts) {
+      CATALYST_DEFS = cached.catalysts;
       CATALOG = withStates(cached.entries, profile);
       await loadDefs([...CATALOG.map(e => e.hash)]);
       await loadDefs(plugsOf(CATALOG));
@@ -56,6 +95,7 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
   progress?.("Reading every exotic in the game (once per Destiny update)");
   const [cols, nodes] = await Promise.all([table(paths.DestinyCollectibleDefinition), table(paths.DestinyPresentationNodeDefinition)]);
   const list = exoticCollectibles(nodes);
+  CATALYST_DEFS = await catalystDefs(catalystRecords(nodes), progress).catch(() => []);
   let entries: CatalogEntry[] = list.map(c => cols[c]).filter(Boolean).map((c: any) => ({
     hash: c.itemHash, collectible: c.hash, source: String(c.sourceString ?? "").replace(/^Source:\s*/i, "").trim(), acquired: false,
   })).filter(e => e.hash);
@@ -65,7 +105,7 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
     return d && d.tier === 6 && (d.itemType === 3 || (d.itemType === 2 && d.cls === 1));
   });
   await loadDefs(plugsOf(entries), (d, t) => progress?.(`Reading exotic perks (${d} of ${t})`));
-  if (store) await set("catalog", { version, entries }, store).catch(() => undefined);
+  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS }, store).catch(() => undefined);
   CATALOG = withStates(entries, profile);
   return CATALOG;
 }

@@ -1,119 +1,143 @@
-import { useEffect, useState } from "react";
-import { DEFS } from "../bungie/defs";
+import { useState } from "react";
 import type { CatalogEntry } from "../bungie/catalog";
 import { STAT_LABEL, STAT_ORDER } from "../bungie/config";
 import type { Inventory } from "../model/inventory";
 import type { BuildSpec } from "../engine/evaluate";
-import type { MaxHunter, Report } from "../engine/maxhunter";
-import { runMax } from "../workers/search";
+import type { Grade } from "../engine/maxhunter";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Spinner } from "../ui/bits";
-import { GearIcon, iconForItem } from "../ui/gear";
+import { useMax } from "../ui/useMax";
 import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "../bungie/clarity";
 
-// Home: how maxed your Hunter is, the one thing to do next, the path to 100%, and a report on each build in your kit.
-export function Home({ inv, catalog, onOpen, onInventory }: { inv: Inventory; catalog: CatalogEntry[]; onOpen: (spec: BuildSpec) => void; onInventory: () => void }) {
+// Home is an overview: your Hunter right now, how to improve, gear to target, and what to play.
+export const gradeTone = (g: Grade) => (g === "Great" ? "good" : g === "Good" ? "neutral" : "warn") as "good" | "neutral" | "warn";
+export const buildName = (s: BuildSpec) => `${s.subclass === "Prismatic Hunter" ? "Prismatic" : s.subclass} · ${s.exotic}`;
+
+export function Home({ inv, catalog, onOpen, onGo }: { inv: Inventory; catalog: CatalogEntry[]; onOpen: (spec: BuildSpec) => void; onGo: (screen: "builds" | "journey" | "inventory") => void }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
-  const [m, setM] = useState<MaxHunter | null>(null);
-  const [err, setErr] = useState("");
-  // Steps you tick off hide until the next refresh, which recomputes the path from your real gear.
+  const { m, err } = useMax(inv, catalog);
+  // Steps you tick off hide until the next refresh, which recomputes everything from your real gear.
   const [done, setDone] = useState<Set<string>>(() => new Set());
 
-  useEffect(() => {
-    if (!hunter) return;
-    let live = true;
-    setErr("");
-    const defs = [...DEFS.values()];
-    const fail = (e: unknown) => { if (live) setErr(e instanceof Error ? e.message : String(e)); };
-    // First your kit and path, then the slower check against every exotic in the game.
-    runMax(inv, defs, hunter.id, catalog, false).then(r => {
-      if (!live) return;
-      setM(cur => cur ?? r);
-      return runMax(inv, defs, hunter.id, catalog, true).then(full => { if (live) setM(full); });
-    }).catch(fail);
-    return () => { live = false; };
-  }, [inv, hunter, catalog]);
-
   if (!hunter) return <Card>Steeped builds for Hunters, and this account has no Hunter yet.</Card>;
-  if (err) return <Card className="border-bad/40 text-bad">Steeped couldn't work out your path: {err}</Card>;
+  if (err) return <Card className="border-bad/40 text-bad">Steeped couldn't work out your overview: {err}</Card>;
   if (!m) return (
     <Card className="space-y-2" data-testid="home-loading">
-      <Spinner label="Working out how maxed your Hunter is" />
-      <p className="text-sm text-ink-dim">Steeped is searching every build you can make from your characters and vault. This takes under a minute, once per refresh.</p>
+      <Spinner label="Looking over your Hunter" />
+      <p className="text-sm text-ink-dim">Steeped is checking every build you can make from your characters and vault. Under a minute, once per refresh.</p>
     </Card>
   );
 
   const steps = m.path.filter(p => !done.has(p.what));
-  const next = steps[0];
-  const markDone = (what: string) => setDone(d => new Set(d).add(what));
+  const clear = m.kit.find(k => k.goal === "whole"), boss = m.kit.find(k => k.goal === "bossDps");
+  const jobs: { key: "clear" | "boss" | "survive"; label: string }[] = [{ key: "clear", label: "Clear rooms" }, { key: "boss", label: "Boss damage" }, { key: "survive", label: "Survive solo" }];
 
   return (
     <div className="space-y-6" data-testid="home">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card className="space-y-5 p-7">
-          <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-accent-hi">{next ? "Your next step" : "Nothing left on your path"}</div>
-            <h1 className="font-display text-3xl font-semibold leading-tight" data-testid="next-step">{next ? next.what : "Your Hunter is as maxed as Steeped can make it"}</h1>
-            {next && <p className="max-w-2xl text-ink-dim">{next.why}. <span className="text-good">+{next.gain.toFixed(1)}% Max Hunter</span></p>}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Card className="space-y-4 p-6" data-testid="me">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-accent-hi">Your Hunter right now</div>
+              <h1 className="font-display text-3xl font-semibold">{m.now ? buildName(m.now.spec) : "Hunter"}</h1>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-5xl font-semibold" data-testid="max-pct">{m.partial ? "…" : `${m.pct.toFixed(0)}%`}</span>
+              <span className="text-ink-dim">{m.partial ? "checking every exotic" : "maxed"}</span>
+            </div>
           </div>
-          {next && (
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => markDone(next.what)}>I did this</Button>
-              {next.kind === "gear" && <Button variant="ghost" onClick={onInventory}>Find it in my inventory</Button>}
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {STAT_ORDER.map(k => {
+              const v = hunter.stats[k];
+              return (
+                <div key={k} className={cn("rounded-xl border p-2.5", v >= 100 ? "border-accent-hi/50 bg-accent/20" : v < 60 ? "border-warn/40 bg-warn/10" : "border-line bg-panel-2")}>
+                  <div className="text-xs text-ink-dim">{STAT_LABEL[k]}</div>
+                  <div className="font-display text-2xl font-semibold tabular-nums">{v}</div>
+                </div>
+              );
+            })}
+          </div>
+          {m.now && (
+            <div className="grid gap-2 sm:grid-cols-3" data-testid="grades">
+              {jobs.map(j => (
+                <div key={j.key} className="space-y-1 rounded-xl border border-line bg-panel-2 p-3">
+                  <div className="flex items-center justify-between gap-2"><span className="font-medium">{j.label}</span><Badge tone={gradeTone(m.now!.grades[j.key])}>{m.now!.grades[j.key]}</Badge></div>
+                  <div className="text-xs text-ink-dim">{m.now!.notes[j.key]}</div>
+                </div>
+              ))}
             </div>
           )}
-          {steps.length > 1 && (
-            <div className="space-y-3 border-t border-line pt-4">
-              <div className="text-sm font-semibold text-ink-dim">Then</div>
-              <ol className="space-y-3">
-                {steps.slice(1, 8).map((p, i) => (
-                  <li key={p.what} className="flex items-start gap-3">
-                    <span className="flex size-7 flex-none items-center justify-center rounded-full bg-panel-2 text-xs font-semibold text-accent-hi">{i + 2}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium">{p.what} <span className="text-sm text-good">+{p.gain.toFixed(1)}%</span></div>
-                      <div className="text-sm text-ink-dim">{p.why}</div>
-                    </div>
-                    <Button size="sm" variant="quiet" onClick={() => markDone(p.what)} aria-label={`Mark ${p.what} done`}>Done</Button>
-                  </li>
-                ))}
-              </ol>
-            </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-dim">
+            <span>Power {m.power.toFixed(1)} of 550</span>
+            {m.lowestSlot && <span>Lowest slot: {m.lowestSlot.slot} ({m.lowestSlot.power})</span>}
+            <span>Gear {m.pillars.gear.toFixed(0)}% upgraded</span>
+          </div>
+          {m.now && m.now.rating < 100 && clear && (
+            <Button size="sm" variant="ghost" onClick={() => onOpen(clear.view.spec)}>Swap to your best build</Button>
           )}
         </Card>
 
-        <Card className="space-y-5 p-7">
+        <Card className="space-y-4 p-6" data-testid="improve">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-dim">Max Hunter</div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-5xl font-semibold" data-testid="max-pct">{m.partial ? "…" : `${m.pct.toFixed(1)}%`}</span>
-              <span className="text-ink-dim">{m.partial ? "checking every exotic in the game" : "maxed"}</span>
-            </div>
+            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-accent-hi">How to improve</div>
+            <h2 className="font-display text-2xl font-semibold">Biggest gains first</h2>
           </div>
-          <Bar label="Power" pct={m.pillars.power} note={`${m.power.toFixed(1)} of 550${m.lowestSlot ? `, lowest slot: ${m.lowestSlot.slot} (${m.lowestSlot.power})` : ""}`} />
-          <Bar label="Gear" pct={m.pillars.gear} note="Your build pieces masterworked, at Tier 5 and at your Power" />
-          {m.partial ? <Spinner label="Builds: comparing with every exotic in the game" /> : <Bar label="Builds" pct={m.pillars.builds} note="Your best builds against the best possible with every exotic in the game" />}
-          <p className="text-xs text-ink-dim">Power counts 40%, Gear 30%, Builds 30%. Searched {inv.characters.length} characters, your vault and {catalog.length} exotics from Collections.</p>
+          {steps.length === 0 && <p className="text-ink-dim">Nothing left. Your Hunter is as maxed as Steeped can make it.</p>}
+          <ol className="space-y-3">
+            {steps.slice(0, 6).map(p => (
+              <li key={p.what} className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium" data-testid="improve-step">{p.what}</div>
+                  <div className="text-sm text-ink-dim">{p.why}</div>
+                </div>
+                <div className="flex flex-none flex-col items-end gap-1">
+                  <span className="text-sm font-semibold text-good">+{p.gain.toFixed(1)}%</span>
+                  <button type="button" className="text-xs text-ink-dim underline-offset-2 hover:text-ink hover:underline" onClick={() => setDone(d => new Set(d).add(p.what))}>Done</button>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <Button size="sm" variant="quiet" onClick={() => onGo("journey")}>See your full Journey</Button>
         </Card>
       </div>
 
-      {m.now && (
-        <Card className="flex flex-wrap items-center justify-between gap-3" data-testid="now-card">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-dim">What you're wearing now</div>
-            <div className="font-display text-lg font-semibold">{m.now.spec.subclass}: {m.now.spec.aspects.join(" + ")} · {m.now.spec.exotic}</div>
-            <p className="text-sm text-ink-dim">Rates <span className="font-semibold text-ink" data-testid="now-rating">{m.now.rating}</span> out of 100 against your best Max Hunter build below. The Builder uses the same scale.</p>
-          </div>
-          {m.now.rating < 100 && m.reports[0] && <Button size="sm" variant="ghost" onClick={() => onOpen(m.reports[0].view.spec)}>Compare in the Builder</Button>}
-        </Card>
-      )}
-
-      <section className="space-y-3">
+      <section className="space-y-3" data-testid="targets">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-2xl font-semibold">Your kit</h2>
-          <span className="text-sm text-ink-dim">Stars compare each build with the strongest Steeped can make from your gear, job by job</span>
+          <h2 className="font-display text-2xl font-semibold">Gear to target</h2>
+          <span className="text-sm text-ink-dim">What would make your builds stronger, and where to get it</span>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {m.reports.map(r => <ReportCard key={r.role} r={r} onOpen={() => onOpen(r.view.spec)} />)}
+        {m.targets.length === 0 ? <Card className="text-ink-dim">Nothing to chase right now. Steeped checks again after every refresh.</Card> : (
+          <div className="grid gap-4 md:grid-cols-3">
+            {m.targets.slice(0, 6).map(t => (
+              <Card key={t.title} className="space-y-2">
+                <div className="flex items-start justify-between gap-2"><span className="font-semibold">{t.title}</span><Badge>{t.tag}</Badge></div>
+                <p className="text-sm text-ink-dim">{t.why}</p>
+                <p className="text-sm"><span className="font-semibold">Where:</span> <span className="text-ink-dim">{t.where}</span></p>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3" data-testid="play">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-2xl font-semibold">What to play</h2>
+          <span className="text-sm text-ink-dim">Picked for what gets you closest to max</span>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <PlayCard title="Solo Ops, Expert, Grade A+" tag="Solo"
+            why={m.power < 550 ? "Climbs your Power toward 550 and drops Tier 5 gear. Add modifiers until it shows A or better." : "Tier 5 drops with better rolls for your builds."}
+            wear={clear ? buildName(clear.view.spec) : "Your best build"} />
+          <PlayCard title="A dungeon or raid with friends" tag="Fireteam"
+            why="Clear with your main build, then swap for the damage phase so the boss goes down in fewer phases."
+            wear={clear && boss ? `${buildName(clear.view.spec)}, then ${buildName(boss.view.spec)} at the boss` : "Your best build"} />
+          <PlayCard title="This week's Grandmaster" tag="Coming soon"
+            why="Steeped will read this week's champions and modifiers and adjust your build for them."
+            wear="Your best build for now" />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="ghost" onClick={() => onGo("builds")}>See your builds</Button>
+          <Button size="sm" variant="ghost" onClick={() => onGo("inventory")}>Clean up your vault</Button>
         </div>
       </section>
 
@@ -127,74 +151,12 @@ export function Home({ inv, catalog, onOpen, onInventory }: { inv: Inventory; ca
   );
 }
 
-function Bar({ label, pct, note }: { label: string; pct: number; note: string }) {
+function PlayCard({ title, tag, why, wear }: { title: string; tag: string; why: string; wear: string }) {
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm"><span className="font-medium">{label}</span><span className="tabular-nums text-ink-dim">{pct.toFixed(0)}%</span></div>
-      <div role="img" aria-label={`${label} ${pct.toFixed(0)}%`} className="h-2 overflow-hidden rounded-full bg-panel-2">
-        <div className="h-2 rounded-full bg-accent" style={{ width: `${Math.min(100, pct)}%` }} />
-      </div>
-      <div className="text-xs text-ink-dim">{note}</div>
-    </div>
-  );
-}
-
-function Stars({ n, label }: { n: number; label: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-panel-2 px-3 py-2">
-      <span className="text-sm text-ink-dim">{label}</span>
-      <span aria-label={`${n} of 5 stars`} className="tracking-wider text-exotic">
-        {[1, 2, 3, 4, 5].map(i => <span key={i} className={i <= n ? "" : i - 0.5 === n ? "opacity-60" : "opacity-20"}>★</span>)}
-      </span>
-    </div>
-  );
-}
-
-function ReportCard({ r, onOpen }: { r: Report; onOpen: () => void }) {
-  const v = r.view, sp = v.spec;
-  const pieces = [...Object.values(v.armor?.pieces ?? {}).map(p => p.item), ...v.weapons.filter(Boolean).map(w => w!.item)];
-  const tone = r.confidence === "Proven" ? "good" : r.confidence === "Mostly proven" ? "neutral" : "warn";
-  return (
-    <Card className="space-y-4" data-testid="report">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-dim">{r.role}</div>
-          <h3 className="font-display text-xl font-semibold">{sp.subclass}: {sp.aspects.join(" + ")}</h3>
-          <p className="text-sm text-ink-dim">{r.verdict}</p>
-        </div>
-        <Badge tone={tone}>{r.confidence}</Badge>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Stars n={r.stars.clear} label="Clear" />
-        <Stars n={r.stars.boss} label="Boss" />
-        <Stars n={r.stars.survive} label="Survive" />
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {pieces.map(i => <GearIcon key={i.id} src={iconForItem(i)} size={40} exotic={i.exotic} title={i.name} mw={i.masterworked} />)}
-      </div>
-      <div className="text-sm text-ink-dim">
-        {sp.super} · {sp.grenade} · {sp.melee} · {sp.classAbility} · {sp.exotic}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {STAT_ORDER.map(k => (
-          <span key={k} className={cn("rounded-lg px-2 py-1 text-xs tabular-nums", v.stats[k] >= 100 ? "bg-accent/25 text-ink" : "bg-panel-2 text-ink-dim")}>{STAT_LABEL[k]} {v.stats[k]}</span>
-        ))}
-      </div>
-      {r.why.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-semibold">Why it works</div>
-          {r.why.map(w => <p key={w.name} className="text-sm"><span className="font-medium">{w.name}:</span> <span className="text-ink-dim">{w.play}</span></p>)}
-        </div>
-      )}
-      <dl className="grid gap-2 text-sm sm:grid-cols-2">
-        <div><dt className="font-semibold">Where it shines</dt><dd className="text-ink-dim">{r.shines}</dd></div>
-        <div><dt className="font-semibold">Where it struggles</dt><dd className="text-ink-dim">{r.struggles}</dd></div>
-        <div><dt className="font-semibold">To run it at full strength</dt><dd className="text-ink-dim">{r.cost.length ? r.cost.join("; ") : "Ready to wear"}</dd></div>
-        <div><dt className="font-semibold">How sure Steeped is</dt><dd className="text-ink-dim">{r.confidenceWhy}</dd></div>
-      </dl>
-      {v.loops.survives.length > 0 && <p className="text-sm text-warn">Not solo-ready: {v.loops.survives.join(", ")}.</p>}
-      <Button size="sm" variant="ghost" onClick={onOpen}>Open in the Builder to equip</Button>
+    <Card className="space-y-2">
+      <div className="flex items-start justify-between gap-2"><span className="font-display text-lg font-semibold">{title}</span><Badge>{tag}</Badge></div>
+      <p className="text-sm text-ink-dim">{why}</p>
+      <p className="text-sm"><span className="font-semibold">Wear:</span> <span className="text-ink-dim">{wear}</span></p>
     </Card>
   );
 }
-
