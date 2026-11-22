@@ -10,14 +10,13 @@ import { Workshop, type Sent } from "./screens/Workshop";
 import { Home } from "./screens/Home";
 import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "./bungie/clarity";
 import { Inventory } from "./screens/Inventory";
-import { Builds } from "./screens/Builds";
 import { Journey } from "./screens/Journey";
 import { Segmented } from "./ui/bits";
 import { Button, Card } from "./ui/kit";
 import { BRAND, Moment } from "./ui/visual";
 
-type Screen = "home" | "builds" | "journey" | "inventory" | "builder" | "workshop" | "roster";
-const ADVANCED: Screen[] = ["builder", "workshop", "roster"];
+type Screen = "home" | "builds" | "journey" | "inventory" | "workshop" | "roster";
+const ADVANCED: Screen[] = ["workshop", "roster"];
 
 type State =
   | { at: "start" }
@@ -38,7 +37,7 @@ export default function App() {
   const [st, setSt] = useState<State>({ at: "start" });
   const [now, setNow] = useState(Date.now());
   // A link can open a screen directly (…/beta/#builder).
-  const [screen, setScreen] = useState<Screen>(() => { const h = location.hash.slice(1) as Screen; return (["home", "builds", "journey", "inventory", "path", ...ADVANCED] as string[]).includes(h) ? (h === ("path" as Screen) ? "journey" : h) : "home"; });
+  const [screen, setScreen] = useState<Screen>(() => { const h = location.hash.slice(1) as Screen; const alias: Record<string, Screen> = { path: "journey", builder: "builds" }; const s = alias[h] ?? h; return (["home", "builds", "journey", "inventory", ...ADVANCED] as string[]).includes(s) ? s : "home"; });
   const [sent, setSent] = useState<Sent | null>(null); // a Workshop build on its way to a Builder column
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
 
@@ -91,20 +90,16 @@ export default function App() {
       )}
       {st.at === "ready" && (
         <nav className="mb-5 flex flex-wrap items-center gap-3">
-          <Segmented label="Screen" value={ADVANCED.includes(screen) ? "advanced" : screen} onChange={v => setScreen(v === "advanced" ? "builder" : v)}
-            options={[{ value: "home", label: "Home" }, { value: "builds", label: "Builds" }, { value: "journey", label: "Journey" }, { value: "inventory", label: "Inventory" }, { value: "advanced", label: "Lab" }]} />
-          {ADVANCED.includes(screen) && (
-            <Segmented label="Lab tools" value={screen} onChange={setScreen}
-              options={[{ value: "builder", label: "Builder" }, { value: "workshop", label: "Workshop" }, { value: "roster", label: "My roster" }]} />
-          )}
+          <Segmented label="Screen" value={ADVANCED.includes(screen) ? "home" : screen} onChange={setScreen}
+            options={[{ value: "home", label: "Home" }, { value: "builds", label: "Builds" }, { value: "journey", label: "Journey" }, { value: "inventory", label: "Inventory" }]} />
+          {ADVANCED.includes(screen) && <span className="text-sm text-ink-dim">{screen === "workshop" ? "Workshop" : "My roster"}</span>}
         </nav>
       )}
-      {st.at === "ready" && screen === "home" && <Home inv={st.data.inventory} catalog={st.data.catalog ?? []} onGo={setScreen} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builder"); }} />}
-      {st.at === "ready" && screen === "builds" && <Builds inv={st.data.inventory} catalog={st.data.catalog ?? []} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builder"); }} />}
+      {st.at === "ready" && screen === "home" && <Home inv={st.data.inventory} catalog={st.data.catalog ?? []} onGo={setScreen} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builds"); }} />}
       {st.at === "ready" && screen === "journey" && <Journey inv={st.data.inventory} catalog={st.data.catalog ?? []} catalysts={st.data.catalysts ?? []} artifact={st.data.artifact} quests={st.data.quests ?? []} />}
       {st.at === "ready" && screen === "inventory" && <Inventory inv={st.data.inventory} />}
-      {st.at === "ready" && screen === "builder" && <Builder inv={st.data.inventory} onRefresh={load} incoming={sent} onIncomingUsed={() => setSent(null)} />}
-            {st.at === "ready" && screen === "workshop" && <Workshop inv={st.data.inventory} onSend={x => { setSent(x); setScreen("builder"); }} />}
+      {st.at === "ready" && screen === "builds" && <Builder inv={st.data.inventory} catalog={st.data.catalog ?? []} onRefresh={load} incoming={sent} onIncomingUsed={() => setSent(null)} />}
+            {st.at === "ready" && screen === "workshop" && <Workshop inv={st.data.inventory} onSend={x => { setSent(x); setScreen("builds"); }} />}
       {st.at === "ready" && screen === "roster" && (
         <Roster
           inv={st.data.inventory}
@@ -116,6 +111,7 @@ export default function App() {
       )}
       <footer className="mt-10 space-y-1 text-center text-xs text-ink-dim">
         {CLARITY_ON && <div>Perk values from <a href={CLARITY_SITE} target="_blank" rel="noreferrer">Clarity</a>{CLARITY_DISCORD && <> · <a href={CLARITY_DISCORD} target="_blank" rel="noreferrer">Clarity Discord</a></>}</div>}
+        {st.at === "ready" && <div className="space-x-3"><button type="button" className="hover:text-ink" onClick={() => setScreen("workshop")}>Workshop</button><button type="button" className="hover:text-ink" onClick={() => setScreen("roster")}>My roster and snapshot</button></div>}
         <div>Steeped beta {__APP_VERSION__} · © Bobby Saggs. All rights reserved. Not affiliated with Bungie.</div>
       </footer>
     </div>

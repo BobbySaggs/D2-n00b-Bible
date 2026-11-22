@@ -3,13 +3,16 @@ import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
 import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
-import { breakdown, currentSlotMods, evaluate, pointsByPiece, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
+import { breakdown, currentSlotMods, evaluate, pointsByPiece, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import type { Require } from "../engine/builds";
 import { clearUndo, equipPlan, loadUndo, restorePlan, saveUndo, snapshotWorn, type WornSnapshot } from "../engine/equip";
 import { EquipDialog } from "./EquipDialog";
 import { count100, lowest } from "../engine/solve";
 import type { Goal } from "../engine/loops";
 import { runSearch } from "../workers/search";
+import type { CatalogEntry } from "../bungie/catalog";
+import { isStandIn, standInSource, withCatalog } from "../engine/catalog";
+import { LoadoutGrid, Moment, gridFromView } from "../ui/visual";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
@@ -18,11 +21,11 @@ import { MODE_NOTES, PVP_NOTES, WSTAT_LABEL } from "../knowledge/pvp";
 import { isPvp } from "../engine/loops";
 
 export const GOALS: { value: Goal; label: string }[] = [
-  { value: "whole", label: "Whole activity" },
+  { value: "whole", label: "All-round monster" },
   { value: "crucible", label: "Crucible" },
   { value: "trials", label: "Trials / Comp" },
   { value: "abilities", label: "Ability spam" },
-  { value: "bossDps", label: "Raid boss" },
+  { value: "bossDps", label: "Boss damage" },
   { value: "survival", label: "Hard content" },
   { value: "team", label: "Team support" },
 ];
@@ -43,9 +46,19 @@ const where = (i: Item, cid: string) =>
 
 type Col = 0 | 1;
 
-export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inventory; onRefresh?: () => void; incoming?: { col: Col; spec: BuildSpec } | null; onIncomingUsed?: () => void }) {
+// Every piece in a build: the stand-ins are what you'd still have to farm.
+const gearOf = (v: BuildView) => [...v.weapons.filter(Boolean).map(w => w!.item), ...Object.values(v.armor?.pieces ?? {}).map(p => p.item)];
+const needsFarm = (v: BuildView | null) => !!v && gearOf(v).some(isStandIn);
+
+export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed }: { inv: Inventory; catalog?: CatalogEntry[]; onRefresh?: () => void; incoming?: { col: Col; spec: BuildSpec } | null; onIncomingUsed?: () => void }) {
   const hunter = inv.characters.find(c => c.cls === "Hunter");
-  const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
+  // Gear you don't own joins as stand-ins, so the "best possible" column and the menu can use anything in the game.
+  const ctx = useMemo<Ctx | null>(() => {
+    if (!hunter) return null;
+    const defs = [...DEFS.values()];
+    const all = catalog.length ? withCatalog(inv, h => DEFS.get(h), catalog, hunter.id).inv : inv;
+    return makeCtx(all, h => DEFS.get(h), defs, hunter.id);
+  }, [inv, hunter, catalog]);
   const [goal, setGoal] = useState<Goal>(incoming?.spec.goal ?? "whole");
   const [settings, setSettings] = useState<Settings>(() => ({ targets: loadTargets(), mw: "asIs", style: "peaks", tune: true }));
   const [pinned, setPinned] = useState<string[]>([]);
@@ -64,56 +77,63 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
   const [fromWs, setFromWs] = useState<[boolean, boolean]>([false, false]); // column holds a build sent from the Workshop // Steeped's best for this goal with nothing locked: the 100 mark
   const [explain, setExplain] = useState(false);
 
+  // Column A: the best from what you own. Column B: the best possible with anything in the game, fully masterworked.
   const search = async (cols: Col[], opts: { onlySubclass?: Subclass; onlyExotic?: string; require?: Require } = {}) => {
     if (!ctx) return;
     setBusy(b => [cols.includes(0) || b[0], cols.includes(1) || b[1]]);
     setErr("");
-    try {
-      const require = opts.require ?? (Object.keys(req).length ? req : undefined);
-      const found = await runSearch({ characterId: ctx.characterId, goal, top: cols.length === 2 ? 6 : 1, pinnedWeapons: pinned, ...opts, require, settings }, inv, ctx.defs);
-      if (!found.length) setErr("No build fits everything you asked for. Try removing one of the Build around picks.");
-      // The rating's yardstick is always the best build with nothing locked, so Build around can't move the goalposts.
-      if (!require && !opts.onlySubclass && !opts.onlyExotic && found[0]) setBest(found[0]);
-      else if (cols.length === 2 || !best) {
-        const free = await runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: [], settings }, inv, ctx.defs);
-        if (free[0]) setBest(free[0]);
+    const require = opts.require ?? (Object.keys(req).length ? req : undefined);
+    const one = async (c: Col) => {
+      try {
+        const found = await runSearch({ characterId: ctx.characterId, goal, top: c === 1 ? 6 : 1, pinnedWeapons: pinned, ...opts, require, settings: c === 1 ? { ...settings, mw: "full" } : settings, catalog: c === 1 ? catalog : undefined }, inv, ctx.defs);
+        if (c === 0 && !require && !opts.onlySubclass && !opts.onlyExotic && found[0]) setBest(found[0]);
+        if (c === 0 && require && !best) runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: [], settings }, inv, ctx.defs).then(f => f[0] && setBest(f[0]));
+        if (c === 1) { setAlts(found); setAltIdx(0); }
+        setSpecs(s => { const n = [...s]; n[c] = found[0] ?? null; return n; });
+        if (c === 1 && incoming) { setSpecs(s => { const n = [...s]; n[incoming.col] = { ...incoming.spec, goal }; return n; }); setFromWs(f => { const n = [...f] as [boolean, boolean]; n[incoming.col] = true; return n; }); onIncomingUsed?.(); }
+        else setFromWs(f => { const n = [...f] as [boolean, boolean]; n[c] = false; return n; });
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(b => { const n = [...b] as [boolean, boolean]; n[c] = false; return n; });
       }
-      setSpecs(s => {
-        const next = [...s];
-        if (cols.length === 2) { next[0] = tuneCurrent(ctx, goal) ?? found[1] ?? null; next[1] = found[0] ?? null; setAlts(found); setAltIdx(0); }
-        else next[cols[0]] = found[0] ?? next[cols[0]];
-        // A build sent from the Workshop takes its column once, after the first search fills the page.
-        setFromWs(f => [cols.includes(0) ? false : f[0], cols.includes(1) ? false : f[1]]);
-        if (incoming) { next[incoming.col] = { ...incoming.spec, goal }; setFromWs(f => { const n = [...f] as [boolean, boolean]; n[incoming.col] = true; return n; }); onIncomingUsed?.(); }
-        return next;
-      });
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(b => [cols.includes(0) ? false : b[0], cols.includes(1) ? false : b[1]]);
-    }
+    };
+    await Promise.all(cols.map(one));
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { search([0, 1]); }, [ctx, goal, pinned.join(","), JSON.stringify(settings.targets), settings.style, settings.tune]);
 
   const now = useMemo(() => (ctx ? evaluateNow(ctx, goal, settings) : null), [ctx, goal, settings]);
-  const views = useMemo(() => specs.map(s => (s && ctx ? evaluate({ ...s, goal }, ctx, settings) : null)), [specs, ctx, goal, settings]);
+  const views = useMemo(() => specs.map((s, c) => (s && ctx ? evaluate({ ...s, goal }, ctx, c === 1 ? { ...settings, mw: "full" } : settings) : null)), [specs, ctx, goal, settings]);
   const bestView = useMemo(() => (best && ctx ? evaluate({ ...best, goal }, ctx, settings) : null), [best, ctx, goal, settings]);
   // 100 = the strongest build Steeped can make from your gear for this goal (or whichever shown build beats it).
   const ref = useMemo(() => {
-    const all = [bestView, now, ...views].filter((x): x is BuildView => !!x);
+    // The yardstick is the best from your own gear, the same 100 as Home. "Best possible" shows how far past it it goes.
+    const all = [bestView, now, views[0]].filter((x): x is BuildView => !!x);
     if (!all.length) return null;
     return { score: Math.max(...all.map(x => x.score)), loop: Math.max(...all.map(x => x.loopScore)), stat: Math.max(...all.map(x => x.statScore)) };
   }, [bestView, now, views]);
   const full = useMemo(() => specs.map(s => (s && ctx && settings.mw === "asIs" ? evaluate({ ...s, goal }, ctx, { ...settings, mw: "full" }) : null)), [specs, ctx, goal, settings]);
 
-  if (!hunter || !ctx) return <Card>The builder knows Hunters first. Titan and Warlock are next.</Card>;
+  if (!hunter || !ctx) return <Moment pose="ghost" title="No Hunter on this account">Steeped builds for Hunters. Titan and Warlock are next.</Moment>;
+  const beats = views[1] && ref ? Math.round((100 * views[1].score) / ref.score) - 100 : 0;
   const edit = (c: Col, patch: Partial<BuildSpec>) => setSpecs(s => { const n = [...s]; if (n[c]) n[c] = { ...n[c]!, ...patch }; return n; });
 
   return (
-    <div className="space-y-5">
-      <section className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5" data-testid="builds">
+      <div>
+        <h1 className="font-display text-3xl font-semibold">Builds</h1>
+        <p className="text-ink-dim">Pick what you want, or leave it on Any. You get the best from what you own and the best in the game, with what to farm.</p>
+      </div>
+      <section className="space-y-3">
         <Segmented label="What are you building for?" value={goal} options={GOALS} onChange={setGoal} />
+      </section>
+
+      <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[0] || busy[1]} onApply={r => search([0, 1], { require: r })} pinned={pinned} setPinned={setPinned} />
+
+      <details className="rounded-2xl border border-line bg-panel/60 p-3 text-sm">
+        <summary className="cursor-pointer text-ink-dim">More options: stat targets, stat style, tuning mods</summary>
+        <div className="mt-3 space-y-3">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Segmented label="Stat style" value={settings.style} onChange={style => setSettings(s => ({ ...s, style }))}
             options={[{ value: "peaks", label: "Most 100s" }, { value: "even", label: "Even spread" }]} />
@@ -123,16 +143,17 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
             <input type="checkbox" checked={settings.tune !== false} onChange={e => setSettings(s => ({ ...s, tune: e.target.checked }))} /> Use tuning mods
           </label>
         </div>
-      </section>
-      <Card className="space-y-2 p-3">
+      <div className="space-y-2">
         <StatTargetsBar targets={settings.targets} onChange={t => setSettings(s => ({ ...s, targets: t }))} />
         {Object.values(settings.targets).some(v => v !== undefined) && (
           <p className="text-xs text-ink-dim" data-testid="targets-note">Your stat targets decide which armor Steeped picks. Ratings don't change with them, so a build rates the same here and on Home. A missed target shows as a note on the build instead.</p>
         )}
-      </Card>
+      </div>
+        </div>
+      </details>
       {err && <Card className="border-bad/40 text-bad">{err}</Card>}
       {equipping !== null && views[equipping] && (
-        <EquipDialog title={`Build ${equipping ? "B" : "A"}: ${views[equipping]!.spec.subclass} + ${views[equipping]!.spec.exotic}`}
+        <EquipDialog title={`${equipping ? "Best possible" : "Best you own"}: ${views[equipping]!.spec.subclass} + ${views[equipping]!.spec.exotic}`}
           steps={equipPlan(views[equipping]!, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }} slots={inv.loadouts?.[ctx.characterId]}
           onStart={() => { const s = snapshotWorn(ctx); saveUndo(s); setUndo(s); }}
           onClose={() => setEquipping(null)} onDone={() => onRefresh?.()} />
@@ -153,24 +174,18 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
         </Card>
       )}
 
-      <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[1]} onApply={r => search([1], { require: r })} />
 
       <section className="grid gap-3 md:grid-cols-3">
         <ScoreCard title="Now" sub="What you're wearing" v={now} ref_={ref} onExplain={() => setExplain(!explain)} />
-        {([0, 1] as Col[]).map(c => (
-          <ScoreCard key={c} title={c === 0 ? "Build A" : "Build B"} sub={fromWs[c] ? "Sent from the Workshop" : c === 0 ? "Your build, tuned: same subclass, exotic and weapons" : altIdx === 0 ? "Steeped's best for this goal" : `Steeped's #${altIdx + 1} for this goal`} v={views[c]} base={now} busy={busy[c]} ref_={ref} onExplain={() => setExplain(!explain)}
-            note={c === 1 && Object.keys(req).length > 0 && bestView && views[1] ? lockCost(views[1], bestView, ref) : undefined}
-            action={c === 0
-              ? <div className="flex flex-wrap gap-2">
-                  <Button size="sm" disabled={!views[0]?.armor} onClick={() => setEquipping(0)}>Equip in game</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setSpecs(s => { const n = [...s]; n[0] = tuneCurrent(ctx, goal); return n; })}>Reset to my build, tuned</Button>
-                </div>
-              : <div className="flex flex-wrap gap-2">
-                  <Button size="sm" disabled={busy[c] || !views[c]?.armor} onClick={() => setEquipping(1)}>Equip in game</Button>
-                  {alts.length > 1 && <Button size="sm" disabled={busy[c]} onClick={() => { const i = (altIdx + 1) % alts.length; setAltIdx(i); setSpecs(s => { const n = [...s]; n[1] = alts[i]; return n; }); }}>Next alternative ({altIdx + 1} of {alts.length})</Button>}
-                  <Button size="sm" variant="ghost" disabled={busy[c]} onClick={() => search([c], { onlySubclass: views[c]?.spec.subclass, onlyExotic: views[c]?.spec.exotic })}>Re-tune around this</Button>
-                </div>} />
-        ))}
+        <ScoreCard title="Best from what you own" sub={fromWs[0] ? "Sent from Home or the Workshop" : "Ready tonight, from your characters and vault"} v={views[0]} base={now} busy={busy[0]} ref_={ref} onExplain={() => setExplain(!explain)}
+          note={!busy[0] && !views[0] ? (req.exotic ? `You don't own ${req.exotic} yet. Best possible shows it and where to get it.` : "Nothing you own fits these picks.") : Object.keys(req).length > 0 && bestView && views[0] ? lockCost(views[0], bestView, ref) : undefined}
+          action={<Button size="sm" disabled={busy[0] || !views[0]?.armor} onClick={() => setEquipping(0)}>Equip in game</Button>} />
+        <ScoreCard title="Best possible" sub={fromWs[1] ? "Sent from the Workshop" : "Anything in the game, fully masterworked"} v={views[1]} base={now} busy={busy[1]} ref_={ref} onExplain={() => setExplain(!explain)}
+          note={views[1] && !busy[1] ? (needsFarm(views[1]) ? (beats > 0 ? `Beats your best by ${beats}%. Farm list below.` : "Needs farming (list below). Your current best is still stronger overall.") : beats > 0 ? `Your own gear, perfected: +${beats}% over your best today.` : "Nothing in the game beats your best for this.") : undefined}
+          action={<div className="flex flex-wrap gap-2">
+            <Button size="sm" disabled={busy[1] || !views[1]?.armor || needsFarm(views[1])} onClick={() => setEquipping(1)}>{needsFarm(views[1]) ? "Farm it first" : "Equip in game"}</Button>
+            {alts.length > 1 && <Button size="sm" variant="ghost" disabled={busy[1]} onClick={() => { const i = (altIdx + 1) % alts.length; setAltIdx(i); setSpecs(s => { const n = [...s]; n[1] = alts[i]; return n; }); }}>Next ({altIdx + 1} of {alts.length})</Button>}
+          </div>} />
       </section>
 
       {explain && <RatingHelp onClose={() => setExplain(false)} best={bestView} />}
@@ -183,7 +198,7 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
       </div>
       <div className="md:hidden">
         <Segmented label="Compare Now with" value={String(focus) as "0" | "1"} onChange={v => setFocus(Number(v) as Col)}
-          options={[{ value: "0", label: "Now vs Build A" }, { value: "1", label: "Now vs Build B" }]} />
+          options={[{ value: "0", label: "Now vs Best you own" }, { value: "1", label: "Now vs Best possible" }]} />
       </div>
       <Card className="p-0">
         <Table now={now} views={views} ctx={ctx} edit={edit} pinned={pinned} setPinned={setPinned} search={search} busy={busy} focus={focus} showWhere={showWhere} settings={settings} />
@@ -192,7 +207,9 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
       <section className="grid gap-3 md:grid-cols-2">
         {([0, 1] as Col[]).map(c => views[c] && (
           <Card key={c} className="space-y-3">
-            <h3 className="text-lg">{c === 0 ? "Build A (your build, tuned)" : "Build B (Steeped's best)"}</h3>
+            <h3 className="text-lg">{c === 0 ? "Best from what you own" : "Best possible"}</h3>
+            <LoadoutGrid {...gridFromView(views[c]!)} size={44} />
+            {c === 1 && <Farm v={views[c]!} />}
             {now && <DoThis steps={[...stepsFrom(now, views[c]!, ctx), ...modSteps(views[c]!, ctx)]} />}
             <HowToPlay v={views[c]!} />
             {ref && <PointsPanel v={views[c]!} base={now} refScore={ref.score} />}
@@ -218,6 +235,24 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
 }
 
 type Ref = { score: number; loop: number; stat: number } | null;
+
+// What "Best possible" needs that you don't have, and where it drops.
+function Farm({ v }: { v: BuildView }) {
+  const need = gearOf(v).filter(isStandIn);
+  if (!need.length) return <p className="text-sm text-good">Everything here is already yours.</p>;
+  return (
+    <div className="space-y-2 rounded-xl border border-exotic/40 bg-exotic/10 p-3" data-testid="farm">
+      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-exotic">To farm</div>
+      {need.map(i => { const src = standInSource(i.id); return (
+        <div key={i.id} className="flex items-center gap-3 text-sm">
+          <GearIcon src={iconForItem(i)} size={36} exotic title={i.name} />
+          <div><div className="font-medium">{src?.acquired ? `Pull ${i.name} from Collections` : `Get ${i.name}`}</div><div className="text-xs text-ink-dim">{src?.source || "Not in your collection yet"}</div></div>
+        </div>
+      ); })}
+      {need.some(i => i.kind === "armor") && <p className="text-xs text-ink-dim">Armor you don't own is rated with the stats of your best exotic in that slot.</p>}
+    </div>
+  );
+}
 const pct = (x: number, of: number) => (of > 0 ? Math.max(0, Math.min(100, Math.round((100 * x) / of))) : 0);
 export const rating = (v: BuildView, r: Ref) => (r ? pct(v.score, r.score) : 0);
 
@@ -269,11 +304,12 @@ function ScoreCard({ title, sub, v, base, busy, action, ref_, onExplain, note }:
           </div>
         )}
       </div>
+      {!v && !busy && note && <div className="text-sm text-accent-hi">{note}</div>}
       {v && (
         <>
           {!busy && r < 100 && !note && <div className="text-xs text-ink-dim">{100 - r} points from the best build your gear can make.</div>}
-          {!busy && r === 100 && <div className="text-xs text-good">The best build Steeped found with your gear.</div>}
-          {!busy && note && <div className="text-xs text-warn">{note}</div>}
+          {!busy && r === 100 && !note && <div className="text-xs text-good">The best build Steeped found with your gear.</div>}
+          {!busy && note && <div className="text-xs text-accent-hi">{note}</div>}
           <div className="text-sm"><span className="text-ink">{v.spec.subclass}</span> <span className="text-ink-dim">+</span> <span className="text-exotic">{v.spec.exotic || "no exotic"}</span></div>
           <LoadoutFigure v={v} compact />
           <div className="flex flex-wrap gap-2">
@@ -464,7 +500,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
           <tr className="text-left">
             <th className="sticky left-0 z-10 bg-bg/95 px-3 py-3" />
             <th className="px-3 py-3 font-display text-lg">Now</th>
-            {cols.map(c => <th key={c} className={cn("px-3 py-3 font-display text-lg text-accent-hi", c !== focus && "max-md:hidden")}>{c === 0 ? "Build A" : "Build B"} {busy[c] && <Spinner />}</th>)}
+            {cols.map(c => <th key={c} className={cn("px-3 py-3 font-display text-lg text-accent-hi", c !== focus && "max-md:hidden")}>{c === 0 ? "Best you own" : "Best possible"} {busy[c] && <Spinner />}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -648,58 +684,73 @@ function PerkList({ v, was }: { v: BuildView; was?: string[] }) {
   );
 }
 
-function BuildAround({ ctx, req, setReq, busy, onApply }: { ctx: Ctx; req: Require; setReq: (r: Require) => void; busy: boolean; onApply: (r: Require) => void }) {
+function BuildAround({ ctx, req, setReq, busy, onApply, pinned, setPinned }: { ctx: Ctx; req: Require; setReq: (r: Require) => void; busy: boolean; onApply: (r: Require) => void; pinned: string[]; setPinned: (p: string[]) => void }) {
   const [open, setOpen] = useState(false);
+  // Weapons: your best copy of each gun, per slot. Picking one keeps it in both columns.
+  const guns = (slot: string) => [...new Map(ctx.inv.items.filter(i => i.kind === "weapon" && i.slot === slot && !isStandIn(i)).sort((a, b) => b.power - a.power).map(i => [i.name, i])).values()].sort((a, b) => Number(b.exotic) - Number(a.exotic) || a.name.localeCompare(b.name));
+  const pinIn = (slot: string) => ctx.inv.items.find(i => pinned.includes(i.id) && i.slot === slot);
+  const pin = (slot: string, id: string) => setPinned([...pinned.filter(p => ctx.inv.items.find(i => i.id === p)?.slot !== slot), ...(id ? [id] : [])]);
   const subs = SUBCLASSES.filter(s => ctx.kit.has(s));
   const inKit = (k: K) => (req.subclass ? [req.subclass] : subs).some(s => k.subs?.includes(s) && ctx.kit.get(s)?.has(k.name));
   const opts = (kind: K["kind"]) => [...new Map(HUNTER.filter(k => k.kind === kind && inKit(k)).map(k => [k.name, k])).values()];
   const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
+  const unowned = new Set(ctx.pieces.filter(p => p.exotic && isStandIn(p.item)).map(p => p.item.name));
   const picked = [req.subclass, req.super, req.grenade, req.melee, req.classAbility, ...(req.aspects ?? []), ...(req.fragments ?? []), req.exotic, req.artifact, ...(req.artifactPerks ?? [])].filter(Boolean) as string[];
   const perkNames = [...new Set(ctx.artifacts.filter(a => !req.artifact || a.name === req.artifact).flatMap(a => a.sockets.flatMap(s => s.options.map(o => o.name))))].sort();
   const set = (patch: Partial<Require>) => { const r = { ...req, ...patch }; for (const k of Object.keys(r) as (keyof Require)[]) { const v = r[k]; if (!v || (Array.isArray(v) && !v.length)) delete r[k]; } setReq(r); };
-  const sel = (label: string, value: string | undefined, list: string[], on: (v: string) => void) => (
+  const sel = (label: string, value: string | undefined, list: string[], on: (v: string) => void, tag?: (n: string) => string) => (
     <label className="space-y-1 text-xs text-ink-dim">
       <span>{label}</span>
       <Pick aria-label={`Build around ${label}`} value={value ?? ""} onChange={e => on(e.target.value)}>
         <option value="">Any</option>
-        {list.map(n => <option key={n} value={n}>{n}</option>)}
+        {list.map(n => <option key={n} value={n}>{n}{tag?.(n) ?? ""}</option>)}
       </Pick>
     </label>
   );
+  const gunSel = (label: string, slot: string) => (
+    <label className="space-y-1 text-xs text-ink-dim">
+      <span>{label}</span>
+      <Pick aria-label={`Build around ${label}`} value={pinIn(slot)?.id ?? ""} onChange={e => pin(slot, e.target.value)}>
+        <option value="">Any</option>
+        {guns(slot).map(i => <option key={i.id} value={i.id}>{i.name}{i.exotic ? " (exotic)" : ""}</option>)}
+      </Pick>
+    </label>
+  );
+  const pinnedNames = pinned.map(id => ctx.inv.items.find(i => i.id === id)?.name).filter(Boolean) as string[];
   const asp = req.aspects ?? [];
   return (
-    <Card className="space-y-3" data-testid="build-around">
+    <Card className="space-y-4 p-5" data-testid="build-around">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg">Build around what you want</h3>
-          <p className="text-sm text-ink-dim">{picked.length ? <>Build B must use: <span className="text-ink">{picked.join(", ")}</span></> : "Pick anything you insist on (an aspect, a grenade, an exotic) and Build B finds the best build that keeps it."}</p>
+          <h3 className="font-display text-xl font-semibold">Build it your way</h3>
+          <p className="text-sm text-ink-dim">{picked.length || pinnedNames.length ? <>Both builds use: <span className="text-ink">{[...picked, ...pinnedNames].join(", ")}</span></> : "Everything on Any: Steeped picks the strongest of each."}</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? "Hide" : picked.length ? "Change" : "Choose"}</Button>
-          {picked.length > 0 && <Button size="sm" variant="quiet" onClick={() => { setReq({}); onApply({}); }}>Clear</Button>}
-        </div>
+        {(picked.length > 0 || pinned.length > 0) && <Button size="sm" variant="quiet" onClick={() => { setReq({}); setPinned([]); onApply({}); }}>Reset to Any</Button>}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {sel("Subclass", req.subclass, subs, v => set({ subclass: v as Subclass }))}
+        {sel("Exotic armor", req.exotic, exotics, v => set({ exotic: v }), n => (unowned.has(n) ? " (farm)" : ""))}
+        {gunSel("Kinetic weapon", "kinetic")}
+        {gunSel("Energy weapon", "energy")}
+        {gunSel("Heavy weapon", "power")}
+        {sel("Super", req.super, opts("super").map(k => k.name), v => set({ super: v }))}
+        {sel("Grenade", req.grenade, opts("grenade").map(k => k.name), v => set({ grenade: v }))}
+        {sel("Melee", req.melee, opts("melee").map(k => k.name), v => set({ melee: v }))}
       </div>
       {open && (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {sel("Subclass", req.subclass, subs, v => set({ subclass: v as Subclass }))}
-            {sel("Super", req.super, opts("super").map(k => k.name), v => set({ super: v }))}
-            {sel("Grenade", req.grenade, opts("grenade").map(k => k.name), v => set({ grenade: v }))}
-            {sel("Melee", req.melee, opts("melee").map(k => k.name), v => set({ melee: v }))}
-            {sel("Class ability", req.classAbility, opts("classAbility").map(k => k.name), v => set({ classAbility: v }))}
-            {sel("Aspect", asp[0], opts("aspect").map(k => k.name), v => set({ aspects: [v, asp[1]].filter(Boolean) as string[] }))}
-            {sel("Second aspect", asp[1], opts("aspect").map(k => k.name).filter(n => n !== asp[0]), v => set({ aspects: [asp[0], v].filter(Boolean) as string[] }))}
-            {sel("Exotic", req.exotic, exotics, v => set({ exotic: v }))}
-            {sel("Artifact", req.artifact, ctx.artifacts.map(a => a.name), v => set({ artifact: v, artifactPerks: (req.artifactPerks ?? []).filter(p => !v || ctx.artifacts.find(a => a.name === v)?.sockets.some(s => s.options.some(o => o.name === p))) }))}
-            {sel("Artifact perk", req.artifactPerks?.[0], perkNames, v => set({ artifactPerks: [v, req.artifactPerks?.[1]].filter(Boolean) as string[] }))}
-            {sel("Second perk", req.artifactPerks?.[1], perkNames.filter(n => n !== req.artifactPerks?.[0]), v => set({ artifactPerks: [req.artifactPerks?.[0], v].filter(Boolean) as string[] }))}
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={busy || !picked.length} onClick={() => { onApply(req); setOpen(false); }}>{busy ? "Finding…" : "Find the best build with these"}</Button>
-            <span className="text-xs text-ink-dim">Uses the goal you picked above (General PvE, Raid boss...). Build A stays your build, tuned.</span>
-          </div>
-        </>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {sel("Class ability", req.classAbility, opts("classAbility").map(k => k.name), v => set({ classAbility: v }))}
+          {sel("Aspect", asp[0], opts("aspect").map(k => k.name), v => set({ aspects: [v, asp[1]].filter(Boolean) as string[] }))}
+          {sel("Second aspect", asp[1], opts("aspect").map(k => k.name).filter(n => n !== asp[0]), v => set({ aspects: [asp[0], v].filter(Boolean) as string[] }))}
+          {sel("Artifact", req.artifact, ctx.artifacts.map(a => a.name), v => set({ artifact: v, artifactPerks: (req.artifactPerks ?? []).filter(p => !v || ctx.artifacts.find(a => a.name === v)?.sockets.some(s => s.options.some(o => o.name === p))) }))}
+          {sel("Artifact perk", req.artifactPerks?.[0], perkNames, v => set({ artifactPerks: [v, req.artifactPerks?.[1]].filter(Boolean) as string[] }))}
+          {sel("Second perk", req.artifactPerks?.[1], perkNames.filter(n => n !== req.artifactPerks?.[0]), v => set({ artifactPerks: [req.artifactPerks?.[0], v].filter(Boolean) as string[] }))}
+        </div>
       )}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button disabled={busy} onClick={() => onApply(req)}>{busy ? "Building…" : "Build it"}</Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? "Fewer choices" : "More choices: class ability, aspects, artifact"}</Button>
+      </div>
     </Card>
   );
 }

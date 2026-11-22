@@ -191,8 +191,8 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
         <Button size="sm" disabled={!!busy || !locks.size} onClick={fill}>{locks.size ? `Fill the rest (${locks.size} locked)` : "Lock slots, then fill the rest"}</Button>
         {locks.size > 0 && <Button size="sm" variant="quiet" onClick={() => setLocks(new Set())}>Unlock all</Button>}
         <span className="mx-1 h-6 w-px bg-line" />
-        <Button size="sm" variant="ghost" onClick={() => onSend({ col: 0, spec: { ...view.spec, goal } })}>Send to Build A</Button>
-        <Button size="sm" variant="ghost" onClick={() => onSend({ col: 1, spec: { ...view.spec, goal } })}>Send to Build B</Button>
+        <Button size="sm" variant="ghost" onClick={() => onSend({ col: 0, spec: { ...view.spec, goal } })}>Send to Best you own</Button>
+        <Button size="sm" variant="ghost" onClick={() => onSend({ col: 1, spec: { ...view.spec, goal } })}>Send to Best possible</Button>
         <span className="text-xs text-ink-dim">Compare it in the Builder and use Equip in game there.</span>
         <SaveBox onSave={save} />
       </Card>
