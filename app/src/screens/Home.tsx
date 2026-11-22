@@ -96,6 +96,17 @@ export function Home({ inv, catalog, onOpen, onInventory }: { inv: Inventory; ca
         </Card>
       </div>
 
+      {m.now && (
+        <Card className="flex flex-wrap items-center justify-between gap-3" data-testid="now-card">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-dim">What you're wearing now</div>
+            <div className="font-display text-lg font-semibold">{m.now.spec.subclass}: {m.now.spec.aspects.join(" + ")} · {m.now.spec.exotic}</div>
+            <p className="text-sm text-ink-dim">Rates <span className="font-semibold text-ink" data-testid="now-rating">{m.now.rating}</span> out of 100 against your best Max Hunter build below. The Builder uses the same scale.</p>
+          </div>
+          {m.now.rating < 100 && m.reports[0] && <Button size="sm" variant="ghost" onClick={() => onOpen(m.reports[0].view.spec)}>Compare in the Builder</Button>}
+        </Card>
+      )}
+
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-2xl font-semibold">Your kit</h2>

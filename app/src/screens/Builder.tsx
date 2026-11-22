@@ -124,7 +124,12 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
           </label>
         </div>
       </section>
-      <Card className="p-3"><StatTargetsBar targets={settings.targets} onChange={t => setSettings(s => ({ ...s, targets: t }))} /></Card>
+      <Card className="space-y-2 p-3">
+        <StatTargetsBar targets={settings.targets} onChange={t => setSettings(s => ({ ...s, targets: t }))} />
+        {Object.values(settings.targets).some(v => v !== undefined) && (
+          <p className="text-xs text-ink-dim" data-testid="targets-note">Your stat targets decide which armor Steeped picks. Ratings don't change with them, so a build rates the same here and on Home. A missed target shows as a note on the build instead.</p>
+        )}
+      </Card>
       {err && <Card className="border-bad/40 text-bad">{err}</Card>}
       {equipping !== null && views[equipping] && (
         <EquipDialog title={`Build ${equipping ? "B" : "A"}: ${views[equipping]!.spec.subclass} + ${views[equipping]!.spec.exotic}`}

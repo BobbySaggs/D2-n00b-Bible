@@ -3,7 +3,7 @@ import type { CatalogEntry } from "../bungie/catalog";
 import type { Inventory } from "../model/inventory";
 import type { Goal } from "./loops";
 import { searchBuilds } from "./builds";
-import { evaluate, makeCtx, specFromBuild, type BuildView, type Settings } from "./evaluate";
+import { evaluate, evaluateNow, makeCtx, specFromBuild, type BuildView, type Settings } from "./evaluate";
 import { withCatalog, isStandIn, standInSource } from "./catalog";
 
 // One number for "how maxed is this Hunter", and the ordered path to 100%.
@@ -36,6 +36,7 @@ export interface MaxHunter {
   best: { role: string; view: BuildView }[];
   path: PathStep[];
   reports: Report[];
+  now?: { rating: number; spec: BuildView["spec"] }; // what you're wearing, rated against your best Max Hunter build (same yardstick as the Builder)
 }
 
 type DefOf = (h: number) => ItemDef | undefined;
@@ -146,8 +147,12 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
     };
   });
 
+  const nowView = evaluateNow(ctx, "whole", settings);
+  const bestScore = Math.max(...kit.filter(k => k.goal === "whole").map(k => k.view.score), nowView?.score ?? 0);
+  const now = nowView && bestScore > 0 ? { rating: Math.max(0, Math.min(100, Math.round((100 * nowView.score) / bestScore))), spec: nowView.spec } : undefined;
+
   const pct = 100 * (WEIGHT.power * powerPct + WEIGHT.gear * gearPct + WEIGHT.builds * buildsPct);
-  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports };
+  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now };
 }
 
 const hasStandIn = (v: BuildView) => [...v.weapons.filter(Boolean).map(w => w!.item), ...Object.values(v.armor?.pieces ?? {}).map(p => p.item)].some(isStandIn);

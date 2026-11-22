@@ -81,6 +81,7 @@ export function statScore(st: Stats, plan?: StatPlan): number {
 
 export interface BuildView {
   plan?: StatPlan;
+  ratingPlan?: StatPlan; // the plan the rating uses (targets left on Auto)
   coreParts: Part[]; // subclass picks, exotic and subclass marker
   perkParts: Part[]; // artifact perks
   spec: BuildSpec;
@@ -125,9 +126,13 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. Add a healing source or damage resistance (Frost Armor, overshield, invisibility).`);
   const bonus = fragmentBonus(fragments, ctx.defs);
 
-  let armor: Solution | undefined, plan: StatPlan | undefined;
+  let armor: Solution | undefined, plan: StatPlan | undefined, ratingPlan: StatPlan | undefined;
   if (exotic && sup && gr && me && ca) {
-    plan = planFor({ ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, spec.goal, settings.targets, settings.style);
+    const shape = { ...core, weapons: weapons.filter((w): w is Weapon => !!w) } as Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">;
+    plan = planFor(shape, spec.goal, settings.targets, settings.style);
+    // Your stat targets steer the armor search, but the rating always uses Steeped's own stat plan, so the same
+    // build gets the same rating on Home and in the Builder whatever targets you set. Missed targets show as issues.
+    ratingPlan = planFor(shape, spec.goal, {}, settings.style);
     armor = solve(ctx.pieces, {
       cls: "Hunter", exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
       locks: spec.armorLocks, minPower: ctx.light - 60, top: 1, tune: settings.tune,
@@ -141,7 +146,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   void corePartsOf;
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
   const coreParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass)], perkParts = artifactPerks.map(k => ({ k }));
-  return { plan, coreParts, perkParts, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, plan), score: loops.score + statScore(stats, plan), bonus, fragmentSlots: slots, armor, stats, issues };
+  return { plan, coreParts, perkParts, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, ratingPlan), score: loops.score + statScore(stats, ratingPlan), ratingPlan, bonus, fragmentSlots: slots, armor, stats, issues };
 }
 
 // Where the points come from. A piece is worth what the build would lose without it, so pieces that only work
@@ -203,7 +208,7 @@ export function evaluateNow(ctx: Ctx, goal: Goal, settings: Settings): BuildView
   const v = evaluate(spec, ctx, { ...settings, mw: "asIs" });
   const ch = ctx.inv.characters.find(c => c.id === ctx.characterId)!;
   v.stats = { ...ch.stats };
-  v.statScore = statScore(v.stats, v.plan);
+  v.statScore = statScore(v.stats, v.ratingPlan);
   v.score = v.loopScore + v.statScore;
   if (v.armor) v.armor = { ...v.armor, stats: { ...ch.stats } };
   v.issues = v.issues.filter(i => !i.startsWith("No armor"));
