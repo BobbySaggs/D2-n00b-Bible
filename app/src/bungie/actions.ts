@@ -42,4 +42,8 @@ export const equipItems = (w: Who, itemIds: string[]) =>
 export const insertPlug = (w: Who, itemId: string, socketIndex: number, plugItemHash: number) =>
   act("/Destiny2/Actions/Items/InsertSocketPlugFree/", { plug: { socketIndex, socketArrayType: 0, plugItemHash }, itemId, characterId: w.characterId, membershipType: w.membershipType });
 
+// Saves what the character is wearing right now into one of its in-game loadout slots (overwrites that slot).
+export const snapshotLoadout = (w: Who, loadoutIndex: number, slot: { nameHash: number; colorHash: number; iconHash: number }) =>
+  act("/Destiny2/Actions/Loadouts/SnapshotLoadout/", { loadoutIndex, colorHash: slot.colorHash, iconHash: slot.iconHash, nameHash: slot.nameHash, characterId: w.characterId, membershipType: w.membershipType });
+
 export { sleep };

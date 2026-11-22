@@ -386,7 +386,7 @@ function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
       const sock = art.sockets[sel.i];
       return sock.options.map(o => ({
         key: o.name, label: o.name, icon: DEFS.get(o.hash)?.icon, quick: true, current: placed[sel.i]?.name === o.name,
-        source: (o.read === "checked" ? "checked" : "bungie") as Source, says: o.read === "checked" ? o.says : undefined, bungie: DEFS.get(o.hash)?.desc,
+        source: (o.read !== "description" ? "checked" : "bungie") as Source, says: o.read !== "description" ? o.says : undefined, bungie: DEFS.get(o.hash)?.desc,
         apply: (sp: BuildSpec) => {
           const names = placed.map(p => p?.name);
           const was = names.indexOf(o.name);

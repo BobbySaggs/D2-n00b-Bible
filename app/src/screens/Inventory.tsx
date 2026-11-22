@@ -6,6 +6,7 @@ import type { Inventory as Inv, Item } from "../model/inventory";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Segmented } from "../ui/bits";
 import { GearIcon, iconForItem } from "../ui/gear";
+import { cleanup, type Junk } from "../engine/cleanup";
 
 // Your whole collection in one place: every character and the vault, with search, filters, item details,
 // and move or equip actions. Every action asks first and shows what Bungie said.
@@ -18,7 +19,7 @@ export function Inventory({ inv }: { inv: Inv }) {
   const [kind, setKind] = useState<Kind>("all");
   const [where, setWhere] = useState("all");
   const [cls, setCls] = useState<"Hunter" | "all">(hunter ? "Hunter" : "all");
-  const [flags, setFlags] = useState({ exotic: false, infuse: false, t5: false, notMw: false });
+  const [flags, setFlags] = useState({ exotic: false, infuse: false, t5: false, notMw: false, junk: false });
   const [sort, setSort] = useState<"power" | "tier" | "name">("power");
   const [open, setOpen] = useState<Item | null>(null);
   // Moves you made here, applied on top of the last load until the next refresh.
@@ -28,6 +29,8 @@ export function Inventory({ inv }: { inv: Inv }) {
     .filter(i => i.kind === "weapon" || i.kind === "armor")
     .map(i => (moved[i.id] ? { ...i, ...moved[i.id] } : i)), [inv, moved]);
   const light = hunter?.light ?? 0;
+  // Safe to dismantle: duplicate rolls and armor beaten on every stat (see engine/cleanup.ts).
+  const junk = useMemo(() => new Map<string, Junk>(cleanup(inv, h => DEFS.get(h)).map(j => [j.item.id, j])), [inv]);
   const ownerName = (o: string) => (o === "vault" ? "Vault" : inv.characters.find(c => c.id === o)?.cls ?? "Character");
 
   const shown = useMemo(() => {
@@ -40,11 +43,12 @@ export function Inventory({ inv }: { inv: Inv }) {
       if (flags.infuse && !(i.power < light - 10)) return false;
       if (flags.t5 && i.gearTier < 5) return false;
       if (flags.notMw && (i.masterworked || i.exotic)) return false;
+      if (flags.junk && !junk.has(i.id)) return false;
       if (!words.length) return true;
       const hay = [i.name, DEFS.get(i.hash)?.type ?? "", i.damage, ...i.plugs.map(h => DEFS.get(h)?.name ?? "")].join(" ").toLowerCase();
       return words.every(w => hay.includes(w));
     }).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : sort === "tier" ? b.gearTier - a.gearTier || b.power - a.power : b.power - a.power);
-  }, [items, q, kind, where, cls, flags, sort, light]);
+  }, [items, q, kind, where, cls, flags, sort, light, junk]);
 
   const groups = useMemo(() => {
     const owners = [...inv.characters.map(c => c.id), "vault"];
@@ -88,6 +92,7 @@ export function Inventory({ inv }: { inv: Inv }) {
           {flag("t5", "Tier 5")}
           {flag("infuse", "Needs infusing")}
           {flag("notMw", "Not masterworked")}
+          {flag("junk", `Safe to dismantle (${junk.size})`)}
           <span className="ml-auto text-sm text-ink-dim" data-testid="inv-count">{shown.length} items</span>
         </div>
       </Card>
@@ -110,7 +115,10 @@ export function Inventory({ inv }: { inv: Inv }) {
       ))}
       {!groups.length && <Card className="text-ink-dim">Nothing matches. Try fewer filters.</Card>}
 
-      {open && <ItemPanel item={open} inv={inv} light={light} ownerName={ownerName} onClose={() => setOpen(null)}
+      {flags.junk && groups.length > 0 && (
+        <p className="text-sm text-ink-dim">These duplicate a better copy you own, or are beaten on every stat by another piece of the same set. Locked and equipped items are never listed. Bungie doesn't let apps dismantle, so do it in game.</p>
+      )}
+      {open && <ItemPanel item={open} junk={junk.get(open.id)} inv={inv} light={light} ownerName={ownerName} onClose={() => setOpen(null)}
         onMoved={(id, owner, equipped, slotOf) => setMoved(m => {
           const n = { ...m, [id]: { owner, equipped } };
           // Equipping something unequips whatever was in that slot on that character.
@@ -121,8 +129,8 @@ export function Inventory({ inv }: { inv: Inv }) {
   );
 }
 
-function ItemPanel({ item, inv, light, ownerName, onClose, onMoved }: {
-  item: Item; inv: Inv; light: number; ownerName: (o: string) => string; onClose: () => void;
+function ItemPanel({ item, junk, inv, light, ownerName, onClose, onMoved }: {
+  item: Item; junk?: Junk; inv: Inv; light: number; ownerName: (o: string) => string; onClose: () => void;
   onMoved: (id: string, owner: string, equipped: boolean, slot: string | null) => void;
 }) {
   const d = DEFS.get(item.hash);
@@ -179,6 +187,7 @@ function ItemPanel({ item, inv, light, ownerName, onClose, onMoved }: {
           <Button size="sm" variant="quiet" onClick={onClose} disabled={busy} aria-label="Close">Close</Button>
         </div>
 
+        {junk && <p className="rounded-xl bg-warn/10 p-3 text-sm text-warn" data-testid="junk-reason">Safe to dismantle: {junk.reason}.</p>}
         {item.kind === "armor" && (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {STAT_ORDER.map(k => (

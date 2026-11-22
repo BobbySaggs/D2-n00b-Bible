@@ -11,7 +11,7 @@ export type EquipStep =
   | { kind: "equip"; label: string; items: Item[] }
   | { kind: "plug"; label: string; item: Item; socket: number; hash: number; group: Group }
   | { kind: "manual"; label: string; why: string; group: Group };
-type Group = "subclass" | "mods" | "artifact";
+type Group = "subclass" | "mods" | "artifact" | "weapons";
 
 const SUB_KIND = (cat: string) =>
   /supers/.test(cat) ? "super" : /grenades/.test(cat) ? "grenade" : /melee/.test(cat) ? "melee" : /class_abilities/.test(cat) ? "classAbility"
@@ -85,6 +85,16 @@ export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
       if (i === undefined) { if (name) steps.push({ kind: "manual", group: "subclass", label: `${label}: ${name}`, why: "Set it in game." }); continue; }
       plug(i, name, `${label}: ${name}`);
     }
+  }
+
+  // 3b) Weapon perks: switch to the perk Steeped picked in each column (free in game, and from here).
+  for (const w of v.weapons) {
+    if (!w) continue;
+    w.cols.forEach((c, j) => {
+      const pick = w.ks[w.base.length + j] as { name: string; hash?: number } | undefined;
+      if (!pick?.hash || w.item.plugs[c.socket] === pick.hash) return;
+      steps.push({ kind: "plug", group: "weapons", label: `${w.item.name}: ${pick.name}`, item: w.item, socket: c.socket, hash: pick.hash });
+    });
   }
 
   // 4) Artifact perks: each perk into a socket that takes it, keeping perks that stay where they are.

@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { equipItems, insertPlug, plain, sleep, transfer, type Who } from "../bungie/actions";
+import { equipItems, insertPlug, plain, sleep, snapshotLoadout, transfer, type Who } from "../bungie/actions";
+import type { LoadoutSlot } from "../model/inventory";
 import type { EquipStep } from "../engine/equip";
 import { Button, Card, cn } from "../ui/kit";
 
 type Status = { state: "waiting" | "working" | "done" | "failed" | "manual"; note?: string };
 
 // Runs an equip plan step by step against Bungie and shows every result. Nothing happens until you press Start.
-export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro }: { title: string; steps: EquipStep[]; who: Who; onClose: () => void; onDone: () => void; onStart?: () => void; intro?: string }) {
+export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro, slots }: { title: string; steps: EquipStep[]; who: Who; onClose: () => void; onDone: () => void; onStart?: () => void; intro?: string; slots?: LoadoutSlot[] }) {
+  const [saveTo, setSaveTo] = useState(-1); // in-game loadout slot to save into afterwards (-1 = don't)
+  const [saved, setSaved] = useState<{ ok: boolean; text: string } | null>(null);
   const [status, setStatus] = useState<Status[]>(() => steps.map(s => ({ state: s.kind === "manual" ? "manual" : "waiting", note: s.kind === "manual" ? s.why : undefined })));
   const [phase, setPhase] = useState<"confirm" | "running" | "finished">("confirm");
   const [stopReason, setStopReason] = useState("");
@@ -14,13 +17,14 @@ export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro
 
   const groups = useMemo(() => {
     const g: { name: string; idx: number[] }[] = [
-      { name: "Bring gear to your Hunter", idx: [] }, { name: "Equip", idx: [] }, { name: "Subclass", idx: [] }, { name: "Armor mods", idx: [] }, { name: "Artifact", idx: [] },
+      { name: "Bring gear to your Hunter", idx: [] }, { name: "Equip", idx: [] }, { name: "Subclass", idx: [] }, { name: "Armor mods", idx: [] }, { name: "Artifact", idx: [] }, { name: "Weapon perks", idx: [] },
     ];
     steps.forEach((s, i) => {
       if (s.kind === "move") g[0].idx.push(i);
       else if (s.kind === "equip") g[1].idx.push(i);
       else if ((s.kind === "plug" || s.kind === "manual") && s.group === "subclass") g[2].idx.push(i);
       else if ((s.kind === "plug" || s.kind === "manual") && s.group === "artifact") g[4].idx.push(i);
+      else if (s.kind === "plug" && s.group === "weapons") g[5].idx.push(i);
       else g[3].idx.push(i);
     });
     return g.filter(x => x.idx.length);
@@ -58,6 +62,10 @@ export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro
           break;
         }
       }
+    }
+    if (saveTo >= 0 && slots?.[saveTo]) {
+      try { await snapshotLoadout(who, saveTo, slots[saveTo]); setSaved({ ok: true, text: `Saved to in-game loadout slot ${saveTo + 1}.` }); }
+      catch (e) { setSaved({ ok: false, text: `Couldn't save the loadout slot: ${plain(e)}` }); }
     }
     setPhase("finished");
   };
@@ -102,6 +110,17 @@ export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro
             <ol className="list-decimal space-y-1 pl-5 text-sm">{todo.map(({ s, st }, n) => <li key={n}>{s.label}{st.note && <span className="text-ink-dim"> ({st.note})</span>}</li>)}</ol>
           </div>
         )}
+        {phase === "confirm" && slots && slots.length > 0 && (
+          <div className="space-y-1">
+            <label htmlFor="save-slot" className="text-sm font-semibold">Also save it to an in-game loadout slot</label>
+            <select id="save-slot" value={saveTo} onChange={e => setSaveTo(Number(e.target.value))} className="block w-full rounded-lg border border-line bg-panel-2 px-2 py-2 text-sm text-ink">
+              <option value={-1}>Don't save</option>
+              {slots.map(sl => <option key={sl.index} value={sl.index}>Slot {sl.index + 1}{sl.empty ? " (empty)" : " (replaces what's saved there)"}</option>)}
+            </select>
+            <p className="text-xs text-ink-dim">Then you can swap to it in game, for example at a boss, without opening Steeped.</p>
+          </div>
+        )}
+        {saved && <p className={cn("text-sm", saved.ok ? "text-good" : "text-bad")} data-testid="loadout-saved">{saved.text}</p>}
         {phase === "confirm" && <Button className="w-full" onClick={run}>Start: equip in game</Button>}
         {phase === "finished" && <Button className="w-full" onClick={() => { onClose(); onDone(); }}>Close and refresh from Bungie</Button>}
       </Card>

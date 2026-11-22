@@ -8,6 +8,10 @@ import type { Goal } from "../engine/loops";
 import type { Subclass } from "../knowledge/hunter";
 import type { CatalogEntry } from "../bungie/catalog";
 import { maxHunter, type MaxHunter } from "../engine/maxhunter";
+import { loadClarity } from "../bungie/clarity";
+
+// Clarity's tested numbers (when switched on) must be in place before any perk is read.
+const clarityReady = loadClarity();
 
 export interface SearchRequest {
   id: number;
@@ -27,7 +31,8 @@ export interface MaxRequest { id: number; kind: "max"; inv: Inventory; defs: Ite
 
 let cache: { inv: Inventory; defs: ItemDef[]; map: Map<number, ItemDef>; ctx?: Ctx; cid?: string } | null = null;
 
-self.onmessage = (e: MessageEvent<SearchRequest | MaxRequest>) => {
+self.onmessage = async (e: MessageEvent<SearchRequest | MaxRequest>) => {
+  await clarityReady;
   const t = performance.now();
   if ("kind" in e.data && e.data.kind === "max") {
     const m = e.data;

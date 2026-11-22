@@ -83,7 +83,7 @@ export function ownedWeapons(inv: Inventory, defOf: DefOf, power = 0): Weapon[] 
       const type = WEAPON_TYPE[typeName];
       if (type) base.push(type);
       const ks = [...base, ...cols.map(c => c.options[0])];
-      const rated = base.some(k => k !== type) || cols.some(c => c.options[0].read === "checked");
+      const rated = base.some(k => k !== type) || cols.some(c => c.options[0].read !== "description");
       const wstats: WeaponStats = Object.fromEntries(Object.entries(WEAPON_STAT).map(([k, h]) => [k, item.wstats?.[h] ?? 0])) as WeaponStats;
       return { item, ks, base, cols, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated, wstats,
         duel: duelRating(typeName, wstats), tier: item.gearTier ?? 0, infuse: power > 0 && item.power < power - 10 };
@@ -169,7 +169,8 @@ function tunePerks(w: Weapon, score: (w: Weapon) => number): { w: Weapon; score:
       const trial = picks.map((p, k) => (k === i ? j : p));
       const t = withPerks(w, trial);
       const sc = score(t);
-      if (sc > best + 1e-6) { best = sc; cur = t; picks[i] = j; }
+      const need = (c.options[j] as { read?: string }).read === "description" ? GUESS_MARGIN : 1e-6;
+      if (sc > best + need) { best = sc; cur = t; picks[i] = j; }
     }
   });
   return { w: cur, score: best };
@@ -209,6 +210,9 @@ function potential(w: Weapon, goal: Goal): number {
   return v;
 }
 const SHORTLIST = 24;
+// Prefer what's proven: each pick that rests only on Steeped's reading of Bungie's text must win by this much.
+export const GUESS_MARGIN = 1.5;
+const guesses = (perks: { perk: { read?: string } }[]) => perks.filter(p => p.perk.read === "description").length;
 
 // quick: a fast first pass (short shortlist, slotted perks only) for ranking many builds; the leaders get the full pick.
 function chooseWeapons(base: Part[], allWeapons: Weapon[], sub: Subclass, exotic: K, goal: Goal, pinned: Set<string> = new Set(), quick = false): Weapon[] {
@@ -371,7 +375,8 @@ export function searchBuilds(o: SearchInput): Build[] {
           if (!first) continue;
           const ws = chooseWeapons([...corePartsOf(b), ...first.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned, true);
           const fit = bestArtifact([...corePartsOf(b), ...weaponParts(ws)], o.goal, [a], undefined, lock)!;
-          if (!best || fit.score > best.score) best = { fit, ws, score: fit.score };
+          const adj = fit.score - GUESS_MARGIN * guesses(fit.perks);
+          if (!best || adj > best.score) best = { fit, ws, score: adj };
         }
       }
       if (!best) continue;
@@ -379,7 +384,8 @@ export function searchBuilds(o: SearchInput): Build[] {
       const art = arts.find(a => a.name === best!.fit.artifact.name);
       const full = chooseWeapons([...corePartsOf(b), ...best.fit.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned);
       const refit = art ? bestArtifact([...corePartsOf(b), ...weaponParts(full)], o.goal, [art], undefined, o.require?.artifactPerks ?? []) : undefined;
-      if (refit && refit.score >= best.score - 1e-6) best = { fit: refit, ws: full, score: refit.score };
+      const refAdj = refit ? refit.score - GUESS_MARGIN * guesses(refit.perks) : -Infinity;
+      if (refit && refAdj >= best.score - 1e-6) best = { fit: refit, ws: full, score: refAdj };
       b.artifact = best.fit;
       b.weapons = best.ws;
       b.loops = scoreLoops([...corePartsOf(b), ...weaponParts(best.ws), ...best.fit.perks.map(p => ({ k: p.perk }))], o.goal);

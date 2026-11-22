@@ -4,6 +4,7 @@ import { DEFS, def, loadDefs, syncManifestVersion, type ItemDef } from "./defs";
 import { buildInventory, itemHashes, plugHashes, plugSetHashes, type Inventory } from "../model/inventory";
 import { readQuests, type Quest } from "./quests";
 import { loadCatalog, type CatalogEntry } from "./catalog";
+import { loadClarity, CLARITY_ON } from "./clarity";
 
 export interface LoadResult {
   inventory: Inventory;
@@ -38,6 +39,7 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
   progress("Reading your quests");
   const quests = await readQuests(P).catch(() => [] as Quest[]);
   const catalog = await loadCatalog(P, progress).catch(() => [] as CatalogEntry[]);
+  if (CLARITY_ON) { progress("Reading Clarity's tested perk values"); await loadClarity(); }
   progress("Putting it together");
   const inventory = buildInventory(P, def, account);
   return { inventory, quests, catalog, raw: P };

@@ -9,6 +9,7 @@ import { runMax } from "../workers/search";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Spinner } from "../ui/bits";
 import { GearIcon, iconForItem } from "../ui/gear";
+import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "../bungie/clarity";
 
 // Home: how maxed your Hunter is, the one thing to do next, the path to 100%, and a report on each build in your kit.
 export function Home({ inv, catalog, onOpen, onInventory }: { inv: Inventory; catalog: CatalogEntry[]; onOpen: (spec: BuildSpec) => void; onInventory: () => void }) {
@@ -98,12 +99,19 @@ export function Home({ inv, catalog, onOpen, onInventory }: { inv: Inventory; ca
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-2xl font-semibold">Your kit</h2>
-          <span className="text-sm text-ink-dim">Stars compare each build with the best Steeped found for you, job by job</span>
+          <span className="text-sm text-ink-dim">Stars compare each build with the strongest Steeped can make from your gear, job by job</span>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {m.reports.map(r => <ReportCard key={r.role} r={r} onOpen={() => onOpen(r.view.spec)} />)}
         </div>
       </section>
+
+      {CLARITY_ON && (
+        <Card className="flex flex-wrap items-center justify-between gap-2 text-sm" data-testid="clarity-credit">
+          <span className="text-ink-dim">Perk values are tested numbers from <a href={CLARITY_SITE} target="_blank" rel="noreferrer">Clarity</a>, the community&apos;s perk database.</span>
+          {CLARITY_DISCORD && <a href={CLARITY_DISCORD} target="_blank" rel="noreferrer">Join the Clarity Discord</a>}
+        </Card>
+      )}
     </div>
   );
 }
@@ -134,7 +142,7 @@ function Stars({ n, label }: { n: number; label: string }) {
 function ReportCard({ r, onOpen }: { r: Report; onOpen: () => void }) {
   const v = r.view, sp = v.spec;
   const pieces = [...Object.values(v.armor?.pieces ?? {}).map(p => p.item), ...v.weapons.filter(Boolean).map(w => w!.item)];
-  const tone = r.confidence === "High" ? "good" : r.confidence === "Medium" ? "neutral" : "warn";
+  const tone = r.confidence === "Proven" ? "good" : r.confidence === "Mostly proven" ? "neutral" : "warn";
   return (
     <Card className="space-y-4" data-testid="report">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -143,7 +151,7 @@ function ReportCard({ r, onOpen }: { r: Report; onOpen: () => void }) {
           <h3 className="font-display text-xl font-semibold">{sp.subclass}: {sp.aspects.join(" + ")}</h3>
           <p className="text-sm text-ink-dim">{r.verdict}</p>
         </div>
-        <Badge tone={tone}>{r.confidence} confidence</Badge>
+        <Badge tone={tone}>{r.confidence}</Badge>
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
         <Stars n={r.stars.clear} label="Clear" />

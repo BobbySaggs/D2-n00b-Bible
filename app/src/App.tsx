@@ -9,6 +9,7 @@ import { Builder } from "./screens/Builder";
 import { Workshop, type Sent } from "./screens/Workshop";
 import { Path } from "./screens/Path";
 import { Home } from "./screens/Home";
+import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "./bungie/clarity";
 import { Inventory } from "./screens/Inventory";
 import { Segmented } from "./ui/bits";
 import { Button, Card, Logo } from "./ui/kit";
@@ -113,7 +114,10 @@ export default function App() {
           }}
         />
       )}
-      <footer className="mt-10 text-center text-xs text-ink-dim">Steeped beta {__APP_VERSION__}</footer>
+      <footer className="mt-10 space-y-1 text-center text-xs text-ink-dim">
+        {CLARITY_ON && <div>Perk values from <a href={CLARITY_SITE} target="_blank" rel="noreferrer">Clarity</a>{CLARITY_DISCORD && <> · <a href={CLARITY_DISCORD} target="_blank" rel="noreferrer">Clarity Discord</a></>}</div>}
+        <div>Steeped beta {__APP_VERSION__} · © Bobby Saggs. All rights reserved. Not affiliated with Bungie.</div>
+      </footer>
     </div>
   );
 }

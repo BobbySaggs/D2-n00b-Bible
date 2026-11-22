@@ -128,7 +128,7 @@ export function Builder({ inv, onRefresh, incoming, onIncomingUsed }: { inv: Inv
       {err && <Card className="border-bad/40 text-bad">{err}</Card>}
       {equipping !== null && views[equipping] && (
         <EquipDialog title={`Build ${equipping ? "B" : "A"}: ${views[equipping]!.spec.subclass} + ${views[equipping]!.spec.exotic}`}
-          steps={equipPlan(views[equipping]!, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }}
+          steps={equipPlan(views[equipping]!, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }} slots={inv.loadouts?.[ctx.characterId]}
           onStart={() => { const s = snapshotWorn(ctx); saveUndo(s); setUndo(s); }}
           onClose={() => setEquipping(null)} onDone={() => onRefresh?.()} />
       )}

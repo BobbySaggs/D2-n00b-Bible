@@ -42,6 +42,9 @@ export interface Item {
   options: Record<number, number[]>; // socket index -> unlocked plugs from your plug sets (subclasses, armor mods)
 }
 
+// An in-game loadout slot: Bungie keeps its name, color and icon as hashes; empty when nothing is saved there.
+export interface LoadoutSlot { index: number; nameHash: number; colorHash: number; iconHash: number; empty: boolean }
+
 export interface Inventory {
   account: { name: string; membershipType: number; membershipId: string };
   characters: Character[];
@@ -50,6 +53,7 @@ export interface Inventory {
   vaultCount: number;
   loadedAt: number;
   artifacts: Record<string, { name: string; perks: number[] }>; // character id -> equipped artifact and its active perk plugs
+  loadouts: Record<string, LoadoutSlot[]>; // character id -> in-game loadout slots
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -143,6 +147,9 @@ export function buildInventory(
 
   return {
     account, characters, items, collectibles, artifacts,
+    loadouts: Object.fromEntries(Object.entries(P.characterLoadouts?.data ?? {}).map(([cid, v]: [string, any]) => [cid, (v.loadouts ?? []).map((l: any, index: number) => ({
+      index, nameHash: l.nameHash ?? 0, colorHash: l.colorHash ?? 0, iconHash: l.iconHash ?? 0, empty: !(l.items ?? []).some((x: any) => x.itemInstanceId && x.itemInstanceId !== "0"),
+    }))])),
     vaultCount: (P.profileInventory?.data?.items ?? []).filter((x: any) => x.bucketHash === VAULT_BUCKET).length,
     loadedAt: Date.now(),
   };

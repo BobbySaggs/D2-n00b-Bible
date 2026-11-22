@@ -1,3 +1,4 @@
+import { clarityFor } from "../bungie/clarity";
 import { byName, type K } from "./hunter";
 
 // Artifact perks. Monument of Triumph has seven artifacts with 21 perks each, and Bungie can describe all of
@@ -34,7 +35,8 @@ const USES: [RegExp, string][] = [
   [/(arc|solar|void|stasis|strand) grenade/i, "gEn"], [/bolt charge/i, "bolt"], [/void breach/i, "breach"], [/finisher/i, "finisher"], [/elemental buff/i, "radiant|frost|woven|overshield|amplified|restoration|invis"],
 ];
 
-export interface ArtifactPerk extends K { hash: number; read: "checked" | "description" }
+// read: "checked" = a hand-written rule; "tested" = Bungie's text plus Clarity's tested numbers; "description" = Steeped's own reading.
+export interface ArtifactPerk extends K { hash: number; read: "checked" | "tested" | "description" }
 
 export function perkKnowledge(hash: number, name: string, desc: string, kind: "artifact" | "weapon" | "exotic" = "artifact"): ArtifactPerk {
   const hand = byName.get(name);
@@ -59,10 +61,27 @@ export function perkKnowledge(hash: number, name: string, desc: string, kind: "a
   const role: string[] = [];
   if (makes.has("multikill")) role.push("adClear");
   if (makes.has("dr") || makes.has("overshield") || makes.has("heal")) role.push("survival");
-  return {
+  const out: ArtifactPerk = {
     name, kind, makes: [...makes], uses: [...uses], needs: needs.length ? needs : undefined, role,
     says: desc.replace(/\[[^\]]*\]/g, "").replace(/\s+/g, " ").trim(), hash, read: "description",
   };
+  return withClarity(out);
+}
+
+// With Clarity's tested numbers, a perk's damage, damage resistance and ability energy come from real values,
+// and it counts as fully as a checked rule.
+function withClarity(p: ArtifactPerk): ArtifactPerk {
+  const c = clarityFor(p.hash);
+  if (!c) return p;
+  const makes = new Map<string, number>();
+  for (const m of p.makes) { const [t, n] = m.split(":"); makes.set(t, Math.max(makes.get(t) ?? 0, Number(n ?? 1))); }
+  if (c.dmgPct) {
+    makes.set("dmg", Math.min(5, Math.max(1, Math.round(c.dmgPct / 10))));
+    if (p.kind === "weapon" && c.dmgPct >= 20) makes.set("bossDmg", Math.min(4, Math.round(c.dmgPct / 12)));
+  }
+  if (c.drPct) makes.set("dr", Math.min(4, Math.max(1, Math.ceil(c.drPct / 15))));
+  for (const [k, v] of Object.entries(c.energy)) makes.set(k, Math.min(3, v >= 25 ? 2 : 1) + (makes.has(k) ? 0 : 0));
+  return { ...p, makes: [...makes].map(([t, n]) => (n > 1 ? `${t}:${n}` : t)), read: "tested", says: c.text.split("\n")[0] || p.says };
 }
 
 function splitCause(text: string): [string, string] {

@@ -13,7 +13,7 @@ export const POWER_CAP = 550;
 const WEIGHT = { power: 0.4, gear: 0.3, builds: 0.3 };
 
 export interface PathStep { what: string; why: string; gain: number; kind: "power" | "gear" | "farm" }
-export type Confidence = "High" | "Medium" | "Low";
+export type Confidence = "Proven" | "Mostly proven" | "Best guess";
 export interface Report {
   role: string;
   stars: { clear: number; boss: number; survive: number }; // 1-5, against the best Steeped found for you
@@ -124,7 +124,9 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
   const ctx = makeCtx(inv, defOf, defs, characterId);
   const rate = (v: BuildView, goal: Goal) => evaluate({ ...v.spec, goal }, ctx, settings).score;
   const jobs: [keyof Report["stars"], Goal][] = [["clear", "whole"], ["boss", "bossDps"], ["survive", "survival"]];
-  const all = [...kit.map(k => k.view), ...best.map(b => b.view).filter(v => !hasStandIn(v))];
+  // Survive is judged against a real best-survival build, not just the other builds in your kit.
+  const survivalBest = withBest ? bestBuild(inv, defOf, defs, characterId, "survival", settings) : undefined;
+  const all = [...kit.map(k => k.view), ...best.map(b => b.view).filter(v => !hasStandIn(v)), ...(survivalBest ? [survivalBest] : [])];
   const top = Object.fromEntries(jobs.map(([j, g]) => [j, Math.max(...all.map(v => rate(v, g)), 1)])) as Record<keyof Report["stars"], number>;
   const reports: Report[] = kit.map(({ role, view }) => {
     const stars = Object.fromEntries(jobs.map(([j, g]) => [j, starsFor(rate(view, g) / top[j])])) as Report["stars"];
@@ -140,7 +142,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
         : `Swap to this for damage phases.`,
       why: view.loops.combos.slice(0, 3).map(c => ({ name: c.name, play: c.play })),
       shines: `Best at ${label[order[0][0]]} (${order[0][1]} of 5).`,
-      struggles: order[2][1] >= 4.5 ? "No weak spot Steeped can find." : `Weakest at ${label[order[2][0]]} (${order[2][1]} of 5).${order[2][0] === "boss" && role !== "Boss damage" ? " Swap to your Boss build for damage phases." : ""}`,
+      struggles: order[2][1] >= 4.5 ? "Strongest of your builds at all three jobs." : `Weakest at ${label[order[2][0]]} (${order[2][1]} of 5).${order[2][0] === "boss" && role !== "Boss damage" ? " Swap to your Boss build for damage phases." : ""}`,
     };
   });
 
@@ -158,9 +160,10 @@ function confidenceOf(v: BuildView, boss: boolean): { confidence: Confidence; wh
   const read = parts.filter(k => (k as { read?: string }).read === "description").length;
   const share = parts.length ? read / parts.length : 0;
   const typeOnly = v.weapons.filter(w => w && !w.rated).length;
-  let c: Confidence = share < 0.1 && typeOnly === 0 ? "High" : share < 0.3 ? "Medium" : "Low";
-  const bits = [`${parts.length - read} of ${parts.length} rules checked by hand`];
+  let c: Confidence = share < 0.1 && typeOnly === 0 ? "Proven" : share < 0.3 ? "Mostly proven" : "Best guess";
+  const guessed = [...new Set(parts.filter(k => (k as { read?: string }).read === "description").map(k => k.name))];
+  const bits = [read ? `Rests partly on Steeped's reading of ${guessed.slice(0, 4).join(", ")}${guessed.length > 4 ? ` and ${guessed.length - 4} more` : ""}` : "Every piece is a proven rule"];
   if (typeOnly) bits.push(`${typeOnly} weapon${typeOnly > 1 ? "s" : ""} judged by type only`);
-  if (boss) { if (c === "High") c = "Medium"; bits.push("no real damage numbers yet, so heavy and boss picks are judgment"); }
+  if (boss) { if (c === "Proven") c = "Mostly proven"; bits.push("no real damage numbers yet, so heavy and boss picks are judgment"); }
   return { confidence: c, why: bits.join("; ") };
 }

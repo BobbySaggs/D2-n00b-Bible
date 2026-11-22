@@ -54,6 +54,7 @@ export const COMPONENTS = [
   201, // character inventories
   202, // character progressions
   205, // character equipment
+  206, // character loadouts (in-game loadout slots)
   300, // item instances
   301, // item objectives
   304, // item stats

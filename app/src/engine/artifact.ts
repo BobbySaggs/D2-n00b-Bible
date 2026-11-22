@@ -54,11 +54,13 @@ export function fitArtifact(base: Part[], goal: Goal, a: ArtifactChoice, lock: s
   let score = scoreLoops(parts(), goal).score;
   for (const s of order) {
     if (chosen.has(s.index)) continue;
-    let best: ArtifactPerk | undefined, bestScore = -Infinity;
+    let best: ArtifactPerk | undefined, bestScore = -Infinity, bestAdj = -Infinity;
     for (const o of s.options) {
       if (used.has(o.name)) continue;
       const sc = scoreLoops([...parts(), { k: o }], goal).score + (o.name === s.current?.name ? 0.01 : 0);
-      if (sc > bestScore) { bestScore = sc; best = o; }
+      // A perk Steeped only read from Bungie's text has to beat a checked one by a clear margin.
+      const adj = sc - (o.read === "description" ? 1.5 : 0);
+      if (adj > bestAdj) { bestAdj = adj; bestScore = sc; best = o; }
     }
     if (best) { chosen.set(s.index, best); used.add(best.name); score = bestScore; }
   }
