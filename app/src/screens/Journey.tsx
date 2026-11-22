@@ -4,7 +4,8 @@ import type { Quest } from "../bungie/quests";
 import { STAT_ORDER } from "../bungie/config";
 import type { Inventory } from "../model/inventory";
 import { Badge, Card, cn } from "../ui/kit";
-import { Spinner } from "../ui/bits";
+import { Mascot, Moment, Ring } from "../ui/visual";
+import { GearIcon, iconForItem } from "../ui/gear";
 import { useMax } from "../ui/useMax";
 import { Path } from "./Path";
 
@@ -24,22 +25,27 @@ export function Journey({ inv, catalog, catalysts, artifact, quests }: {
   const catDone = catalysts.filter(c => c.done).length;
   const todo = cats.filter(c => !c.done);
 
-  if (err) return <Card className="border-bad/40 text-bad">{err}</Card>;
+  if (err) return <Moment pose="ghost" title="Something went wrong">{err}</Moment>;
   const best = m?.possible.find(p => p.role === "Max Hunter")?.view;
   const at100 = best ? STAT_ORDER.filter(k => best.stats[k] >= 100).length : 0;
 
   return (
     <div className="space-y-6" data-testid="journey">
       <div className="space-y-1">
-        <h1 className="font-display text-3xl font-semibold">Journey to a maxed Hunter</h1>
-        <p className="text-ink-dim">Every max that matters, where you are, and what to run to get there.</p>
+        <div className="flex items-center gap-4">
+          <Mascot pose="point" size={72} />
+          <div>
+            <h1 className="font-display text-3xl font-semibold">Journey to a maxed Hunter</h1>
+            <p className="text-ink-dim">Every max that matters, and what to run to get there.</p>
+          </div>
+        </div>
       </div>
 
       <section className="space-y-3">
         <h2 className="font-display text-2xl font-semibold">Your maxes</h2>
-        {!m ? <Card><Spinner label="Checking your progress" /></Card> : (
+        {!m ? <Moment pose="mug" title="Brewing your progress…" /> : (
           <div className="grid gap-4 md:grid-cols-3" data-testid="maxes">
-            <Max label="Power" now={m.power.toFixed(1)} goal="550" pct={(100 * m.power) / 550} how={m.power < 550 ? `Run Solo Ops at Grade A or better. Raise your lowest slot first${m.lowestSlot ? ` (${m.lowestSlot.slot}, ${m.lowestSlot.power})` : ""}.` : "Maxed."} />
+            <Max label="Power" now={String(Math.floor(m.power))} goal="550" pct={(100 * m.power) / 550} how={m.power < 550 ? `Run Solo Ops at Grade A or better. Raise your lowest slot first${m.lowestSlot ? ` (${m.lowestSlot.slot}, ${m.lowestSlot.power})` : ""}.` : "Maxed."} />
             <Max label="Build gear upgraded" now={`${m.pillars.gear.toFixed(0)}%`} goal="100%" pct={m.pillars.gear} how="Masterwork, infuse and upgrade the pieces your builds use. Steps are below." />
             <Max label="Stats at 100+ in your best build" now={`${at100}`} goal="6" pct={(100 * at100) / 6} how="Counted with every piece masterworked. Tier 5 armor with the right rolls adds more." />
             <Max label="Exotics for your builds" now={m.partial ? "…" : m.pillars.builds >= 99.5 ? "All" : `${m.pillars.builds.toFixed(0)}%`} goal="All" pct={m.partial ? 0 : m.pillars.builds} how={m.pillars.builds >= 99.5 ? "Nothing you're missing would make you stronger." : "See Gear to target on Home for what to get and where."} />
@@ -76,7 +82,10 @@ export function Journey({ inv, catalog, catalysts, artifact, quests }: {
           <Card className="space-y-2" data-testid="catalysts">
             {(showAll ? todo : todo.slice(0, 10)).map(c => (
               <div key={c.record} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className={cn("font-medium", !owned.has(c.weapon) && "text-ink-dim")}>{c.name}</span>
+                <span className="flex items-center gap-3">
+                  {(() => { const it = inv.items.find(i => i.name === c.weapon); return it ? <GearIcon src={iconForItem(it)} size={36} exotic title={it.name} /> : <span className="size-9 rounded-md border border-dashed border-line" />; })()}
+                  <span className={cn("font-medium", !owned.has(c.weapon) && "text-ink-dim")}>{c.name}</span>
+                </span>
                 <span className="flex items-center gap-2">
                   {c.progress && <span className="text-xs text-ink-dim">{c.progress}</span>}
                   {kitGuns.has(c.weapon) ? <Badge tone="good">In your builds</Badge> : owned.has(c.weapon) ? <Badge>You own it</Badge> : <Badge>Gun not owned</Badge>}
@@ -98,11 +107,15 @@ export function Journey({ inv, catalog, catalysts, artifact, quests }: {
 }
 
 function Max({ label, now, goal, pct, how }: { label: string; now: string; goal: string; pct: number; how: string }) {
+  const maxed = pct >= 99.5;
   return (
-    <Card className="space-y-2">
-      <div className="flex items-baseline justify-between gap-2"><span className="font-semibold">{label}</span><span className="text-sm text-ink-dim tabular-nums">{now} of {goal}</span></div>
-      <div role="img" aria-label={`${label} ${Math.round(pct)}%`} className="h-2 overflow-hidden rounded-full bg-panel-2"><div className="h-2 rounded-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>
-      <p className="text-sm text-ink-dim">{how}</p>
+    <Card className="flex items-center gap-4">
+      {maxed ? <Mascot pose="cheer" size={84} /> : <Ring pct={pct} size={84} label={`${Math.round(pct)}%`} />}
+      <div className="min-w-0 space-y-1">
+        <div className="font-semibold">{label}</div>
+        <div className="font-display text-xl font-semibold tabular-nums">{now} <span className="text-sm font-normal text-ink-dim">of {goal}</span></div>
+        <p className="text-xs text-ink-dim">{maxed ? "Maxed." : how}</p>
+      </div>
     </Card>
   );
 }

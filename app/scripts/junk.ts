@@ -1,0 +1,11 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { cleanup } from "../src/engine/cleanup";
+const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const inv = buildInventory(s.profile, h => defs.get(h), s.account);
+const j = cleanup(inv, h => defs.get(h));
+console.log("junk", j.length, "weapons", j.filter(x => x.item.kind === "weapon").length, "armor", j.filter(x => x.item.kind === "armor").length);
+for (const x of j.slice(0, 12)) console.log(` ${x.item.name} P${x.item.power} T${x.item.gearTier} | ${x.reason}`);

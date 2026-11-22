@@ -128,7 +128,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
     }
   });
 
-  if (power < POWER_CAP) path.push({ what: "Run Solo Ops at Grade A or better", why: `Power ${power.toFixed(1)} of ${POWER_CAP}. Your lowest slot is ${lowest.slot} (${lowest.power}): equip any higher drop there`, gain: WEIGHT.power * 100 * (1 - powerPct), kind: "power" });
+  if (power < POWER_CAP) path.push({ what: "Run Solo Ops at Grade A or better", why: `Power ${Math.floor(power)} of ${POWER_CAP}. Raise your ${lowest.slot} first (${lowest.power})`, gain: WEIGHT.power * 100 * (1 - powerPct), kind: "power" });
   // Two copies of the same piece (one per build) read as one step.
   const merged = new Map<string, PathStep>();
   for (const st of path) { const m = merged.get(st.what); if (m) m.gain += st.gain; else merged.set(st.what, { ...st }); }

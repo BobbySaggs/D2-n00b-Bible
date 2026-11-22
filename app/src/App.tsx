@@ -13,7 +13,8 @@ import { Inventory } from "./screens/Inventory";
 import { Builds } from "./screens/Builds";
 import { Journey } from "./screens/Journey";
 import { Segmented } from "./ui/bits";
-import { Button, Card, Logo } from "./ui/kit";
+import { Button, Card } from "./ui/kit";
+import { BRAND, Moment } from "./ui/visual";
 
 type Screen = "home" | "builds" | "journey" | "inventory" | "builder" | "workshop" | "roster";
 const ADVANCED: Screen[] = ["builder", "workshop", "roster"];
@@ -65,11 +66,8 @@ export default function App() {
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3 py-5">
         <div className="flex items-center gap-3">
-          <Logo />
-          <div>
-            <div className="font-display text-2xl font-semibold leading-none">Steeped</div>
-            {st.at === "ready" && <div className="text-xs text-ink-dim">{st.data.inventory.account.name}</div>}
-          </div>
+          <img src={BRAND.emblemSmall} alt="Steeped" className="h-16 w-auto drop-shadow-[0_6px_14px_rgb(123_63_242/0.5)]" />
+          {st.at === "ready" && <div className="text-sm text-ink-dim">{st.data.inventory.account.name}</div>}
         </div>
         <div className="flex items-center gap-2">
           {st.at === "ready" && (
@@ -83,7 +81,7 @@ export default function App() {
       </header>
 
       {st.at === "loading" && (
-        <Card className="flex items-center gap-3"><span className="size-3 animate-pulse rounded-full bg-accent-hi" />{st.msg}…</Card>
+        <Moment pose="mug" title="Brewing…">{st.msg}…</Moment>
       )}
       {st.at === "error" && (
         <Card className="space-y-3 border-bad/40">

@@ -17,6 +17,7 @@ export interface Character {
   stats: Stats; // what the character screen shows
   lastPlayed: string;
   emblem: string;
+  emblemBg: string; // the wide emblem banner Bungie shows behind your character
 }
 
 export interface Item {
@@ -78,6 +79,7 @@ export function buildInventory(
       stats: statsFrom(Object.fromEntries(Object.entries(c.stats ?? {}).map(([k, v]) => [k, { value: v as number }]))),
       lastPlayed: c.dateLastPlayed ?? "",
       emblem: c.emblemPath ?? "",
+      emblemBg: c.emblemBackgroundPath ?? "",
     }))
     .sort((a, b) => b.lastPlayed.localeCompare(a.lastPlayed));
 

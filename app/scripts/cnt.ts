@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import type { ItemDef } from "../src/bungie/defs";
+import { buildInventory } from "../src/model/inventory";
+import { ownedWeapons, distinct } from "../src/engine/builds";
+const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
+const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
+const inv = buildInventory(s.profile, h => defs.get(h), s.account);
+const ws = ownedWeapons(inv, h => defs.get(h), 470);
+console.log(ws.length, distinct(ws, new Set()).length, "avg cols opts", ws.reduce((t, w) => t + w.cols.reduce((a, c) => a + c.options.length, 0), 0) / ws.length);
