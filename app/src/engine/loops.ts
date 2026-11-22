@@ -70,6 +70,9 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   // "a+b" in needs means both; the list itself is any-of.
   const dead = new Set(parts.filter(p => p.k.needs && !p.k.needs.some(n => n.split("+").every(x => names.has(x)))).map(p => p.k.name));
   const live = parts.filter(p => !dead.has(p.k.name));
+  // Perks Steeped only read from Bungie's text (not hand-checked) count for less, so a guess can't outrank a known piece.
+  const UNVERIFIED = 0.35;
+  const trust = (n: string) => ((parts.find(p => p.k.name === n)?.k as { read?: string } | undefined)?.read === "description" ? UNVERIFIED : 1);
 
   const buildMade = (factor: (p: Part) => number) => {
     const made = new Map<string, { total: number; by: string[] }>();
@@ -80,7 +83,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
       made.set(t, m);
     };
     for (const p of live) {
-      const f = factor(p) * (p.k.kind === "super" ? 0.5 : 1);
+      const f = factor(p) * (p.k.kind === "super" ? 0.5 : 1) * trust(p.k.name);
       if (f > 0) for (const raw of p.k.makes) { const [t, n] = parse(raw); addMade(t, n * f, p.k.name); }
     }
     // Derived: abilities make kills of their kind; debuffs plus any kill make "kDebuffed"; orbs get picked up.
@@ -136,7 +139,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
       if (src) {
         const fromSuper = parts.find(x => x.k.name === src.by)?.k.kind === "super";
         links.push({ from: src.by, to: p.k.name, token: src.token });
-        score += (fromSuper ? 0.6 : 1.5) * n; // a super comes up a few times per fight; abilities and weapons all the time
+        score += (fromSuper ? 0.6 : 1.5) * n * Math.min(trust(p.k.name), trust(src.by)); // a super comes up a few times per fight; abilities and weapons all the time
       }
       else if (p.k.kind !== "weapon") unfed.push({ name: p.k.name, token: t.split("|").join(" or ") });
     }

@@ -146,6 +146,20 @@ function chooseWeapons(base: Part[], weapons: Weapon[], sub: Subclass, exotic: K
     }
     if (best) chosen.push(best);
   }
+  // One more pass with all three guns on: a gun that pairs with the heavy (or the heavy with it) can now win its slot.
+  const total = (ws: Weapon[]) => scoreLoops([...base, ...weaponParts(ws)], goal).score + ws.reduce((t, w) => t + weaponFit(w, sub, exotic, goal), 0);
+  for (let i = 0; i < chosen.length; i++) {
+    const slot = chosen[i].item.slot;
+    if (pinned.has(chosen[i].item.id)) continue;
+    let bestScore = total(chosen);
+    for (const w of weapons) {
+      if (w.item.slot !== slot || w === chosen[i]) continue;
+      if (w.item.exotic && chosen.some((c, j) => j !== i && c.item.exotic)) continue;
+      const trial = chosen.map((c, j) => (j === i ? w : c));
+      const sc = total(trial);
+      if (sc > bestScore + 1e-6) { bestScore = sc; chosen[i] = w; }
+    }
+  }
   return chosen;
 }
 
@@ -239,11 +253,22 @@ export function searchBuilds(o: SearchInput): Build[] {
       for (const a of arts) {
         if (o.require?.artifact && a.name !== o.require.artifact) continue;
         const lock = o.require?.artifactPerks ?? [];
-        const first = bestArtifact([...corePartsOf(b), ...weaponParts(b.weapons)], o.goal, [a], undefined, lock);
-        if (!first) continue;
-        const ws = chooseWeapons([...corePartsOf(b), ...first.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned);
-        const fit = bestArtifact([...corePartsOf(b), ...weaponParts(ws)], o.goal, [a], undefined, lock)!;
-        if (!best || fit.score > best.score) best = { fit, ws, score: fit.score };
+        // Seeds: the perks that fit today's weapons, plus each perk that asks for a weapon element or type
+        // (Volatile Flow wants a Void gun), so a perk is never skipped just because the right gun isn't on yet.
+        const seeds: string[][] = [lock];
+        const seen = new Set<string>();
+        for (const sk of a.sockets) for (const opt of sk.options) {
+          if (seen.has(opt.name) || lock.includes(opt.name)) continue;
+          seen.add(opt.name);
+          if (opt.needs?.some((n: string) => n.includes("__el:") || n.includes("__type:"))) seeds.push([...lock, opt.name]);
+        }
+        for (const seed of seeds) {
+          const first = bestArtifact([...corePartsOf(b), ...weaponParts(b.weapons)], o.goal, [a], undefined, seed);
+          if (!first) continue;
+          const ws = chooseWeapons([...corePartsOf(b), ...first.perks.map(p => ({ k: p.perk }))], weapons, b.subclass, b.exotic, o.goal, pinned);
+          const fit = bestArtifact([...corePartsOf(b), ...weaponParts(ws)], o.goal, [a], undefined, lock)!;
+          if (!best || fit.score > best.score) best = { fit, ws, score: fit.score };
+        }
       }
       if (!best) continue;
       b.artifact = best.fit;
