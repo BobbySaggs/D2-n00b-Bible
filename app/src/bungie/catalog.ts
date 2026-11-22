@@ -1,0 +1,84 @@
+import { createStore, get, set } from "idb-keyval";
+import { api } from "./api";
+import { BNET } from "./config";
+import { def, loadDefs } from "./defs";
+
+// Every exotic in the game that a Hunter can use (Hunter exotic armor and all exotic weapons), owned or not,
+// read from Bungie's Collections. "Best possible" builds use these. Bungie's own source text says where each drops.
+export interface CatalogEntry {
+  hash: number; // item hash
+  collectible: number;
+  source: string; // Bungie's "Source: ..." line
+  acquired: boolean; // unlocked in your Collections (you can pull it from there if you dismantled it)
+}
+
+const store = typeof indexedDB !== "undefined" ? createStore("steeped-catalog", "v1") : null;
+let CATALOG: CatalogEntry[] = [];
+export const getCatalog = () => CATALOG;
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function table(path: string): Promise<Record<string, any>> {
+  const r = await fetch(BNET + path);
+  if (!r.ok) throw new Error(`Bungie returned HTTP ${r.status} for ${path}`);
+  return r.json();
+}
+
+// Collectibles under Collections > Exotic, minus the Titan and Warlock armor branches.
+function exoticCollectibles(nodes: Record<string, any>): number[] {
+  const name = (h: number | string) => String(nodes[h]?.displayProperties?.name ?? "").trim();
+  const roots = Object.keys(nodes).filter(h => /^exotics?$/i.test(name(h)));
+  const out = new Set<number>();
+  const walk = (h: number | string, depth: number) => {
+    const n = nodes[h];
+    if (!n || depth > 6) return;
+    if (/^(titan|warlock)$/i.test(name(h))) return;
+    for (const c of n.children?.collectibles ?? []) out.add(c.collectibleHash);
+    for (const c of n.children?.presentationNodes ?? []) walk(c.presentationNodeHash, depth + 1);
+  };
+  for (const r of roots) walk(r, 0);
+  return [...out];
+}
+
+export async function loadCatalog(profile: any, progress?: (msg: string) => void): Promise<CatalogEntry[]> {
+  const m: any = await api("/Destiny2/Manifest/");
+  const version = String(m?.version ?? "");
+  if (store) {
+    const cached = await get<{ version: string; entries: CatalogEntry[] }>("catalog", store).catch(() => undefined);
+    if (cached && cached.version === version && cached.entries.length) {
+      CATALOG = withStates(cached.entries, profile);
+      await loadDefs([...CATALOG.map(e => e.hash)]);
+      await loadDefs(plugsOf(CATALOG));
+      return CATALOG;
+    }
+  }
+  const paths = m?.jsonWorldComponentContentPaths?.en ?? {};
+  if (!paths.DestinyCollectibleDefinition || !paths.DestinyPresentationNodeDefinition) throw new Error("Bungie's manifest didn't list Collections");
+  progress?.("Reading every exotic in the game (once per Destiny update)");
+  const [cols, nodes] = await Promise.all([table(paths.DestinyCollectibleDefinition), table(paths.DestinyPresentationNodeDefinition)]);
+  const list = exoticCollectibles(nodes);
+  let entries: CatalogEntry[] = list.map(c => cols[c]).filter(Boolean).map((c: any) => ({
+    hash: c.itemHash, collectible: c.hash, source: String(c.sourceString ?? "").replace(/^Source:\s*/i, "").trim(), acquired: false,
+  })).filter(e => e.hash);
+  await loadDefs(entries.map(e => e.hash), (d, t) => progress?.(`Reading exotics (${d} of ${t})`));
+  entries = entries.filter(e => {
+    const d = def(e.hash);
+    return d && d.tier === 6 && (d.itemType === 3 || (d.itemType === 2 && d.cls === 1));
+  });
+  await loadDefs(plugsOf(entries), (d, t) => progress?.(`Reading exotic perks (${d} of ${t})`));
+  if (store) await set("catalog", { version, entries }, store).catch(() => undefined);
+  CATALOG = withStates(entries, profile);
+  return CATALOG;
+}
+
+const plugsOf = (entries: CatalogEntry[]) => entries.flatMap(e => (def(e.hash)?.sockets ?? []).map(s => s.init)).filter(Boolean);
+
+function withStates(entries: CatalogEntry[], profile: any): CatalogEntry[] {
+  const states: Record<string, number> = { ...(profile?.profileCollectibles?.data?.collectibles ?? {}) } as any;
+  for (const c of Object.values(profile?.characterCollectibles?.data ?? {}) as any[])
+    for (const [h, v] of Object.entries(c.collectibles ?? {})) if (!(h in states)) states[h] = v as any;
+  return entries.map(e => {
+    const st = (states[e.collectible] as any)?.state;
+    return { ...e, acquired: st !== undefined && (st & 1) === 0 };
+  });
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */

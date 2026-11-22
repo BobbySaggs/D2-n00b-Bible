@@ -36,7 +36,7 @@ const USES: [RegExp, string][] = [
 
 export interface ArtifactPerk extends K { hash: number; read: "checked" | "description" }
 
-export function perkKnowledge(hash: number, name: string, desc: string, kind: "artifact" | "weapon" = "artifact"): ArtifactPerk {
+export function perkKnowledge(hash: number, name: string, desc: string, kind: "artifact" | "weapon" | "exotic" = "artifact"): ArtifactPerk {
   const hand = byName.get(name);
   if (hand && hand.kind === kind) return { ...hand, hash, read: "checked" };
   const text = desc.replace(/\[[^\]]*\]/g, " ");

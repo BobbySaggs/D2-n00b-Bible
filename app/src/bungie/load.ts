@@ -3,10 +3,12 @@ import { COMPONENTS } from "./config";
 import { DEFS, def, loadDefs, syncManifestVersion, type ItemDef } from "./defs";
 import { buildInventory, itemHashes, plugHashes, plugSetHashes, type Inventory } from "../model/inventory";
 import { readQuests, type Quest } from "./quests";
+import { loadCatalog, type CatalogEntry } from "./catalog";
 
 export interface LoadResult {
   inventory: Inventory;
   quests: Quest[]; // quest items on each character with live objective progress
+  catalog: CatalogEntry[]; // every Hunter-usable exotic in the game, owned or not (for "best possible")
   // Kept so the snapshot export can hand Claude the exact same inputs the app used.
   raw: unknown;
 }
@@ -35,14 +37,16 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
 
   progress("Reading your quests");
   const quests = await readQuests(P).catch(() => [] as Quest[]);
+  const catalog = await loadCatalog(P, progress).catch(() => [] as CatalogEntry[]);
   progress("Putting it together");
   const inventory = buildInventory(P, def, account);
-  return { inventory, quests, raw: P };
+  return { inventory, quests, catalog, raw: P };
 }
 
 // Everything Claude needs to test the engine on your real gear. No sign-in token is included.
 export function makeSnapshot(r: LoadResult) {
   const used = new Set<number>([...itemHashes(r.raw), ...plugHashes(r.raw), ...plugSetHashes(r.raw, def)]);
+  for (const e of r.catalog ?? []) { used.add(e.hash); for (const s of def(e.hash)?.sockets ?? []) if (s.init) used.add(s.init); }
   const defs: Record<number, ItemDef> = {};
   for (const h of used) { const d = DEFS.get(h); if (d) defs[h] = d; }
   return {
@@ -53,6 +57,7 @@ export function makeSnapshot(r: LoadResult) {
     profile: r.raw,
     defs,
     quests: r.quests,
+    catalog: r.catalog,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

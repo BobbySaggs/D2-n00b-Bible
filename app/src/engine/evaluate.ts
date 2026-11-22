@@ -9,6 +9,7 @@ import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, 
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, planValue, solve, statValue, type Solution, type StatPlan } from "./solve";
 import type { Part } from "./loops";
+import { CATALOG_OWNER, standInSource } from "./catalog";
 import { ownedMods, planArmorMods, type PieceMods } from "./mods";
 
 // A build the player can edit: everything by name or item id, so it is easy to store, compare and send to a worker.
@@ -308,7 +309,13 @@ export function breakdown(v: BuildView, settings: Settings, isNow: boolean): Bre
 
 export interface Step { what: string; detail?: string }
 const LBL: Record<StatKey, string> = { health: "Health", melee: "Melee", grenade: "Grenade", super: "Super", class: "Class", weapons: "Weapons" };
-const where = (i: { owner: string; equipped: boolean }, cid: string) => (i.owner === cid ? (i.equipped ? "worn" : "on your character") : i.owner === "vault" ? "in your vault" : "on another character");
+const where = (i: { id?: string; owner: string; equipped: boolean }, cid: string) => {
+  if (i.owner === CATALOG_OWNER) {
+    const s = standInSource(i.id ?? "");
+    return s?.acquired ? "not on you: pull it from Collections" : `you don't own it yet${s?.source ? `: ${s.source}` : ""}`;
+  }
+  return i.owner === cid ? (i.equipped ? "worn" : "on your character") : i.owner === "vault" ? "in your vault" : "on another character";
+};
 
 export function stepsFrom(now: BuildView, v: BuildView, ctx: Ctx): Step[] {
   const steps: Step[] = [];
