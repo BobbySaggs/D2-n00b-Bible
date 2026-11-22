@@ -343,6 +343,10 @@ export type StatStyle = "peaks" | "even";
 // Targets: your minimum per stat (50 if you don't set one). 100 means "Keep at 100+", which the solver treats as a must.
 export type StatTargets = Partial<Record<StatKey, number>>;
 const STAT_BUDGET = 2.4;
+const PAST_BY_GOAL: Partial<Record<Goal, Partial<Record<StatKey, number>>>> = {
+  bossDps: { super: 1.6, weapons: 1.4 },
+  abilities: { grenade: 1.3, melee: 1.2 },
+};
 export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbility" | "aspects" | "fragments" | "exotic" | "weapons">, goal: Goal, targets: StatTargets = {}, style: StatStyle = "peaks"): StatPlan {
   const lean = statLean([...corePartsOf(b), ...weaponParts(b.weapons)], goal);
   // Every build gets the same stat budget: its weights are scaled so they add up to STAT_BUDGET. Before, a build
@@ -352,7 +356,9 @@ export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbi
   for (const k of STAT_ORDER) {
     const w = Math.min(1, (Math.max(0, lean[k]) / sum) * STAT_BUDGET); // 0..1
     const floor = targets[k] ?? 50, hard = (targets[k] ?? 0) >= 100;
-    const past = isPvp(goal) ? PVP_PAST_100[k] ?? 0.3 : 1; // past 100 is mostly PvE damage; worth less against players
+    // Past 100, stats add damage (Bungie: Super up to +45% super damage, Grenade +65%, Melee +30%, Weapons +15%
+    // primary and special / +10% heavy vs bosses, Class up to a 40 HP overshield). Boss damage leans on Super and Weapons.
+    const past = (isPvp(goal) ? PVP_PAST_100[k] ?? 0.3 : 1) * (PAST_BY_GOAL[goal]?.[k] ?? 1);
     // Every point counts (points past 100 still buy real bonuses); the loop's stats count more.
     plan[k] = style === "peaks"
       ? { floor, hard, low: 0.5 + 0.7 * w, high: past * (0.2 + 0.4 * w), peak: (isPvp(goal) ? 0.6 : 1) * (0.4 + 1.0 * w) }
