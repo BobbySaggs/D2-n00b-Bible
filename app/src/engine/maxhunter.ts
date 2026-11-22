@@ -204,7 +204,10 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
 
   // Gear to target: your lowest slot, the stats holding your main build back, weapon upgrades, and exotics to get.
   const targets: Target[] = [];
-  if (power < POWER_CAP) targets.push({ title: `Tier 5 ${lowest.slot} ${["kinetic", "energy", "power"].includes(lowest.slot) ? "weapon" : "armor"}`, why: `Your lowest Power slot (${lowest.power}). Raising it lifts your Power the most.`, where: "Solo Ops at Grade A or better", tag: "Power" });
+  if (power < POWER_CAP) {
+    const kind = ["kinetic", "energy", "power"].includes(lowest.slot) ? "weapon" : "armor";
+    targets.push({ title: `Any ${lowest.slot} ${kind} above ${lowest.power} Power`, why: `Your best ${lowest.slot} ${kind} is ${lowest.power}, your lowest slot. Infuse the drop into the piece you like and your Power goes up.`, where: "Solo Ops at Grade A or better", tag: "Power" });
+  }
   const main = possible.find(p => p.role === "Max Hunter")?.view ?? kit[0]?.view;
   if (main?.ratingPlan) {
     const short = STAT_ORDER.filter(k => (main.ratingPlan![k]?.low ?? 0) >= 0.9 && main.stats[k] < 100) as StatKey[];

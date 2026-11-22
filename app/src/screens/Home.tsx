@@ -112,7 +112,8 @@ export function Home({ inv, catalog, onOpen, onGo }: { inv: Inventory; catalog: 
                     {it ? <GearIcon src={iconForItem(it)} size={40} exotic={it.exotic} title={it.name} /> : <span className="grid size-10 shrink-0 place-items-center rounded-md bg-exotic/15 text-lg text-exotic">◆</span>}
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{t.title}</div>
-                      <div className="truncate text-xs text-ink-dim">{t.where}</div>
+                      <div className="text-xs text-ink-dim">{t.why}</div>
+                      <div className="text-xs text-accent-hi">{t.where}</div>
                     </div>
                     <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-ink-dim">{t.tag}</span>
                   </li>
