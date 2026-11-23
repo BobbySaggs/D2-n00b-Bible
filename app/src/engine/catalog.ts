@@ -8,7 +8,8 @@ import { readPiece } from "./armor";
 
 // "Best possible": gear you don't own, added as stand-in items so the same search can use it.
 // Exotic armor you don't have gets an assumed roll: the stats of your best exotic in that slot, masterworked.
-// Exotic weapons come at your Power with their fixed perks. Each stand-in's owner is "catalog".
+// Exotic weapons come at your Power with their fixed perks. Legendary weapons come as a masterworked Tier 5 drop
+// that can roll any of its perks (the search picks the best roll). Each stand-in's owner is "catalog".
 export const CATALOG_OWNER = "catalog";
 export const isStandIn = (i: { owner: string }) => i.owner === CATALOG_OWNER;
 
@@ -26,7 +27,23 @@ export function withCatalog(inv: Inventory, defOf: (h: number) => ItemDef | unde
   const standIns: StandIn[] = [];
   for (const e of entries) {
     const d = defOf(e.hash);
-    if (!d || ownedNames.has(d.name)) continue;
+    if (!d) continue;
+    if (e.rolls) {
+      // Legendaries join even when you own one: your copy may be a lower tier or a worse roll. Ties go to yours.
+      const slot = BUCKET[d.bucket] ?? null;
+      if (!slot || d.itemType !== 3) continue;
+      const reusable: Record<number, number[]> = {};
+      e.rolls.forEach((r, i) => { if (r.length) reusable[i] = r; });
+      const item: Item = {
+        id: `cat:${d.hash}`, hash: d.hash, name: d.name, slot, kind: "weapon", cls: "Any", exotic: false, owner: CATALOG_OWNER, equipped: false,
+        power: light, damage: DAMAGE[d.damage] ?? "", locked: false, masterworked: true, gearTier: 5, energy: 0,
+        stats: { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 }, wstats: Object.fromEntries(d.stats.map(([h, v]) => [h, v])),
+        plugs: d.sockets.map((s, i) => e.rolls![i]?.[0] ?? s.init), reusable, options: {},
+      };
+      standIns.push({ item, source: e.source, acquired: false, assumedRoll: false });
+      continue;
+    }
+    if (ownedNames.has(d.name)) continue;
     const slot = BUCKET[d.bucket] ?? null;
     if (!slot) continue;
     if (d.itemType === 2) {

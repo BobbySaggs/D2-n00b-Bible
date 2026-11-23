@@ -12,6 +12,8 @@ import type { Goal } from "../engine/loops";
 import { runSearch } from "../workers/search";
 import type { CatalogEntry } from "../bungie/catalog";
 import { isStandIn, standInSource, withCatalog } from "../engine/catalog";
+import { farmName } from "../engine/maxhunter";
+import { useMax } from "../ui/useMax";
 import { LoadoutGrid, Moment, gridFromView } from "../ui/visual";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
@@ -68,6 +70,9 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
   const [focus, setFocus] = useState<Col>(0);
   const [showWhere, setShowWhere] = useState(false);
   const [req, setReq] = useState<Require>({});
+  // Nothing customized: "Best possible" is the same answer Home gives (one shared search), so the two never disagree.
+  const { m: max } = useMax(inv, catalog);
+  const [shared, setShared] = useState(false);
   const [equipping, setEquipping] = useState<Col | null>(null);
   const [undo, setUndo] = useState<WornSnapshot | null>(loadUndo);
   const [restoring, setRestoring] = useState(false);
@@ -83,15 +88,19 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
     setBusy(b => [cols.includes(0) || b[0], cols.includes(1) || b[1]]);
     setErr("");
     const require = opts.require ?? (Object.keys(req).length ? req : undefined);
+    const plain = !require && !opts.onlySubclass && !opts.onlyExotic && !pinned.length && (goal === "whole" || goal === "bossDps")
+      && !Object.values(settings.targets ?? {}).some(Boolean) && settings.style === "peaks" && settings.tune !== false;
+    const useShared = plain && incoming?.col !== 1;
+    if (cols.includes(1)) setShared(useShared);
     const one = async (c: Col) => {
+      if (c === 1 && useShared) return; // filled from the shared Max Hunter result below
       try {
         const found = await runSearch({ characterId: ctx.characterId, goal, top: c === 1 ? 6 : 1, pinnedWeapons: pinned, ...opts, require, settings: c === 1 ? { ...settings, mw: "full" } : settings, catalog: c === 1 ? catalog : undefined }, inv, ctx.defs);
         if (c === 0 && !require && !opts.onlySubclass && !opts.onlyExotic && found[0]) setBest(found[0]);
         if (c === 0 && require && !best) runSearch({ characterId: ctx.characterId, goal, top: 1, pinnedWeapons: [], settings }, inv, ctx.defs).then(f => f[0] && setBest(f[0]));
         if (c === 1) { setAlts(found); setAltIdx(0); }
         setSpecs(s => { const n = [...s]; n[c] = found[0] ?? null; return n; });
-        if (c === 1 && incoming) { setSpecs(s => { const n = [...s]; n[incoming.col] = { ...incoming.spec, goal }; return n; }); setFromWs(f => { const n = [...f] as [boolean, boolean]; n[incoming.col] = true; return n; }); onIncomingUsed?.(); }
-        else setFromWs(f => { const n = [...f] as [boolean, boolean]; n[c] = false; return n; });
+        setFromWs(f => { const n = [...f] as [boolean, boolean]; n[c] = false; return n; });
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));
       } finally {
@@ -99,7 +108,21 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
       }
     };
     await Promise.all(cols.map(one));
+    if (incoming) {
+      setSpecs(s => { const n = [...s]; n[incoming.col] = { ...incoming.spec, goal }; return n; });
+      setFromWs(f => { const n = [...f] as [boolean, boolean]; n[incoming.col] = true; return n; });
+      if (incoming.col === 1) setShared(false);
+      onIncomingUsed?.();
+    }
   };
+  useEffect(() => {
+    if (!shared || !max || max.partial || fromWs[1]) return;
+    const role = max.kit.find(k => k.goal === goal)?.role;
+    const p = max.possible.find(x => x.role === role);
+    setSpecs(s => { const n = [...s]; n[1] = p?.view.spec ?? null; return n; });
+    setAlts(p ? [p.view.spec] : []); setAltIdx(0);
+    setBusy(b => [b[0], false]);
+  }, [shared, max, goal, fromWs]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { search([0, 1]); }, [ctx, goal, pinned.join(","), JSON.stringify(settings.targets), settings.style, settings.tune]);
 
@@ -245,8 +268,8 @@ function Farm({ v }: { v: BuildView }) {
       <div className="text-xs font-semibold uppercase tracking-[0.14em] text-exotic">To farm</div>
       {need.map(i => { const src = standInSource(i.id); return (
         <div key={i.id} className="flex items-center gap-3 text-sm">
-          <GearIcon src={iconForItem(i)} size={36} exotic title={i.name} />
-          <div><div className="font-medium">{src?.acquired ? `Pull ${i.name} from Collections` : `Get ${i.name}`}</div><div className="text-xs text-ink-dim">{src?.source || "Not in your collection yet"}</div></div>
+          <GearIcon src={iconForItem(i)} size={36} exotic={i.exotic} title={i.name} />
+          <div><div className="font-medium">{src?.acquired ? `Pull ${i.name} from Collections` : `Get ${farmName(i, v)}`}</div><div className="text-xs text-ink-dim">{src?.source || "Not in your collection yet"}</div></div>
         </div>
       ); })}
       {need.some(i => i.kind === "armor") && <p className="text-xs text-ink-dim">Armor you don't own is rated with the stats of your best exotic in that slot.</p>}

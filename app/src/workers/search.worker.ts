@@ -31,7 +31,7 @@ export interface SearchRequest {
 export interface SearchResponse { id: number; specs?: BuildSpec[]; max?: MaxHunter; error?: string; ms: number }
 export interface MaxRequest { id: number; kind: "max"; inv: Inventory; defs: ItemDef[]; characterId: string; catalog: CatalogEntry[]; withBest: boolean }
 
-let cache: { inv: Inventory; defs: ItemDef[]; map: Map<number, ItemDef>; ctx?: Ctx; cid?: string; all?: Inventory; allCtx?: Ctx } | null = null;
+let cache: { inv: Inventory; defs: ItemDef[]; map: Map<number, ItemDef>; ctx?: Ctx; cid?: string; all?: Inventory; allCtx?: Ctx; allSize?: number } | null = null;
 
 self.onmessage = async (e: MessageEvent<SearchRequest | MaxRequest>) => {
   await clarityReady;
@@ -49,10 +49,10 @@ self.onmessage = async (e: MessageEvent<SearchRequest | MaxRequest>) => {
   }
   const r = e.data as SearchRequest;
   try {
-    if (!cache || cache.inv !== r.inv) cache = { inv: r.inv, defs: r.defs, map: new Map(r.defs.map(d => [d.hash, d])) };
+    if (!cache || cache.inv !== r.inv || cache.defs.length !== r.defs.length) cache = { inv: r.inv, defs: r.defs, map: new Map(r.defs.map(d => [d.hash, d])) };
     let inv = r.inv;
     if (r.catalog?.length) {
-      if (!cache.all || cache.cid !== r.characterId) { cache.all = withCatalog(r.inv, h => cache!.map.get(h), r.catalog, r.characterId).inv; cache.allCtx = undefined; cache.ctx = undefined; cache.cid = r.characterId; }
+      if (!cache.all || cache.cid !== r.characterId || cache.allSize !== r.catalog.length) { cache.allSize = r.catalog.length; cache.all = withCatalog(r.inv, h => cache!.map.get(h), r.catalog, r.characterId).inv; cache.allCtx = undefined; cache.ctx = undefined; cache.cid = r.characterId; }
       inv = cache.all;
     }
     const builds = searchBuilds({

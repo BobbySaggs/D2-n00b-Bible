@@ -1,6 +1,6 @@
 import type { ItemDef } from "../bungie/defs";
 import type { CatalogEntry } from "../bungie/catalog";
-import type { Inventory } from "../model/inventory";
+import type { Inventory, Item } from "../model/inventory";
 import { STAT_LABEL, STAT_ORDER, type StatKey } from "../bungie/config";
 import type { Goal } from "./loops";
 import { searchBuilds } from "./builds";
@@ -12,6 +12,13 @@ import { withCatalog, isStandIn, standInSource } from "./catalog";
 // and Builds (your best builds against the best Steeped can make with every exotic in the game).
 export const POWER_CAP = 550;
 const WEIGHT = { power: 0.4, gear: 0.3, builds: 0.3 };
+
+// What to farm, said the way you'd ask for it: a legendary comes with the roll that makes it worth chasing.
+export function farmName(it: Item, view: BuildView): string {
+  if (it.kind !== "weapon" || it.exotic) return it.name;
+  const perks = (view.spec.weaponPerks?.[it.id] ?? []).filter(Boolean);
+  return `${it.name} (Tier 5${perks.length ? `, ${perks.join(" + ")}` : ""})`;
+}
 
 export interface PathStep { what: string; why: string; gain: number; kind: "power" | "gear" | "farm" }
 export type Confidence = "Proven" | "Mostly proven" | "Best guess";
@@ -124,7 +131,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
     const gain = ((view.score - mine.score) / view.score) * (WEIGHT.builds * 100) / Math.max(1, best.length);
     for (const it of missing) {
       const src = standInSource(it.id);
-      path.push({ what: src?.acquired ? `Pull ${it.name} from Collections` : `Get ${it.name}`, why: `Raises your ${role.toLowerCase()} build${src?.source && !src.acquired ? `. Source: ${src.source}` : ""}`, gain: gain / missing.length, kind: "farm" });
+      path.push({ what: src?.acquired ? `Pull ${it.name} from Collections` : `Get ${farmName(it, view)}`, why: `Raises your ${role.toLowerCase()} build${src?.source && !src.acquired ? `. Source: ${src.source}` : ""}`, gain: gain / missing.length, kind: "farm" });
     }
   });
 
@@ -192,7 +199,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
     const steps: Possible["steps"] = [];
     for (const it of [...perfected.weapons.filter(Boolean).map(w => w!.item), ...Object.values(perfected.armor?.pieces ?? {}).map(p => p.item)].filter(isStandIn)) {
       const src = standInSource(it.id);
-      steps.push({ kind: "get", what: src?.acquired ? `Pull ${it.name} from Collections` : `Get ${it.name}`, why: src?.source ? `Source: ${src.source}` : "Not in your collection yet" });
+      steps.push({ kind: "get", what: src?.acquired ? `Pull ${it.name} from Collections` : `Get ${farmName(it, perfected)}`, why: src?.source ? `Source: ${src.source}` : "Not in your collection yet" });
     }
     const notMw = Object.values(perfected.armor?.pieces ?? {}).filter(p => !p.item.masterworked && !isStandIn(p.item)).map(p => p.item.name);
     if (notMw.length) steps.push({ kind: "gear", what: `Masterwork ${notMw.join(", ")}`, why: "Full stats on every piece" });
@@ -214,7 +221,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
     if (short.length) targets.push({ title: `Armor with high ${short.map(k => STAT_LABEL[k]).join(" or ")} rolls`, why: `${short.map(k => `${STAT_LABEL[k]} ${main.stats[k]}`).join(", ")} in your best build even when perfected. Keep Tier 5 pieces that roll high here.`, where: "Any Grade A+ activity", tag: "Stats" });
   }
   for (const p of path.filter(x => x.what.startsWith("Upgrade "))) targets.push({ title: p.what.replace("Upgrade ", ""), why: p.why, where: "Weapon Tier Upgrading", tag: "Upgrade" });
-  for (const p of path.filter(x => x.kind === "farm")) targets.push({ title: p.what.replace(/^(Get|Pull) /, "").replace(/ from Collections$/, ""), why: p.why, where: p.why.split("Source: ")[1] ?? "Collections", tag: "Exotic" });
+  for (const p of path.filter(x => x.kind === "farm")) targets.push({ title: p.what.replace(/^(Get|Pull) /, "").replace(/ from Collections$/, ""), why: p.why, where: p.why.split("Source: ")[1] ?? "Collections", tag: /\(Tier 5/.test(p.what) ? "God roll" : "Exotic" });
 
   const pct = 100 * (WEIGHT.power * powerPct + WEIGHT.gear * gearPct + WEIGHT.builds * buildsPct);
   return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now, possible, targets };

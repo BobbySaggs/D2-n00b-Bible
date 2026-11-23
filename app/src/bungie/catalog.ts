@@ -10,8 +10,15 @@ export interface CatalogEntry {
   collectible: number;
   source: string; // Bungie's "Source: ..." line
   acquired: boolean; // unlocked in your Collections (you can pull it from there if you dismantled it)
+  // Legendary weapons that can drop now (with gear tiers): every perk each socket can roll, by socket index.
+  rolls?: number[][];
 }
 
+// The marker on weapons that drop with gear tiers today. Older guns without it can't drop at Tier 5 any more.
+export const TIER_SOCKET = "weapon_tiering.plugs.mods.enhancers";
+const NO_SOURCE = /cannot be reacquired|^$/i;
+
+type Cached = { version: string; entries: CatalogEntry[]; catalysts?: CatalystDef[]; legendary?: boolean };
 const store = typeof indexedDB !== "undefined" ? createStore("steeped-catalog", "v1") : null;
 let CATALOG: CatalogEntry[] = [];
 export const getCatalog = () => CATALOG;
@@ -81,12 +88,12 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
   const m: any = await api("/Destiny2/Manifest/");
   const version = String(m?.version ?? "");
   if (store) {
-    const cached = await get<{ version: string; entries: CatalogEntry[]; catalysts?: CatalystDef[] }>("catalog", store).catch(() => undefined);
+    const cached = await get<Cached>("catalog", store).catch(() => undefined);
     if (cached && cached.version === version && cached.entries.length && cached.catalysts) {
       CATALYST_DEFS = cached.catalysts;
       CATALOG = withStates(cached.entries, profile);
       await loadDefs([...CATALOG.map(e => e.hash)]);
-      await loadDefs(plugsOf(CATALOG));
+      await loadDefs([...plugsOf(CATALOG), ...CATALOG.flatMap(e => (e.rolls ?? []).flat())]);
       return CATALOG;
     }
   }
@@ -105,7 +112,57 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
     return d && d.tier === 6 && (d.itemType === 3 || (d.itemType === 2 && d.cls === 1));
   });
   await loadDefs(plugsOf(entries), (d, t) => progress?.(`Reading exotic perks (${d} of ${t})`));
-  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS }, store).catch(() => undefined);
+  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS } satisfies Cached, store).catch(() => undefined);
+  CATALOG = withStates(entries, profile);
+  return CATALOG;
+}
+
+// Collections > Weapons (the legendary side: Primary, Special, Heavy), skipping ornaments.
+function legendaryCollectibles(nodes: Record<string, any>): number[] {
+  const name = (h: number | string) => String(nodes[h]?.displayProperties?.name ?? "").trim();
+  const kids = (h: number | string) => (nodes[h]?.children?.presentationNodes ?? []).map((c: any) => name(c.presentationNodeHash));
+  const roots = Object.keys(nodes).filter(h => /^weapons$/i.test(name(h)) && kids(h).some((k: string) => /^(primary|special|heavy)$/i.test(k)));
+  const out = new Set<number>();
+  const walk = (h: number | string, depth: number) => {
+    const n = nodes[h];
+    if (!n || depth > 6 || /ornament/i.test(name(h))) return;
+    for (const c of n.children?.collectibles ?? []) out.add(c.collectibleHash);
+    for (const c of n.children?.presentationNodes ?? []) walk(c.presentationNodeHash, depth + 1);
+  };
+  for (const r of roots) walk(r, 0);
+  return [...out];
+}
+
+// Adds every legendary weapon that can drop today, with every perk it can roll, so "Best possible" can find the
+// god roll you don't have yet. Runs after the app is up (it reads a few thousand definitions the first time,
+// then nothing until the next Destiny update). Returns the full catalog, or null when it was already there.
+export async function extendCatalog(profile: any, progress?: (msg: string) => void): Promise<CatalogEntry[] | null> {
+  const m: any = await api("/Destiny2/Manifest/");
+  const version = String(m?.version ?? "");
+  const cached = store ? await get<Cached>("catalog", store).catch(() => undefined) : undefined;
+  if (cached?.legendary && cached.version === version) return null;
+  const paths = m?.jsonWorldComponentContentPaths?.en ?? {};
+  if (!paths.DestinyCollectibleDefinition || !paths.DestinyPresentationNodeDefinition || !paths.DestinyPlugSetDefinition) return null;
+  progress?.("Reading every legendary weapon (once per Destiny update)");
+  const [cols, nodes, sets] = await Promise.all([table(paths.DestinyCollectibleDefinition), table(paths.DestinyPresentationNodeDefinition), table(paths.DestinyPlugSetDefinition)]);
+  let legs: CatalogEntry[] = legendaryCollectibles(nodes).map(c => cols[c]).filter(Boolean).map((c: any) => {
+    const src = String(c.sourceString ?? "").trim();
+    return { hash: c.itemHash, collectible: c.hash, source: NO_SOURCE.test(src) ? "Random world and activity drop" : src.replace(/^Source:\s*/i, ""), acquired: false };
+  }).filter(e => e.hash);
+  await loadDefs(legs.map(e => e.hash), (d, t) => progress?.(`Reading legendary weapons (${d} of ${t})`));
+  legs = legs.filter(e => { const d = def(e.hash); return d && d.tier === 5 && d.itemType === 3; });
+  await loadDefs(plugsOf(legs));
+  legs = legs.filter(e => def(e.hash)!.sockets.some(s => def(s.init)?.plugCat === TIER_SOCKET));
+  for (const e of legs) {
+    e.rolls = def(e.hash)!.sockets.map(s => {
+      const items: any[] = s.random ? sets[s.random]?.reusablePlugItems ?? [] : [];
+      return [...new Set(items.filter(p => p.currentlyCanRoll !== false).map(p => Number(p.plugItemHash)))];
+    });
+  }
+  await loadDefs(legs.flatMap(e => e.rolls!.flat()), (d, t) => progress?.(`Reading weapon perks (${d} of ${t})`));
+  const base = (cached?.version === version ? cached.entries : CATALOG).filter(e => !e.rolls);
+  const entries = [...base, ...legs];
+  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS, legendary: true } satisfies Cached, store).catch(() => undefined);
   CATALOG = withStates(entries, profile);
   return CATALOG;
 }
@@ -118,7 +175,7 @@ function withStates(entries: CatalogEntry[], profile: any): CatalogEntry[] {
     for (const [h, v] of Object.entries(c.collectibles ?? {})) if (!(h in states)) states[h] = v as any;
   return entries.map(e => {
     const st = (states[e.collectible] as any)?.state;
-    return { ...e, acquired: st !== undefined && (st & 1) === 0 };
+    return { ...e, acquired: !e.rolls && st !== undefined && (st & 1) === 0 }; // random-roll legendaries can't be pulled
   });
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

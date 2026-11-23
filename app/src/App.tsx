@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { finishSignIn, getToken, signOut } from "./bungie/auth";
 import { BungieError } from "./bungie/api";
+import { extendCatalog } from "./bungie/catalog";
 import { loadEverything, makeSnapshot, type LoadResult } from "./bungie/load";
 import { downloadSnapshot } from "./snapshot";
 import { SignIn } from "./screens/SignIn";
@@ -35,6 +36,7 @@ function ago(t: number, now: number) {
 
 export default function App() {
   const [st, setSt] = useState<State>({ at: "start" });
+  const [bg, setBg] = useState(""); // background work, such as reading every legendary weapon
   const [now, setNow] = useState(Date.now());
   // A link can open a screen directly (…/beta/#builder).
   const [screen, setScreen] = useState<Screen>(() => { const h = location.hash.slice(1) as Screen; const alias: Record<string, Screen> = { path: "journey", builder: "builds" }; const s = alias[h] ?? h; return (["home", "builds", "journey", "inventory", ...ADVANCED] as string[]).includes(s) ? s : "home"; });
@@ -47,6 +49,11 @@ export default function App() {
     try {
       const data = await loadEverything(msg => setSt({ at: "loading", msg }));
       setSt({ at: "ready", data });
+      // Every legendary weapon that can drop today, for "Best possible". Loads behind the scenes, once per Destiny update.
+      extendCatalog(data.raw, msg => setBg(msg)).then(full => {
+        setBg("");
+        if (full) setSt(s => (s.at === "ready" && s.data === data ? { at: "ready", data: { ...data, catalog: full } } : s));
+      }, () => setBg(""));
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e);
       setSt(e instanceof BungieError && e.signedOut ? { at: "signedOut", error: err } : { at: "error", error: err });
@@ -69,6 +76,7 @@ export default function App() {
           {st.at === "ready" && <div className="text-sm text-ink-dim">{st.data.inventory.account.name}</div>}
         </div>
         <div className="flex items-center gap-2">
+          {st.at === "ready" && bg && <span data-testid="bg-work" className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs text-accent-hi"><span className="size-2 animate-pulse rounded-full bg-accent-hi" />{bg}</span>}
           {st.at === "ready" && (
             <span data-testid="live-badge" className="inline-flex items-center gap-2 rounded-full bg-good/12 px-3 py-1 text-xs text-good">
               <span className="size-2 rounded-full bg-good" /> Live from Bungie, updated {ago(st.data.inventory.loadedAt, now)}

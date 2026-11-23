@@ -157,6 +157,7 @@ function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
   // Higher gear tiers carry enhanced perks, barrels and magazines and a bigger masterwork bonus.
   s += 0.3 * w.tier;
   s += w.item.power / 10000; // last tiebreak: higher Power copies (no infusing needed)
+  if (w.item.owner === "catalog") s -= 0.05; // a gun you'd have to farm must beat yours, not tie it
   return s;
 }
 
@@ -186,7 +187,9 @@ export function distinct(weapons: Weapon[], pinned: Set<string>): Weapon[] {
   for (const w of weapons) {
     const sig = [w.item.slot, w.element, w.type, w.item.exotic ? w.item.name : "", Math.round(w.duel ?? 0), ...w.base.map(k => k.name), ...w.cols.map(c => c.options.map(o => o.name).sort().join("/"))].join("|");
     const cur = best.get(sig);
-    if (!cur || w.tier > cur.tier || (w.tier === cur.tier && w.item.power > cur.item.power)) best.set(sig, w);
+    // Higher tier wins; on a tie, a gun you own beats one you'd have to farm, then higher Power.
+    const farm = (x: Weapon) => (x.item.owner === "catalog" ? 1 : 0);
+    if (!cur || w.tier > cur.tier || (w.tier === cur.tier && (farm(w) < farm(cur) || (farm(w) === farm(cur) && w.item.power > cur.item.power)))) best.set(sig, w);
   }
   const out = [...best.values(), ...weapons.filter(w => pinned.has(w.item.id) && !best.has(w.item.id))];
   const uniq = [...new Set(out)];
