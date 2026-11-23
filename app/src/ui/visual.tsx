@@ -122,3 +122,14 @@ export function EmblemBanner({ bg, children }: { bg?: string; children: ReactNod
 }
 
 export const gradeClass = (g: string) => g === "Great" ? "bg-good/20 text-good border-good/40" : g === "Good" ? "bg-accent/25 text-accent-hi border-accent-hi/40" : "bg-warn/15 text-warn border-warn/40";
+
+// The artifact a build runs and its perks, compact, for the build columns.
+export function ArtifactLine({ name, perks = [] }: { name?: string; perks?: string[] }) {
+  if (!name) return null;
+  return (
+    <div className="text-xs" data-testid="artifact-line">
+      <span className="text-ink-dim">Artifact </span><span className="font-medium text-ink">{name}</span>
+      {perks.length > 0 && <div className="mt-0.5 leading-snug text-ink-dim">{perks.join(" · ")}</div>}
+    </div>
+  );
+}

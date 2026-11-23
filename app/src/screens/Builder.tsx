@@ -15,7 +15,7 @@ import { isStandIn, standInSource, withCatalog } from "../engine/catalog";
 import { farmName } from "../engine/maxhunter";
 import { useMax } from "../ui/useMax";
 import { OptionRow, optionsFor, slotKey, tryOptions, type Option, type SlotId } from "./Workshop";
-import { LoadoutGrid, Moment, gridFromView } from "../ui/visual";
+import { ArtifactLine, LoadoutGrid, Moment, gridFromView } from "../ui/visual";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
@@ -363,6 +363,7 @@ function ScoreCard({ title, sub, v, base, busy, action, ref_, onExplain, note }:
           {!busy && r === 100 && !note && <div className="text-xs text-good">The best build Steeped found with your gear.</div>}
           {!busy && note && <div className="text-xs text-accent-hi">{note}</div>}
           <div className="text-sm"><span className="text-ink">{v.spec.subclass}</span> <span className="text-ink-dim">+</span> <span className="text-exotic">{v.spec.exotic || "no exotic"}</span></div>
+          {v.spec.goal !== "trials" && <ArtifactLine name={v.artifact?.name} perks={v.spec.artifactPerks} />}
           <LoadoutFigure v={v} compact />
           <div className="flex flex-wrap gap-2">
             <Badge>{statSum(v)} stat points{base ? <Delta className="ml-1" v={statSum(v) - statSum(base)} /> : null}</Badge>

@@ -9,7 +9,7 @@ import { Button, Card, cn } from "../ui/kit";
 import { Segmented } from "../ui/bits";
 import { useMax } from "../ui/useMax";
 import { GearIcon, iconForItem } from "../ui/gear";
-import { LoadoutGrid, Moment, gradeClass, gridFromView, gridFromWorn } from "../ui/visual";
+import { ArtifactLine, LoadoutGrid, Moment, gradeClass, gridFromView, gridFromWorn } from "../ui/visual";
 import { EquipDialog } from "./EquipDialog";
 import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "../bungie/clarity";
 
@@ -58,10 +58,10 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
       {c && (
         <section className="grid gap-4 md:grid-cols-3" data-testid="compare">
           <Column title="Wearing now" name={c.now ? buildName(c.now.spec) : "Hunter"} grades={c.now?.grades} rating={c.now?.rating} testId="col-now"
-            grid={worn ? <LoadoutGrid {...worn} size={40} /> : null}
+            grid={<>{worn && <LoadoutGrid {...worn} size={40} />}{c.now && <ArtifactLine name={c.now.spec.artifact} perks={c.now.spec.artifactPerks} />}</>}
             foot={<p className="text-xs text-ink-dim">Your starting point</p>} />
           <Column title="Strongest you own" name={buildName(c.own.view.spec)} grades={c.own.grades} rating={100} delta={c.now ? 100 - c.now.rating : undefined} featured testId="col-own"
-            grid={<LoadoutGrid {...gridFromView(c.own.view)} size={40} />}
+            grid={<><LoadoutGrid {...gridFromView(c.own.view)} size={40} /><ArtifactLine name={c.own.view.artifact?.name} perks={c.own.view.spec.artifactPerks} /></>}
             foot={<>
               {c.own.changes.length > 0
                 ? <p className="text-sm text-ink-dim" data-testid="changes">{c.own.changes.slice(0, 3).join(", ")}{c.own.changes.length > 3 && ` and ${c.own.changes.length - 3} more`}</p>
@@ -69,7 +69,7 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
               {c.own.changes.length > 0 && <Button onClick={wear} data-testid="wear-this">Wear this</Button>}
             </>} />
           <Column title="Best possible" name={buildName(c.best.view.spec)} grades={m.partial ? undefined : c.best.grades} rating={m.partial ? undefined : c.best.rating} delta={m.partial ? undefined : c.best.rating - 100} testId="col-best"
-            grid={<LoadoutGrid {...gridFromView(c.best.view)} size={40} />}
+            grid={<><LoadoutGrid {...gridFromView(c.best.view)} size={40} /><ArtifactLine name={c.best.view.artifact?.name} perks={c.best.view.spec.artifactPerks} /></>}
             foot={<>
               <p className="text-sm text-ink-dim">{m.partial ? "Checking every exotic and weapon in the game…" : c.best.missing ? `Needs ${c.best.missing} piece${c.best.missing > 1 ? "s" : ""} you don't have.` : c.best.rating > 100 ? "Your own gear, fully masterworked." : "Nothing in the game beats it yet."}</p>
               <Button variant="ghost" onClick={() => onGo("builds")}>See the build</Button>
