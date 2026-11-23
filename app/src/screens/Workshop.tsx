@@ -19,10 +19,10 @@ import { GOALS, HowItWorks, HowToPlay, PointsPanel, word } from "./Builder";
 // The Workshop: you pick, Steeped explains. Click a slot and every option you own for it is tried in your build
 // and ranked by what it really does, with where each claim comes from.
 
-type SlotId =
+export type SlotId =
   | { kind: "super" | "grenade" | "melee" | "classAbility" | "exotic" | "artifact" | "subclass" }
   | { kind: "aspect" | "fragment" | "weapon" | "perk"; i: number };
-const slotKey = (s: SlotId) => ("i" in s ? `${s.kind}${s.i}` : s.kind);
+export const slotKey = (s: SlotId) => ("i" in s ? `${s.kind}${s.i}` : s.kind);
 
 type Source = "checked" | "bungie" | "frame" | "unrated" | "stats";
 const SOURCE: Record<Source, { label: string; tone: "good" | "neutral" | "warn"; tip: string }> = {
@@ -33,7 +33,7 @@ const SOURCE: Record<Source, { label: string; tone: "good" | "neutral" | "warn";
   stats: { label: "Bungie's stats", tone: "good", tip: "Rated for duels from this roll's own stats from Bungie (range, handling, stability, aim assist, airborne, reload). How much each stat matters per weapon type is Steeped's judgment." },
 };
 
-interface Option {
+export interface Option {
   key: string;
   label: string;
   icon?: string;
@@ -45,7 +45,7 @@ interface Option {
   where?: string;
   current: boolean;
 }
-interface Tried { o: Option; v: BuildView; gained: string[]; lost: string[]; nowIdle: string[]; nowFed: string[] }
+export interface Tried { o: Option; v: BuildView; gained: string[]; lost: string[]; nowIdle: string[]; nowFed: string[] }
 
 type Ref = { score: number; loop: number; stat: number };
 const BEST = new Map<string, BuildSpec | null>();
@@ -96,21 +96,7 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
   }, [bestView, now, view]);
 
   const options = useMemo(() => (ctx && view ? optionsFor(sel, view, ctx) : []), [sel, view, ctx]);
-  const tried = useMemo<Tried[]>(() => {
-    if (!ctx || !view) return [];
-    const lockArmor = Object.fromEntries(ARMOR_SLOTS.map(s => [s, view.armor?.pieces[s]?.item.id]).filter(([, id]) => id)) as Partial<Record<Slot, string>>;
-    const combos = new Set(view.loops.combos.map(c => c.name)), idle = new Set(view.loops.unfed.map(u => u.name));
-    return options.map(o => {
-      const next = o.apply(view.spec);
-      const v = evaluate({ ...next, goal, armorLocks: o.quick ? lockArmor : next.armorLocks }, ctx, settings);
-      const after = new Set(v.loops.combos.map(c => c.name)), afterIdle = new Set(v.loops.unfed.map(u => u.name));
-      return {
-        o, v,
-        gained: [...after].filter(c => !combos.has(c)), lost: [...combos].filter(c => !after.has(c)),
-        nowIdle: [...afterIdle].filter(n => !idle.has(n)), nowFed: [...idle].filter(n => !afterIdle.has(n) && namesOf(v).has(n)),
-      };
-    }).sort((a, b) => b.v.score - a.v.score);
-  }, [options, view, ctx, goal, settingsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tried = useMemo<Tried[]>(() => (ctx && view ? tryOptions(options, view, ctx, goal, settings) : []), [options, view, ctx, goal, settingsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!hunter || !ctx) return <Card>The Workshop knows Hunters first.</Card>;
   if (!spec || !view) return <Card><Spinner label="Reading your build" /></Card>;
@@ -312,7 +298,23 @@ function SaveBox({ onSave }: { onSave: (n: string) => void }) {
 const bungieText = (name: string) => [...DEFS.values()].find(d => d.name === name && d.desc && /hunter|shared|fragments|trinkets|totems|supers|grenades|melee|class_abilities|aspects/.test(d.plugCat))?.desc;
 const whereOf = (it: Item, cid: string) => (it.owner === "vault" ? "in your vault" : it.owner === cid ? "on your Hunter" : "on another character");
 
-function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
+// Each option tried in the build and ranked by what it really does (score, combos it starts or breaks).
+export function tryOptions(options: Option[], view: BuildView, ctx: Ctx, goal: Goal, settings: Settings): Tried[] {
+  const lockArmor = Object.fromEntries(ARMOR_SLOTS.map(s => [s, view.armor?.pieces[s]?.item.id]).filter(([, id]) => id)) as Partial<Record<Slot, string>>;
+  const combos = new Set(view.loops.combos.map(c => c.name)), idle = new Set(view.loops.unfed.map(u => u.name));
+  return options.map(o => {
+    const next = o.apply(view.spec);
+    const v = evaluate({ ...next, goal, armorLocks: o.quick ? lockArmor : next.armorLocks }, ctx, settings);
+    const after = new Set(v.loops.combos.map(c => c.name)), afterIdle = new Set(v.loops.unfed.map(u => u.name));
+    return {
+      o, v,
+      gained: [...after].filter(c => !combos.has(c)), lost: [...combos].filter(c => !after.has(c)),
+      nowIdle: [...afterIdle].filter(n => !idle.has(n)), nowFed: [...idle].filter(n => !afterIdle.has(n) && namesOf(v).has(n)),
+    };
+  }).sort((a, b) => b.v.score - a.v.score);
+}
+
+export function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
   const s = v.spec, sub = s.subclass, cid = ctx.characterId;
   const kit = ctx.kit.get(sub) ?? new Set<string>();
   const ability = (kind: K["kind"], cur: string, set: (n: string) => Partial<BuildSpec>): Option[] =>
@@ -400,7 +402,7 @@ function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
   return [];
 }
 
-function OptionRow({ t, base, r, onPick }: { t: Tried; base: BuildView; r: (v: BuildView) => number; onPick: () => void }) {
+export function OptionRow({ t, base, r, onPick }: { t: Tried; base: BuildView; r: (v: BuildView) => number; onPick: () => void }) {
   const d = r(t.v) - r(base);
   const src = SOURCE[t.o.source];
   return (

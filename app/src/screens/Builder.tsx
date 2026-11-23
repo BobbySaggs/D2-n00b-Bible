@@ -14,6 +14,7 @@ import type { CatalogEntry } from "../bungie/catalog";
 import { isStandIn, standInSource, withCatalog } from "../engine/catalog";
 import { farmName } from "../engine/maxhunter";
 import { useMax } from "../ui/useMax";
+import { OptionRow, optionsFor, slotKey, tryOptions, type Option, type SlotId } from "./Workshop";
 import { LoadoutGrid, Moment, gridFromView } from "../ui/visual";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
@@ -139,6 +140,21 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
   const full = useMemo(() => specs.map(s => (s && ctx && settings.mw === "asIs" ? evaluate({ ...s, goal }, ctx, { ...settings, mw: "full" }) : null)), [specs, ctx, goal, settings]);
 
   if (!hunter || !ctx) return <Moment pose="ghost" title="No Hunter on this account">Steeped builds for Hunters. Titan and Warlock are next.</Moment>;
+  // "Use this" from Try other options: the change shows right away in Best from what you own, and it's locked in
+  // the menu so the next "Build it" (and Best possible) keeps it.
+  const use = (sel: SlotId, o: Option, next: BuildSpec) => {
+    setSpecs(s => { const n = [...s]; n[0] = next; return n; });
+    if (sel.kind === "weapon") { const slot = (["kinetic", "energy", "power"] as const)[sel.i]; setPinned(p => [...p.filter(id => ctx.inv.items.find(i => i.id === id)?.slot !== slot), o.key]); return; }
+    setReq(r => {
+      const n: Require = { ...r, subclass: next.subclass };
+      if (sel.kind === "super" || sel.kind === "grenade" || sel.kind === "melee" || sel.kind === "classAbility" || sel.kind === "exotic") n[sel.kind] = o.label;
+      if (sel.kind === "aspect") n.aspects = [...new Set([...(r.aspects ?? []).filter(a => next.aspects.includes(a)), o.label])].slice(0, 2);
+      if (sel.kind === "fragment") n.fragments = [...new Set([...(r.fragments ?? []).filter(f => next.fragments.includes(f)), o.label])];
+      if (sel.kind === "artifact") { n.artifact = o.label; n.artifactPerks = undefined; }
+      if (sel.kind === "perk") n.artifactPerks = [...new Set([...(r.artifactPerks ?? []), o.label])].slice(0, 2);
+      return n;
+    });
+  };
   const beats = views[1] && ref ? Math.round((100 * views[1].score) / ref.score) - 100 : 0;
   const edit = (c: Col, patch: Partial<BuildSpec>) => setSpecs(s => { const n = [...s]; if (n[c]) n[c] = { ...n[c]!, ...patch }; return n; });
 
@@ -152,7 +168,7 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
         <Segmented label="What are you building for?" value={goal} options={GOALS} onChange={setGoal} />
       </section>
 
-      <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[0] || busy[1]} onApply={r => search([0, 1], { require: r })} pinned={pinned} setPinned={setPinned} />
+      <BuildAround ctx={ctx} req={req} setReq={setReq} busy={busy[0]} onApply={r => search([0, 1], { require: r })} pinned={pinned} setPinned={setPinned} />
 
       <details className="rounded-2xl border border-line bg-panel/60 p-3 text-sm">
         <summary className="cursor-pointer text-ink-dim">More options: stat targets, stat style, tuning mods</summary>
@@ -210,6 +226,8 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
             {alts.length > 1 && <Button size="sm" variant="ghost" disabled={busy[1]} onClick={() => { const i = (altIdx + 1) % alts.length; setAltIdx(i); setSpecs(s => { const n = [...s]; n[1] = alts[i]; return n; }); }}>Next ({altIdx + 1} of {alts.length})</Button>}
           </div>} />
       </section>
+
+      {views[0] && !busy[0] && <Explore v={views[0]} ctx={ctx} goal={goal} settings={settings} rate={x => (ref ? Math.round((100 * x.score) / ref.score) : 0)} onUse={use} />}
 
       {explain && <RatingHelp onClose={() => setExplain(false)} best={bestView} />}
 
@@ -753,26 +771,26 @@ function BuildAround({ ctx, req, setReq, busy, onApply, pinned, setPinned }: { c
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {sel("Subclass", req.subclass, subs, v => set({ subclass: v as Subclass }))}
         {sel("Exotic armor", req.exotic, exotics, v => set({ exotic: v }), n => (unowned.has(n) ? " (farm)" : ""))}
-        {gunSel("Kinetic weapon", "kinetic")}
-        {gunSel("Energy weapon", "energy")}
-        {gunSel("Heavy weapon", "power")}
+        {sel("Aspect", asp[0], opts("aspect").map(k => k.name), v => set({ aspects: [v, asp[1]].filter(Boolean) as string[] }))}
+        {sel("Second aspect", asp[1], opts("aspect").map(k => k.name).filter(n => n !== asp[0]), v => set({ aspects: [asp[0], v].filter(Boolean) as string[] }))}
         {sel("Super", req.super, opts("super").map(k => k.name), v => set({ super: v }))}
         {sel("Grenade", req.grenade, opts("grenade").map(k => k.name), v => set({ grenade: v }))}
         {sel("Melee", req.melee, opts("melee").map(k => k.name), v => set({ melee: v }))}
+        {sel("Class ability", req.classAbility, opts("classAbility").map(k => k.name), v => set({ classAbility: v }))}
+        {gunSel("Kinetic weapon", "kinetic")}
+        {gunSel("Energy weapon", "energy")}
+        {gunSel("Heavy weapon", "power")}
+        {sel("Artifact", req.artifact, ctx.artifacts.map(a => a.name), v => set({ artifact: v, artifactPerks: (req.artifactPerks ?? []).filter(p => !v || ctx.artifacts.find(a => a.name === v)?.sockets.some(s => s.options.some(o => o.name === p))) }))}
       </div>
       {open && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {sel("Class ability", req.classAbility, opts("classAbility").map(k => k.name), v => set({ classAbility: v }))}
-          {sel("Aspect", asp[0], opts("aspect").map(k => k.name), v => set({ aspects: [v, asp[1]].filter(Boolean) as string[] }))}
-          {sel("Second aspect", asp[1], opts("aspect").map(k => k.name).filter(n => n !== asp[0]), v => set({ aspects: [asp[0], v].filter(Boolean) as string[] }))}
-          {sel("Artifact", req.artifact, ctx.artifacts.map(a => a.name), v => set({ artifact: v, artifactPerks: (req.artifactPerks ?? []).filter(p => !v || ctx.artifacts.find(a => a.name === v)?.sockets.some(s => s.options.some(o => o.name === p))) }))}
           {sel("Artifact perk", req.artifactPerks?.[0], perkNames, v => set({ artifactPerks: [v, req.artifactPerks?.[1]].filter(Boolean) as string[] }))}
           {sel("Second perk", req.artifactPerks?.[1], perkNames.filter(n => n !== req.artifactPerks?.[0]), v => set({ artifactPerks: [req.artifactPerks?.[0], v].filter(Boolean) as string[] }))}
         </div>
       )}
       <div className="flex flex-wrap items-center gap-3">
         <Button disabled={busy} onClick={() => onApply(req)}>{busy ? "Building…" : "Build it"}</Button>
-        <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? "Fewer choices" : "More choices: class ability, aspects, artifact"}</Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? "Fewer choices" : "Pick artifact perks"}</Button>
       </div>
     </Card>
   );
@@ -915,5 +933,56 @@ function Stronger({ v, full, ctx }: { v: BuildView; full: BuildView | null; ctx:
         {infuse.map(w => <li key={w!.item.id}>Infuse {w!.item.name} (Power {w!.item.power}) up toward {ctx.light}.</li>)}
       </ol>
     </div>
+  );
+}
+
+// Try other options: pick any piece of your best build and see every alternative you own, ranked in that build.
+function Explore({ v, ctx, goal, settings, rate, onUse }: { v: BuildView; ctx: Ctx; goal: Goal; settings: Settings; rate: (v: BuildView) => number; onUse: (sel: SlotId, o: Option, next: BuildSpec) => void }) {
+  const [sel, setSel] = useState<SlotId | null>(null);
+  const s = v.spec;
+  const name = (id: string) => ctx.inv.items.find(i => i.id === id)?.name ?? "Empty";
+  const slots: { id: SlotId; label: string; value: string }[] = [
+    { id: { kind: "aspect", i: 0 }, label: "Aspect", value: s.aspects[0] ?? "Empty" },
+    { id: { kind: "aspect", i: 1 }, label: "Aspect", value: s.aspects[1] ?? "Empty" },
+    { id: { kind: "artifact" }, label: "Artifact", value: v.artifact?.name ?? "None" },
+    { id: { kind: "super" }, label: "Super", value: s.super },
+    { id: { kind: "grenade" }, label: "Grenade", value: s.grenade },
+    { id: { kind: "melee" }, label: "Melee", value: s.melee },
+    { id: { kind: "classAbility" }, label: "Class ability", value: s.classAbility },
+    { id: { kind: "exotic" }, label: "Exotic", value: s.exotic },
+    ...(["Kinetic", "Energy", "Heavy"] as const).map((l, i) => ({ id: { kind: "weapon", i } as SlotId, label: l, value: name(s.weapons[i]) })),
+    ...s.fragments.map((f, i) => ({ id: { kind: "fragment", i } as SlotId, label: "Fragment", value: f })),
+  ];
+  // Only gear you own here: this tunes the build you can wear tonight.
+  const options = useMemo(() => (sel ? optionsFor(sel, v, ctx).filter(o => !o.key.startsWith("cat:") && !(sel.kind === "exotic" && !ctx.pieces.some(p => p.item.name === o.key && !isStandIn(p.item)))) : []), [sel, v, ctx]);
+  const tried = useMemo(() => (sel ? tryOptions(options, v, ctx, goal, settings) : []), [options, v, ctx, goal, settings, sel]);
+  const [all, setAll] = useState(false);
+  const shown = all ? tried : tried.slice(0, 6);
+  return (
+    <Card className="space-y-4 p-5" data-testid="explore">
+      <div>
+        <h3 className="font-display text-xl font-semibold">Try other options</h3>
+        <p className="text-sm text-ink-dim">Tap any piece of your best build to see everything you own for it, ranked in this build. "Use this" swaps it in and locks it.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {slots.map(x => (
+          <button key={slotKey(x.id)} type="button" data-testid={`explore-${slotKey(x.id)}`} onClick={() => { setSel(sel && slotKey(sel) === slotKey(x.id) ? null : x.id); setAll(false); }}
+            className={cn("rounded-xl border px-3 py-1.5 text-left text-sm", sel && slotKey(sel) === slotKey(x.id) ? "border-accent-hi bg-accent/25" : "border-line bg-panel-2 hover:border-accent/60")}>
+            <div className="text-[11px] uppercase tracking-wide text-ink-dim">{x.label}</div>
+            <div className="font-medium">{x.value}</div>
+          </button>
+        ))}
+      </div>
+      {sel && (
+        tried.length <= 1 ? <p className="text-sm text-ink-dim">Nothing else you own fits this slot.</p> : (
+          <>
+            <ul className="space-y-2" data-testid="explore-options">
+              {shown.map(t => <OptionRow key={t.o.key} t={t} base={v} r={rate} onPick={() => onUse(sel, t.o, t.v.spec)} />)}
+            </ul>
+            {tried.length > shown.length && <Button size="sm" variant="ghost" onClick={() => setAll(true)}>Show all {tried.length}</Button>}
+          </>
+        )
+      )}
+    </Card>
   );
 }
