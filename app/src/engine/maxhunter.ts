@@ -39,6 +39,16 @@ export type Grade = "Great" | "Good" | "Needs work";
 export const gradeOf = (ratio: number): Grade => (ratio >= 0.9 ? "Great" : ratio >= 0.75 ? "Good" : "Needs work");
 export interface Possible { role: string; view: BuildView; steps: { what: string; why: string; kind: "get" | "gear" | "power" }[]; sameCore: boolean }
 export interface Target { title: string; why: string; where: string; tag: string }
+type Grades = Record<"clear" | "boss" | "survive", Grade>;
+// Home's three columns for one job: what you wear, the strongest you own (the 100 mark), and the best possible.
+export interface Compare {
+  role: string; goal: Goal;
+  now?: { spec: BuildView["spec"]; rating: number; grades: Grades };
+  own: { view: BuildView; rating: number; grades: Grades; changes: string[] };
+  best: { view: BuildView; rating: number; grades: Grades; missing: number };
+}
+// One line of the farm list: what to get, what it replaces, where it drops and what it adds to your strongest build.
+export interface FarmRow { kind: "farm" | "upgrade" | "power"; title: string; detail?: string; replaces?: string; where: string; gain?: number; role: string }
 export interface MaxHunter {
   pct: number;
   pillars: { power: number; gear: number; builds: number };
@@ -52,6 +62,8 @@ export interface MaxHunter {
   now?: { rating: number; spec: BuildView["spec"]; grades: Record<"clear" | "boss" | "survive", Grade>; notes: Record<"clear" | "boss" | "survive", string> }; // what you're wearing, rated against your best Max Hunter build (same yardstick as the Builder)
   possible: Possible[]; // per role: the strongest Hunter possible (any exotic in the game, everything masterworked) and how to get there
   targets: Target[]; // gear to chase next
+  compare: Compare[];
+  farm: FarmRow[]; // ranked by what each adds to your strongest build
 }
 
 type DefOf = (h: number) => ItemDef | undefined;
@@ -223,8 +235,69 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
   for (const p of path.filter(x => x.what.startsWith("Upgrade "))) targets.push({ title: p.what.replace("Upgrade ", ""), why: p.why, where: "Weapon Tier Upgrading", tag: "Upgrade" });
   for (const p of path.filter(x => x.kind === "farm")) targets.push({ title: p.what.replace(/^(Get|Pull) /, "").replace(/ from Collections$/, ""), why: p.why, where: p.why.split("Source: ")[1] ?? "Collections", tag: /\(Tier 5/.test(p.what) ? "God roll" : "Exotic" });
 
+  // Home: three columns per job and one ranked farm list.
+  const compare: Compare[] = [], farm: FarmRow[] = [];
+  const wctx = ctxFor(wc.inv, defOf, defs, characterId);
+  const gradesOf = (v: BuildView, c: typeof ctx, set: Settings): Grades => Object.fromEntries(jobs.map(([j, g]) => {
+    const e = evaluate({ ...v.spec, goal: g }, c, set);
+    return [j, j === "survive" && e.loops.survives.length ? "Needs work" : gradeOf(e.score / top[j])];
+  })) as Grades;
+  const full: Settings = { ...settings, mw: "full" };
+  const nameOf = (id: string | undefined) => (id ? inv.items.find(i => i.id === id)?.name : undefined);
+  for (const { role, goal, view: own } of kit) {
+    const best = possible.find(p => p.role === role)!.view;
+    const nowV = evaluateNow(ctx, goal, settings);
+    const changes: string[] = [];
+    if (nowV) {
+      const a = nowV.spec, b = own.spec;
+      if (a.subclass !== b.subclass) changes.push(`${b.subclass} instead of ${a.subclass}`);
+      if (a.exotic !== b.exotic) changes.push(`${b.exotic} instead of ${a.exotic}`);
+      for (const k of ["super", "grenade", "melee", "classAbility"] as const) if (a[k] !== b[k]) changes.push(`${b[k]} instead of ${a[k]}`);
+      for (const x of b.aspects) if (!a.aspects.includes(x)) changes.push(`Aspect: ${x}`);
+      if (b.artifact && b.artifact !== a.artifact) changes.push(`Artifact: ${b.artifact}`);
+      b.weapons.forEach((id, i) => { const n = nameOf(id); if (n && n !== nameOf(a.weapons[i])) changes.push(n); });
+      for (const x of b.fragments) if (!a.fragments.includes(x)) changes.push(x);
+    }
+    compare.push({
+      role, goal,
+      now: nowV ? { spec: nowV.spec, rating: Math.min(100, Math.round((100 * nowV.score) / own.score)), grades: gradesOf(nowV, ctx, settings) } : undefined,
+      own: { view: own, rating: 100, grades: gradesOf(own, ctx, settings), changes },
+      best: { view: best, rating: Math.round((100 * best.score) / own.score), grades: gradesOf(best, hasStandIn(best) ? wctx : ctx, full), missing: [...best.weapons.filter(Boolean).map(w => w!.item), ...Object.values(best.armor?.pieces ?? {}).map(p => p.item)].filter(isStandIn).length },
+    });
+    // What each missing piece adds: put just that piece into your strongest build (both fully masterworked).
+    const base = evaluate({ ...own.spec, goal }, wctx, full);
+    const ownArmor = Object.values(own.armor?.pieces ?? {}).map(p => p.item);
+    best.weapons.forEach((w, i) => {
+      if (!w || !isStandIn(w.item)) return;
+      const ws = [...own.spec.weapons]; ws[i] = w.item.id;
+      const v = evaluate({ ...own.spec, goal, weapons: ws, weaponPerks: { ...own.spec.weaponPerks, [w.item.id]: best.spec.weaponPerks?.[w.item.id] ?? [] } }, wctx, full);
+      const perks = (best.spec.weaponPerks?.[w.item.id] ?? []).filter(Boolean);
+      farm.push({ kind: "farm", role, title: w.item.name, detail: `Tier 5${perks.length ? `, ${perks.join(" + ")}` : ""}`, replaces: nameOf(own.spec.weapons[i]), where: standInSource(w.item.id)?.source || "Not in your collection yet", gain: (100 * (v.score - base.score)) / base.score });
+    });
+    for (const p of Object.values(best.armor?.pieces ?? {})) {
+      if (!isStandIn(p.item)) continue;
+      const src = standInSource(p.item.id);
+      farm.push({ kind: "farm", role, title: src?.acquired ? `Pull ${p.item.name} from Collections` : p.item.name, detail: "Exotic armor", replaces: own.spec.exotic, where: src?.source || "Not in your collection yet", gain: (100 * (best.score - base.score)) / base.score });
+    }
+    const notMw = ownArmor.filter(i => !i.masterworked);
+    if (notMw.length) {
+      const asIs = own.score;
+      const mw = evaluate({ ...own.spec, goal }, ctx, full).score;
+      farm.push({ kind: "upgrade", role, title: `Masterwork ${notMw.map(i => i.name).join(", ")}`, where: "Upgrade materials", gain: (100 * (mw - asIs)) / asIs });
+    }
+    for (const w of own.weapons) if (w && !w.item.exotic && w.tier > 0 && w.tier < 5) farm.push({ kind: "upgrade", role, title: `Upgrade ${w.item.name} to Tier 5`, where: "Weapon Tier Upgrading", detail: "Unlocks its enhanced perks" });
+    for (const w of own.weapons) if (w?.infuse) farm.push({ kind: "upgrade", role, title: `Infuse ${w.item.name}`, where: `It's Power ${w.item.power}` });
+  }
+  // Same piece for two jobs: keep it once, with the bigger gain.
+  const byTitle = new Map<string, FarmRow>();
+  for (const r of farm) { const c = byTitle.get(r.title); if (!c || (r.gain ?? -1) > (c.gain ?? -1)) byTitle.set(r.title, c ? { ...r, role: `${c.role} and ${r.role}` } : r); }
+  // A piece that makes your strongest build weaker on its own isn't worth farming, whatever a combo elsewhere says.
+  farm.splice(0, farm.length, ...[...byTitle.values()].filter(r => r.kind !== "farm" || (r.gain ?? 0) > 0.05));
+  farm.sort((a, b) => (b.gain ?? 0.5) - (a.gain ?? 0.5));
+  if (power < POWER_CAP) farm.unshift({ kind: "power", role: "Power", title: `Any ${lowest.slot} above ${lowest.power} Power`, detail: `Power ${Math.floor(power)} of ${POWER_CAP}, lowest slot: ${lowest.slot}`, where: "Solo Ops at Grade A or better" });
+
   const pct = 100 * (WEIGHT.power * powerPct + WEIGHT.gear * gearPct + WEIGHT.builds * buildsPct);
-  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now, possible, targets };
+  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now, possible, targets, compare, farm };
 }
 
 const hasStandIn = (v: BuildView) => [...v.weapons.filter(Boolean).map(w => w!.item), ...Object.values(v.armor?.pieces ?? {}).map(p => p.item)].some(isStandIn);

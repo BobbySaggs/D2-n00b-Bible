@@ -103,7 +103,7 @@ export default function App() {
           {ADVANCED.includes(screen) && <span className="text-sm text-ink-dim">{screen === "workshop" ? "Workshop" : "My roster"}</span>}
         </nav>
       )}
-      {st.at === "ready" && screen === "home" && <Home inv={st.data.inventory} catalog={st.data.catalog ?? []} onGo={setScreen} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builds"); }} />}
+      {st.at === "ready" && screen === "home" && <Home inv={st.data.inventory} catalog={st.data.catalog ?? []} onGo={setScreen} onRefresh={load} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builds"); }} />}
       {st.at === "ready" && screen === "journey" && <Journey inv={st.data.inventory} catalog={st.data.catalog ?? []} catalysts={st.data.catalysts ?? []} artifact={st.data.artifact} quests={st.data.quests ?? []} />}
       {st.at === "ready" && screen === "inventory" && <Inventory inv={st.data.inventory} />}
       {st.at === "ready" && screen === "builds" && <Builder inv={st.data.inventory} catalog={st.data.catalog ?? []} onRefresh={load} incoming={sent} onIncomingUsed={() => setSent(null)} />}

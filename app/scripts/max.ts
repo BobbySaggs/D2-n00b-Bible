@@ -24,3 +24,11 @@ for (const p of m.path) console.log(`  +${p.gain.toFixed(1)}%  ${p.what}  (${p.w
 console.log("\nNOW", JSON.stringify(m.now?.grades), JSON.stringify(m.now?.notes));
 for (const p of m.possible) console.log(`POSSIBLE [${p.role}] ${p.view.spec.subclass} ${p.view.spec.exotic} | ${STAT_ORDER.map(k => p.view.stats[k]).join("/")} | same ${p.sameCore} | ${p.steps.map(x => x.what).join("; ")}`);
 for (const t of m.targets) console.log(`TARGET ${t.title} | ${t.why} | ${t.where}`);
+
+// Home view: three columns and the farm list.
+for (const c of m.compare) {
+  console.log(`\nCOMPARE ${c.role}: now ${c.now?.rating} ${JSON.stringify(c.now?.grades)} | own ${c.own.rating} ${JSON.stringify(c.own.grades)} | best ${c.best.rating} ${JSON.stringify(c.best.grades)} missing ${c.best.missing}`);
+  console.log(`  changes: ${c.own.changes.join("; ")}`);
+}
+console.log("\nFARM");
+for (const f of m.farm) console.log(`  [${f.kind}] ${f.title}${f.detail ? ` (${f.detail})` : ""}${f.replaces ? ` replaces ${f.replaces}` : ""} | ${f.where} | ${f.gain?.toFixed(1) ?? "-"}% | ${f.role}`);
