@@ -589,7 +589,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
                 return (
                   <Pick aria-label={`Aspect ${i + 1} for build ${c ? "B" : "A"}`} changed={v.spec.aspects[i] !== now?.spec.aspects[i]} value={v.spec.aspects[i] ?? ""}
                     onChange={e => { const a = [...v.spec.aspects]; a[i] = e.target.value; edit(c, { aspects: a.filter(Boolean) }); }}>
-                    {kitOf(v.spec.subclass, "aspect").filter(k => k.name !== other).map(k => <option key={k.name} value={k.name}>{k.name} ({k.slots ?? 2} slots)</option>)}
+                    {kitOf(v.spec.subclass, "aspect").filter(k => k.name !== other).map(k => <option key={k.name} value={k.name}>{k.name} ({k.slotsBy?.[v.spec.subclass] ?? k.slots ?? 2} slots)</option>)}
                   </Pick>
                 );
               })} />

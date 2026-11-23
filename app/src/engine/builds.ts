@@ -321,7 +321,7 @@ export function searchBuilds(o: SearchInput): Build[] {
   const seen = new Set<string>();
   for (const { c } of cores.slice(0, 400)) {
     const frags = pick(kit.get(c.subclass)!, c.subclass, "fragment");
-    const slots = Math.min(MAX_FRAGMENTS[c.subclass], c.aspects.reduce((t, a) => t + (a.slots ?? 2), 0));
+    const slots = Math.min(MAX_FRAGMENTS[c.subclass], c.aspects.reduce((t, a) => t + (a.slotsBy?.[c.subclass] ?? a.slots ?? 2), 0));
     const chosen: K[] = (o.require?.fragments ?? []).map(n => byName.get(n)).filter((x): x is K => !!x).slice(0, slots);
     for (let i = chosen.length; i < slots; i++) {
       let best: K | undefined, gain = 0;

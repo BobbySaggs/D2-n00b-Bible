@@ -35,6 +35,7 @@ export interface K {
   uses: string[];
   wants?: Partial<Record<StatKey, number>>; // which stats make it come back faster or hit harder
   slots?: number; // aspects: fragment slots they open
+  slotsBy?: Partial<Record<Subclass, number>>; // when the count differs by subclass (Winter's Shroud: 3 on Revenant, 2 on Prismatic)
   needs?: string[]; // hard requirement: one of these must be in the build or this piece does nothing
   role?: string[]; // bossDps, adClear, survival, team, champion
   says: string; // what it does for you, in plain words

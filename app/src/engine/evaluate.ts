@@ -132,7 +132,7 @@ export interface BuildView {
 const k = (n: string) => byName.get(n);
 
 export function fragmentSlots(aspects: string[], sub: Subclass): number {
-  return Math.min(MAX_FRAGMENTS[sub], aspects.reduce((t, a) => t + (k(a)?.slots ?? 2), 0));
+  return Math.min(MAX_FRAGMENTS[sub], aspects.reduce((t, a) => t + (k(a)?.slotsBy?.[sub] ?? k(a)?.slots ?? 2), 0));
 }
 
 export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildView {

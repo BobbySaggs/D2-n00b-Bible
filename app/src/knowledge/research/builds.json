@@ -1,5 +1,673 @@
 {
-  "about": "Current top community Hunter builds. Each records the build's parts (not anyone's write-up), who made it, where, and when. Steeped tests every one against your vault, tries to beat it, and uses them as a referee for its own scoring.",
-  "updated": "2026-11-23",
-  "builds": []
+ "about": "Current top community Hunter builds. Each records the build's parts (not anyone's write-up), who made it, where, and when. Steeped tests every one against your vault, tries to beat it, and uses them as a referee for its own scoring.",
+ "updated": "2026-11-23",
+ "builds": [
+  {
+   "id": "bb-gift-tempest",
+   "name": "Gift of the Tempest",
+   "role": "allround",
+   "subclass": "Arcstrider",
+   "aspects": [
+    "Tempest Strike",
+    "Ascension"
+   ],
+   "fragments": [
+    "Spark of Resistance",
+    "Spark of Shock",
+    "Spark of Amplitude",
+    "Spark of Frequency",
+    "Spark of Ions"
+   ],
+   "exotic": "Gifted Conviction",
+   "weapons": [
+    {
+     "name": "Praxic Blade"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Arc Staff",
+   "grenade": "Pulse Grenade",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "melee",
+    "class"
+   ],
+   "activity": "Endgame"
+  },
+  {
+   "id": "bb-transcendent-tank",
+   "name": "The Transcendent Tank",
+   "role": "survive",
+   "subclass": "Prismatic Hunter",
+   "aspects": [
+    "Stylish Executioner",
+    "Ascension"
+   ],
+   "fragments": [
+    "Facet of Purpose",
+    "Facet of Hope",
+    "Facet of Courage",
+    "Facet of Protection"
+   ],
+   "exotic": "Relativism",
+   "weapons": [
+    {
+     "name": "VS Velocity Baton"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Silkstrike",
+   "grenade": "Grapple",
+   "melee": "Threaded Spike",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "grenade",
+    "melee",
+    "class"
+   ],
+   "activity": "Grandmasters"
+  },
+  {
+   "id": "bb-one-two-grapple",
+   "name": "One-Two Grapple",
+   "role": "allround",
+   "subclass": "Prismatic Hunter",
+   "aspects": [
+    "Stylish Executioner",
+    "Winter's Shroud"
+   ],
+   "fragments": [
+    "Facet of Purpose",
+    "Facet of Protection",
+    "Facet of Hope",
+    "Facet of Courage"
+   ],
+   "exotic": "Liar's Handshake",
+   "weapons": [
+    {
+     "name": "The Navigator"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Golden Gun: Marksman",
+   "grenade": "Grapple",
+   "melee": "Combination Blow",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "grenade",
+    "melee",
+    "super"
+   ],
+   "activity": "Endgame"
+  },
+  {
+   "id": "bb-stealthed-gyrfalcon",
+   "name": "Stealthed Gyrfalcon",
+   "role": "allround",
+   "subclass": "Nightstalker",
+   "aspects": [
+    "Stylish Executioner",
+    "Vanishing Step"
+   ],
+   "fragments": [
+    "Echo of Starvation",
+    "Echo of Persistence",
+    "Echo of Remnants",
+    "Echo of Obscurity"
+   ],
+   "exotic": "Gyrfalcon's Hauberk",
+   "weapons": [
+    {
+     "name": "Collective Obligation"
+    },
+    {
+     "name": "Graviton Lance"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Shadowshot: Moebius Quiver",
+   "grenade": "Vortex Grenade",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "weapons",
+    "grenade",
+    "class"
+   ],
+   "activity": "Endgame"
+  },
+  {
+   "id": "bb-jolting-resolve",
+   "name": "Jolting Resolve",
+   "role": "survive",
+   "subclass": "Prismatic Hunter",
+   "aspects": [
+    "Ascension",
+    "Stylish Executioner"
+   ],
+   "fragments": [
+    "Facet of Hope",
+    "Facet of Purpose",
+    "Facet of Protection",
+    "Facet of Solitude"
+   ],
+   "exotic": "Gifted Conviction",
+   "weapons": [
+    {
+     "name": "Multimach CCX"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Silkstrike",
+   "grenade": "Grapple",
+   "melee": "Threaded Spike",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "weapons",
+    "class",
+    "grenade"
+   ],
+   "activity": "Grandmasters"
+  },
+  {
+   "id": "bb-gunpowder-guru",
+   "name": "Gunpowder Guru",
+   "role": "clear",
+   "subclass": "Prismatic Hunter",
+   "aspects": [
+    "Gunpowder Gamble",
+    "Threaded Specter"
+   ],
+   "fragments": [
+    "Facet of Ruin",
+    "Facet of Purpose",
+    "Facet of Protection",
+    "Facet of Balance",
+    "Facet of Courage"
+   ],
+   "exotic": "Relativism",
+   "weapons": [],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Silence and Squall",
+   "grenade": "Swarm Grenade",
+   "melee": "Threaded Spike",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "grenade",
+    "weapons"
+   ],
+   "activity": "Endgame"
+  },
+  {
+   "id": "bb-radiant-assassin",
+   "name": "Radiant Assassin",
+   "role": "allround",
+   "subclass": "Gunslinger",
+   "aspects": [
+    "Knock 'Em Down",
+    "On Your Mark"
+   ],
+   "fragments": [
+    "Ember of Mercy",
+    "Ember of Torches",
+    "Ember of Empyrean",
+    "Ember of Singeing",
+    "Ember of Searing"
+   ],
+   "exotic": "Assassin's Cowl",
+   "weapons": [
+    {
+     "name": "Yeartide Apex"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Blade Barrage",
+   "grenade": "Healing Grenade",
+   "melee": "Knife Trick",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "melee",
+    "class",
+    "weapons"
+   ],
+   "activity": "Solo"
+  },
+  {
+   "id": "bb-temporal-teleporter",
+   "name": "Temporal Teleporter",
+   "role": "survive",
+   "subclass": "Prismatic Hunter",
+   "aspects": [
+    "Threaded Specter",
+    "Winter's Shroud"
+   ],
+   "fragments": [
+    "Facet of Purpose",
+    "Facet of Protection",
+    "Facet of Dawn",
+    "Facet of Balance",
+    "Facet of Blessing"
+   ],
+   "exotic": "Mask of Bakris",
+   "weapons": [
+    {
+     "name": "Graviton Spike"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Silence and Squall",
+   "grenade": "Duskfield Grenade",
+   "melee": "Threaded Spike",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "weapons",
+    "class",
+    "melee"
+   ],
+   "activity": "Grandmasters"
+  },
+  {
+   "id": "bb-grasps-duskfield",
+   "name": "Grasps of Duskfield",
+   "role": "survive",
+   "subclass": "Revenant",
+   "aspects": [
+    "Touch of Winter",
+    "Grim Harvest"
+   ],
+   "fragments": [
+    "Whisper of Torment",
+    "Whisper of Conduction",
+    "Whisper of Rime",
+    "Whisper of Chains",
+    "Whisper of Shards"
+   ],
+   "exotic": "Renewal Grasps",
+   "weapons": [
+    {
+     "name": "Buried Bloodline"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Silence and Squall",
+   "grenade": "Duskfield Grenade",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "weapons",
+    "grenade"
+   ],
+   "activity": "Grandmasters"
+  },
+  {
+   "id": "bb-threaded-maelstrom",
+   "name": "The Threaded Maelstrom",
+   "role": "clear",
+   "subclass": "Threadrunner",
+   "aspects": [
+    "Widow's Silk",
+    "Whirling Maelstrom"
+   ],
+   "fragments": [
+    "Thread of Ascent",
+    "Thread of Generation",
+    "Thread of Transmutation",
+    "Thread of Isolation"
+   ],
+   "exotic": "Cyrtarachne's Facade",
+   "weapons": [
+    {
+     "name": "Quicksilver Storm"
+    }
+   ],
+   "source": {
+    "title": "Blueberries.gg Hunter builds",
+    "url": "https://www.blueberries.gg/armor/destiny-2-hunter-builds/",
+    "creator": "Blueberries",
+    "date": "2026-01-09"
+   },
+   "added": "2026-11-23",
+   "super": "Silkstrike",
+   "grenade": "Shackle Grenade",
+   "classAbility": "Gambler's Dodge",
+   "stats": [
+    "weapons",
+    "grenade",
+    "melee"
+   ],
+   "activity": "Endgame"
+  },
+  {
+   "id": "ra-crackshot-conqueror",
+   "name": "Crackshot Conqueror",
+   "role": "allround",
+   "subclass": "Gunslinger",
+   "super": "Golden Gun: Deadshot",
+   "grenade": "Healing Grenade",
+   "melee": "Knife Trick",
+   "classAbility": "Acrobat's Dodge",
+   "aspects": [
+    "Crackshot",
+    "On Your Mark"
+   ],
+   "fragments": [
+    "Ember of Singeing",
+    "Ember of Empyrean",
+    "Ember of Solace",
+    "Ember of Ashes",
+    "Ember of Wonder"
+   ],
+   "exotic": "Wormhusk Crown",
+   "weapons": [
+    {
+     "name": "Ticuu's Divination"
+    }
+   ],
+   "artifactPerks": [
+    "Kindling Trigger",
+    "Heart of the Flame",
+    "Wished into Being",
+    "Torch",
+    "Fever and Chill",
+    "Rays of Precision",
+    "Revitalizing Blast"
+   ],
+   "stats": [
+    "class",
+    "weapons",
+    "super"
+   ],
+   "source": {
+    "title": "Mobalytics: Crackshot Conqueror",
+    "url": "https://mobalytics.gg/destiny-2/profile/restassured/builds/ba4d7c04-bd25-40d9-be00-1386860e66c3",
+    "creator": "RestAssured",
+    "date": "2026-06-24"
+   },
+   "added": "2026-11-23"
+  },
+  {
+   "id": "mactics-dps",
+   "name": "The #1 Best DPS Hunter Build Ever",
+   "role": "boss",
+   "subclass": "Prismatic Hunter",
+   "super": "Golden Gun: Marksman",
+   "grenade": "Duskfield Grenade",
+   "melee": "Threaded Spike",
+   "classAbility": "Gambler's Dodge",
+   "aspects": [
+    "Stylish Executioner",
+    "Winter's Shroud"
+   ],
+   "fragments": [
+    "Facet of Courage",
+    "Facet of Dawn",
+    "Facet of Hope",
+    "Facet of Protection",
+    "Facet of Purpose"
+   ],
+   "exotic": "",
+   "weapons": [
+    {
+     "name": "Still Hunt"
+    }
+   ],
+   "artifactPerks": [
+    "Radiant Orbs"
+   ],
+   "source": {
+    "title": "Mobalytics: The #1 Best DPS Hunter Build Ever (exotic armor not listed)",
+    "url": "https://mobalytics.gg/destiny-2/builds/hunter/prismatic/mactics-best-dps-hunter",
+    "creator": "Mactics"
+   },
+   "added": "2026-11-23"
+  },
+  {
+   "id": "profane-gifted-arc",
+   "name": "Unkillable Gifted Conviction Arc Hunter",
+   "role": "survive",
+   "subclass": "Arcstrider",
+   "super": "Gathering Storm",
+   "grenade": "Flashbang Grenade",
+   "melee": "Combination Blow",
+   "classAbility": "Gambler's Dodge",
+   "aspects": [
+    "Ascension",
+    "Tempest Strike"
+   ],
+   "fragments": [
+    "Spark of Feedback",
+    "Spark of Ions",
+    "Spark of Recharge",
+    "Spark of Resistance",
+    "Spark of Shock"
+   ],
+   "exotic": "Gifted Conviction",
+   "weapons": [
+    {
+     "name": "Delicate Tomb"
+    }
+   ],
+   "sets": [
+    {
+     "name": "Bushido",
+     "count": 2
+    }
+   ],
+   "artifactPerks": [
+    "Shieldcrush",
+    "Elemental Benevolence",
+    "Elemental Coalescence",
+    "Elemental Overdrive",
+    "Fever and Chill"
+   ],
+   "stats": [
+    "melee",
+    "class",
+    "weapons"
+   ],
+   "source": {
+    "title": "Mobalytics: Unkillable Gifted Conviction Arc Hunter",
+    "url": "https://mobalytics.gg/destiny-2/builds/hunter/arc/profane-unkillable-gifted-conviction",
+    "creator": "Profane",
+    "date": "2025-07-22"
+   },
+   "added": "2026-11-23"
+  },
+  {
+   "id": "profane-prismatic-assassin",
+   "name": "Unstoppable Prismatic Assassin",
+   "role": "clear",
+   "subclass": "Prismatic Hunter",
+   "super": "Silkstrike",
+   "melee": "Combination Blow",
+   "classAbility": "Gambler's Dodge",
+   "aspects": [
+    "Ascension",
+    "Threaded Specter"
+   ],
+   "fragments": [
+    "Facet of Awakening",
+    "Facet of Courage",
+    "Facet of Dawn",
+    "Facet of Hope",
+    "Facet of Purpose"
+   ],
+   "exotic": "Relativism",
+   "weapons": [
+    {
+     "name": "Bastion"
+    }
+   ],
+   "sets": [
+    {
+     "name": "Bushido",
+     "count": 2
+    },
+    {
+     "name": "Techsec",
+     "count": 2
+    }
+   ],
+   "artifactPerks": [
+    "Elemental Benevolence",
+    "Elemental Coalescence",
+    "Elemental Daze",
+    "Shoulder to Shoulder",
+    "Shieldcrush",
+    "Tangled Web",
+    "Threaded Blast"
+   ],
+   "stats": [
+    "melee",
+    "grenade",
+    "super"
+   ],
+   "source": {
+    "title": "Mobalytics: Unstoppable Prismatic Assassin Hunter",
+    "url": "https://mobalytics.gg/destiny-2/builds/hunter/prismatic/profane-unstoppable-prismatic-assassin",
+    "creator": "Profane",
+    "date": "2025-08-16"
+   },
+   "added": "2026-11-23"
+  },
+  {
+   "id": "mrronit-phantom-surge",
+   "name": "Phantom Surge Void NUKES",
+   "role": "clear",
+   "subclass": "Nightstalker",
+   "super": "Shadowshot: Deadfall",
+   "grenade": "Magnetic Grenade",
+   "melee": "Phantom Surge",
+   "classAbility": "Gambler's Dodge",
+   "aspects": [
+    "On the Prowl",
+    "Stylish Executioner"
+   ],
+   "fragments": [
+    "Echo of Cessation",
+    "Echo of Instability",
+    "Echo of Persistence",
+    "Echo of Starvation",
+    "Echo of Harvest"
+   ],
+   "exotic": "",
+   "weapons": [
+    {
+     "name": "The Turncoat"
+    },
+    {
+     "name": "Mint Retrograde"
+    }
+   ],
+   "sets": [
+    {
+     "name": "Dark Age",
+     "count": 2
+    }
+   ],
+   "stats": [
+    "melee",
+    "weapons",
+    "class"
+   ],
+   "source": {
+    "title": "Mobalytics: MrRonit's Phantom Surge Void NUKES (exotic armor not named)",
+    "url": "https://mobalytics.gg/destiny-2/builds/hunter/void/mrronits-phantom-surge",
+    "creator": "MrRonit",
+    "date": "2026-06-14"
+   },
+   "added": "2026-11-23"
+  },
+  {
+   "id": "itemlevel-crackshot-barrage",
+   "name": "Crackshot Blade Barrage",
+   "role": "allround",
+   "subclass": "Gunslinger",
+   "super": "Blade Barrage",
+   "grenade": "Healing Grenade",
+   "classAbility": "Acrobat's Dodge",
+   "aspects": [
+    "Crackshot",
+    "On Your Mark"
+   ],
+   "fragments": [
+    "Ember of Singeing"
+   ],
+   "exotic": "Speedloader Slacks",
+   "weapons": [
+    {
+     "name": "Dragon's Breath"
+    }
+   ],
+   "artifactPerks": [
+    "Torch",
+    "Kindling Trigger",
+    "Unraveling Orbs",
+    "Horde Shuttle"
+   ],
+   "stats": [
+    "class",
+    "weapons"
+   ],
+   "source": {
+    "title": "Item Level: Best Hunter PvE build for Monument of Triumph",
+    "url": "https://itemlevel.net/destiny-2-best-hunter-pve-build-for-monument-of-triumph-2026/",
+    "creator": "Item Level",
+    "date": "2026-06-15"
+   },
+   "added": "2026-11-23"
+  }
+ ]
 }

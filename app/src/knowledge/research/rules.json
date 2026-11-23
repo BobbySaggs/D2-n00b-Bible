@@ -1,5 +1,846 @@
 {
-  "about": "Rules Steeped learned from research. Each one says what a piece does in Steeped's terms (makes, uses, needs, role), in plain words, and where that comes from. A rule here wins over Steeped's own reading of Bungie's text and over the hand-written rules in hunter.ts. Confidence: bungie = Bungie's own text or patch notes; tested = measured by a public tester; multiple = several independent sources agree; single = one community source.",
-  "updated": "2026-11-23",
-  "rules": []
+ "about": "Rules Steeped learned from research. Each one says what a piece does in Steeped's terms (makes, uses, needs, role), in plain words, and where that comes from. A rule here wins over Steeped's own reading of Bungie's text and over the hand-written rules in hunter.ts. Confidence: bungie = Bungie's own text or patch notes; tested = measured by a public tester; multiple = several independent sources agree; single = one community source.",
+ "updated": "2026-11-23",
+ "rules": [
+  {
+   "name": "Widow's Silk",
+   "kind": "aspect",
+   "subs": [
+    "Threadrunner"
+   ],
+   "makes": [
+    "tangle",
+    "gEn"
+   ],
+   "uses": [],
+   "says": "An extra grenade charge, and your Grapple leaves a Tangle where you land.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Bungie: Destiny 2 Update 9.7.0 patch notes",
+     "url": "https://www.bungie.net/7/en/news/article/destiny_update_9_7_0",
+     "date": "2026-06-09"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "slots": 3,
+   "role": [
+    "adClear"
+   ]
+  },
+  {
+   "name": "Winter's Shroud",
+   "kind": "aspect",
+   "subs": [
+    "Revenant",
+    "Prismatic Hunter"
+   ],
+   "makes": [
+    "slow",
+    "cEn"
+   ],
+   "uses": [
+    "dodge"
+   ],
+   "says": "Dodging slows enemies around you, and slowing them speeds up your next dodge.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Bungie: Destiny 2 Update 9.7.0 patch notes",
+     "url": "https://www.bungie.net/7/en/news/article/destiny_update_9_7_0",
+     "date": "2026-06-09"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "slots": 3,
+   "slotsBy": {
+    "Revenant": 3,
+    "Prismatic Hunter": 2
+   },
+   "wants": {
+    "class": 1
+   }
+  },
+  {
+   "name": "Ascension",
+   "kind": "aspect",
+   "subs": [
+    "Arcstrider",
+    "Prismatic Hunter"
+   ],
+   "makes": [
+    "jolt",
+    "amplified",
+    "teamBuff",
+    "kAbility"
+   ],
+   "uses": [
+    "cEn",
+    "airborne"
+   ],
+   "says": "Spend your dodge in the air to launch upward, jolting enemies and amplifying allies. Hits harder past 100 Class.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Bungie: Destiny 2 Update 9.7.0 patch notes",
+     "url": "https://www.bungie.net/7/en/news/article/destiny_update_9_7_0",
+     "date": "2026-06-09"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "slots": 3,
+   "slotsBy": {
+    "Arcstrider": 3,
+    "Prismatic Hunter": 2
+   },
+   "wants": {
+    "class": 1
+   },
+   "role": [
+    "adClear"
+   ]
+  },
+  {
+   "name": "On the Prowl",
+   "kind": "aspect",
+   "subs": [
+    "Nightstalker"
+   ],
+   "makes": [
+    "weaken",
+    "invis",
+    "reload",
+    "teamBuff"
+   ],
+   "uses": [],
+   "says": "Marks a nearby priority target every so often. Killing it leaves a weakening smoke cloud that turns you and allies invisible, plus faster reloads.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Bungie: Destiny 2 Update 9.7.0 patch notes",
+     "url": "https://www.bungie.net/7/en/news/article/destiny_update_9_7_0",
+     "date": "2026-06-09"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "slots": 3,
+   "role": [
+    "survival",
+    "adClear"
+   ]
+  },
+  {
+   "name": "Tempest Strike",
+   "kind": "aspect",
+   "subs": [
+    "Arcstrider"
+   ],
+   "makes": [
+    "jolt",
+    "bolt",
+    "kMelee",
+    "multikill"
+   ],
+   "uses": [
+    "mEn"
+   ],
+   "says": "Slide and melee for an uppercut that travels along the ground, jolting what it hits. Killing jolted enemies gives Bolt Charge.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "slots": 2,
+   "wants": {
+    "melee": 1
+   },
+   "role": [
+    "adClear"
+   ]
+  },
+  {
+   "name": "Healing Grenade",
+   "kind": "grenade",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "heal",
+    "cure",
+    "restoration"
+   ],
+   "uses": [
+    "gEn"
+   ],
+   "says": "Heals allies it hits and leaves a Solar orb that gives Restoration when picked up.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "wants": {
+    "grenade": 0.5
+   },
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Flashbang Grenade",
+   "kind": "grenade",
+   "subs": [
+    "Arcstrider",
+    "Prismatic Hunter"
+   ],
+   "makes": [
+    "blind",
+    "kGrenade"
+   ],
+   "uses": [
+    "gEn"
+   ],
+   "says": "Damages and blinds enemies nearby.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "wants": {
+    "grenade": 0.5
+   }
+  },
+  {
+   "name": "Shackle Grenade",
+   "kind": "grenade",
+   "subs": [
+    "Threadrunner"
+   ],
+   "makes": [
+    "suspend",
+    "kGrenade"
+   ],
+   "uses": [
+    "gEn"
+   ],
+   "says": "Suspends enemies where it lands and throws out more suspending pieces.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "wants": {
+    "grenade": 0.5
+   },
+   "role": [
+    "adClear"
+   ]
+  },
+  {
+   "name": "Whirling Maelstrom",
+   "kind": "aspect",
+   "subs": [
+    "Threadrunner"
+   ],
+   "makes": [
+    "unravel",
+    "multikill",
+    "kAbility"
+   ],
+   "uses": [
+    "tangle"
+   ],
+   "says": "Destroying a Tangle releases a seeking Strand mass that damages enemies and unravels on kills.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "slots": 2,
+   "role": [
+    "adClear"
+   ]
+  },
+  {
+   "name": "Spark of Ions",
+   "kind": "fragment",
+   "subs": [
+    "Arcstrider"
+   ],
+   "makes": [
+    "ionic",
+    "mEn",
+    "gEn",
+    "cEn"
+   ],
+   "uses": [
+    "jolt|bolt"
+   ],
+   "says": "Killing jolted enemies (or killing with Bolt Charge) drops an Ionic Trace for ability energy.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Spark of Amplitude",
+   "kind": "fragment",
+   "subs": [
+    "Arcstrider"
+   ],
+   "makes": [
+    "orb"
+   ],
+   "uses": [
+    "amplified"
+   ],
+   "says": "Fast kills while amplified make Orbs of Power.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Spark of Feedback",
+   "kind": "fragment",
+   "subs": [
+    "Arcstrider"
+   ],
+   "makes": [
+    "dmg"
+   ],
+   "uses": [],
+   "says": "Taking melee damage briefly boosts your melee damage.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Echo of Starvation",
+   "kind": "fragment",
+   "subs": [
+    "Nightstalker"
+   ],
+   "makes": [
+    "devour",
+    "heal"
+   ],
+   "uses": [
+    "orbPickup|breach"
+   ],
+   "says": "Picking up an Orb of Power or a Void Breach gives Devour.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Echo of Obscurity",
+   "kind": "fragment",
+   "subs": [
+    "Nightstalker"
+   ],
+   "makes": [
+    "invis"
+   ],
+   "uses": [
+    "finisher"
+   ],
+   "says": "Finisher kills turn you invisible.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Echo of Cessation",
+   "kind": "fragment",
+   "subs": [
+    "Nightstalker"
+   ],
+   "makes": [
+    "volatile",
+    "breach"
+   ],
+   "uses": [
+    "finisher"
+   ],
+   "says": "Finisher kills burst Void damage that makes nearby enemies volatile; killing volatile enemies leaves a Void Breach.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Echo of Instability",
+   "kind": "fragment",
+   "subs": [
+    "Nightstalker"
+   ],
+   "makes": [
+    "volatile"
+   ],
+   "uses": [
+    "kGrenade"
+   ],
+   "says": "Grenade kills give your Void weapons Volatile Rounds.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Echo of Harvest",
+   "kind": "fragment",
+   "subs": [
+    "Nightstalker"
+   ],
+   "makes": [
+    "orb",
+    "breach"
+   ],
+   "uses": [
+    "weaken"
+   ],
+   "says": "Killing weakened enemies makes an Orb of Power and a Void Breach.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Ember of Empyrean",
+   "kind": "fragment",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "restoration",
+    "radiant"
+   ],
+   "uses": [
+    "restoration|radiant"
+   ],
+   "says": "Solar kills extend your Restoration and Radiant.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Ember of Mercy",
+   "kind": "fragment",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "restoration"
+   ],
+   "uses": [
+    "firesprite"
+   ],
+   "says": "Picking up a Firesprite (or reviving) gives Restoration.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Ember of Searing",
+   "kind": "fragment",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "mEn",
+    "firesprite"
+   ],
+   "uses": [
+    "scorch"
+   ],
+   "says": "Killing scorched enemies gives melee energy and a Firesprite.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Facet of Solitude",
+   "kind": "fragment",
+   "subs": [
+    "Prismatic Hunter"
+   ],
+   "makes": [
+    "sever",
+    "multikill"
+   ],
+   "uses": [
+    "kPrecision"
+   ],
+   "says": "Fast precision hits release a severing blast, bigger while transcendent.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Facet of Awakening",
+   "kind": "fragment",
+   "subs": [
+    "Prismatic Hunter"
+   ],
+   "makes": [
+    "firesprite",
+    "ionic",
+    "breach",
+    "tangle",
+    "shard"
+   ],
+   "uses": [
+    "multikill|kSuper"
+   ],
+   "says": "Fast Light or Darkness kills (and super kills) drop an elemental pickup of that element.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Thread of Generation",
+   "kind": "fragment",
+   "subs": [
+    "Threadrunner"
+   ],
+   "makes": [
+    "gEn"
+   ],
+   "uses": [],
+   "says": "Dealing damage builds grenade energy.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Thread of Isolation",
+   "kind": "fragment",
+   "subs": [
+    "Threadrunner"
+   ],
+   "makes": [
+    "sever",
+    "multikill"
+   ],
+   "uses": [
+    "kPrecision"
+   ],
+   "says": "Fast precision hits release a severing burst.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Thread of Transmutation",
+   "kind": "fragment",
+   "subs": [
+    "Threadrunner"
+   ],
+   "makes": [
+    "tangle"
+   ],
+   "uses": [
+    "woven"
+   ],
+   "says": "With Woven Mail, weapon kills leave Tangles.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Ember of Char",
+   "kind": "fragment",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "scorch"
+   ],
+   "uses": [
+    "ignite"
+   ],
+   "says": "Your ignitions spread scorch to what they hit. It needs ignitions from something else; it doesn't make them.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Steeped referee: community builds consistently skipped this, Steeped overrated it",
+     "url": "https://github.com/BobbySaggs/D2-n00b-Bible",
+     "date": "2026-11-23"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Ember of Benevolence",
+   "kind": "fragment",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "gEn",
+    "mEn",
+    "cEn"
+   ],
+   "uses": [
+    "teamBuff"
+   ],
+   "says": "Buffing allies (Restoration, Cure, Radiant) speeds up all your abilities. Does nothing solo.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Steeped referee: community builds consistently skipped this, Steeped overrated it",
+     "url": "https://github.com/BobbySaggs/D2-n00b-Bible",
+     "date": "2026-11-23"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23",
+   "role": [
+    "team"
+   ]
+  },
+  {
+   "name": "Spark of Recharge",
+   "kind": "fragment",
+   "subs": [
+    "Arcstrider"
+   ],
+   "makes": [
+    "gEn",
+    "mEn"
+   ],
+   "uses": [
+    "critical"
+   ],
+   "says": "Faster grenade and melee recharge only while you're critically wounded.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Steeped referee: community builds consistently skipped this, Steeped overrated it",
+     "url": "https://github.com/BobbySaggs/D2-n00b-Bible",
+     "date": "2026-11-23"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Facet of Balance",
+   "kind": "fragment",
+   "subs": [
+    "Prismatic Hunter"
+   ],
+   "makes": [
+    "mEn",
+    "gEn"
+   ],
+   "uses": [
+    "multikill"
+   ],
+   "says": "Rapid Light kills give melee energy; rapid Darkness kills give grenade energy.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026)",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-18"
+    },
+    {
+     "title": "Steeped referee: community builds consistently skipped this, Steeped overrated it",
+     "url": "https://github.com/BobbySaggs/D2-n00b-Bible",
+     "date": "2026-11-23"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  },
+  {
+   "name": "Blade Barrage",
+   "kind": "super",
+   "subs": [
+    "Gunslinger"
+   ],
+   "makes": [
+    "kSuper",
+    "bossDmg:3",
+    "scorch:2",
+    "multikill"
+   ],
+   "uses": [
+    "sEn"
+   ],
+   "wants": {
+    "super": 1
+   },
+   "role": [
+    "bossDps",
+    "adClear"
+   ],
+   "says": "A volley of explosive knives. Since the final patch the blasts are bigger and scorch, so it clears rooms as well as hurting bosses.",
+   "sources": [
+    {
+     "title": "Bungie: Destiny 2 Update 9.7.0 patch notes",
+     "url": "https://www.bungie.net/7/en/news/article/destiny_update_9_7_0",
+     "date": "2026-06-09"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-23"
+  }
+ ]
 }
