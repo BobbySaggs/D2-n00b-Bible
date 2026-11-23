@@ -32,3 +32,4 @@ for (const c of m.compare) {
 }
 console.log("\nFARM");
 for (const f of m.farm) console.log(`  [${f.kind}] ${f.title}${f.detail ? ` (${f.detail})` : ""}${f.replaces ? ` replaces ${f.replaces}` : ""} | ${f.where} | ${f.gain?.toFixed(1) ?? "-"}% | ${f.role}`);
+for (const c of m.compare) console.log(`SETS ${c.role}: own [${(c.own.view.setPerks ?? []).map(p => p.name).join(", ")}] best [${(c.best.view.setPerks ?? []).map(p => p.name).join(", ")}]`);

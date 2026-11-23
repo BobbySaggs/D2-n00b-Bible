@@ -38,7 +38,7 @@ const USES: [RegExp, string][] = [
 // read: "checked" = a hand-written rule; "tested" = Bungie's text plus Clarity's tested numbers; "description" = Steeped's own reading.
 export interface ArtifactPerk extends K { hash: number; read: "checked" | "tested" | "description" }
 
-export function perkKnowledge(hash: number, name: string, desc: string, kind: "artifact" | "weapon" | "exotic" = "artifact"): ArtifactPerk {
+export function perkKnowledge(hash: number, name: string, desc: string, kind: "artifact" | "weapon" | "exotic" | "set" = "artifact"): ArtifactPerk {
   const hand = byName.get(name);
   if (hand && hand.kind === kind) return { ...hand, hash, read: "checked" };
   const text = desc.replace(/\[[^\]]*\]/g, " ");

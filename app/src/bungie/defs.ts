@@ -3,7 +3,7 @@ import { api } from "./api";
 
 // Trimmed DestinyInventoryItemDefinition. Cached forever in this browser (IndexedDB).
 // Bump DEF_VERSION when the shape changes so old entries are refetched.
-export const DEF_VERSION = 2; // 2: plug text from sandbox perks
+export const DEF_VERSION = 3; // 2: plug text from sandbox perks; 3: armor set bonuses
 
 export interface ItemDef {
   v: number;
@@ -27,7 +27,10 @@ export interface ItemDef {
   perks: number[]; // sandbox perk hashes (plugs)
   collectible: number;
   traits: string[];
+  setHash?: number; // armor: the set it belongs to
+  set?: ArmorSet; // filled in when loaded: the set's name and its 2- and 4-piece bonuses
 }
+export interface ArmorSet { hash: number; name: string; perks: { count: number; hash: number; name: string; desc: string }[] }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function trim(d: any, hash: number): ItemDef {
@@ -60,6 +63,7 @@ export function trim(d: any, hash: number): ItemDef {
     perks: (d.perks || []).map((p: any) => p.perkHash).filter(Boolean),
     collectible: d.collectibleHash || 0,
     traits: d.traitIds || [],
+    setHash: (d.equippingBlock || {}).equipableItemSetHash || undefined,
   };
 }
 
@@ -103,6 +107,7 @@ export async function loadDefs(hashes: number[], onProgress?: (done: number, tot
         const t = trim(d, h);
         // Aspects, fragments, abilities and mods keep their rules text on sandbox perks, not the item.
         if (!t.desc && t.plugCat && t.perks.length) t.desc = await perkText(t.perks);
+        if (t.setHash) t.set = await setOf(t.setHash);
         DEFS.set(h, t);
         fresh.push([h, t]);
       } catch {
@@ -117,6 +122,32 @@ export async function loadDefs(hashes: number[], onProgress?: (done: number, tot
 }
 
 export const def = (h: number) => DEFS.get(h);
+
+// Armor sets: name plus each bonus (pieces needed, name, Bungie's description). Fetched once per set.
+const SETS = new Map<number, Promise<ArmorSet | undefined>>();
+function setOf(h: number): Promise<ArmorSet | undefined> {
+  let p = SETS.get(h);
+  if (!p) {
+    p = (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d: any = await api(`/Destiny2/Manifest/DestinyEquipableItemSetDefinition/${h}/`);
+        const perks: ArmorSet["perks"] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const sp of (d?.setPerks ?? []) as any[]) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pd: any = await api(`/Destiny2/Manifest/DestinySandboxPerkDefinition/${sp.sandboxPerkHash}/`).catch(() => null);
+          perks.push({ count: sp.requiredSetCount, hash: sp.sandboxPerkHash, name: String(pd?.displayProperties?.name ?? ""), desc: String(pd?.displayProperties?.description ?? "").replace(/\s+/g, " ").trim() });
+        }
+        return { hash: h, name: String(d?.displayProperties?.name ?? ""), perks };
+      } catch {
+        return undefined;
+      }
+    })();
+    SETS.set(h, p);
+  }
+  return p;
+}
 
 async function perkText(perks: number[]): Promise<string> {
   const out: string[] = [];

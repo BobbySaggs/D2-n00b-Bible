@@ -74,6 +74,7 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
   // Nothing customized: "Best possible" is the same answer Home gives (one shared search), so the two never disagree.
   const { m: max } = useMax(inv, catalog);
   const [shared, setShared] = useState(false);
+  const [sharedOwn, setSharedOwn] = useState(false); // "Best from what you own" is Home's strongest build too
   const [equipping, setEquipping] = useState<Col | null>(null);
   const [undo, setUndo] = useState<WornSnapshot | null>(loadUndo);
   const [restoring, setRestoring] = useState(false);
@@ -93,6 +94,7 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
       && !Object.values(settings.targets ?? {}).some(Boolean) && settings.style === "peaks" && settings.tune !== false;
     const useShared = plain && incoming?.col !== 1;
     if (cols.includes(1)) setShared(useShared);
+    if (cols.includes(0)) setSharedOwn(plain && incoming?.col !== 0);
     const one = async (c: Col) => {
       if (c === 1 && useShared) return; // filled from the shared Max Hunter result below
       try {
@@ -116,6 +118,14 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
       onIncomingUsed?.();
     }
   };
+  // Same strongest build as Home (one shared search), so aspect and fragment picks never disagree between pages.
+  useEffect(() => {
+    if (!sharedOwn || !max || fromWs[0]) return;
+    const own = max.kit.find(k => k.goal === goal)?.view.spec;
+    if (!own) return;
+    setSpecs(s => { const n = [...s]; n[0] = own; return n; });
+    setBest(own);
+  }, [sharedOwn, max, goal, fromWs]);
   useEffect(() => {
     if (!shared || !max || max.partial || fromWs[1]) return;
     const role = max.kit.find(k => k.goal === goal)?.role;
@@ -143,6 +153,7 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
   // "Use this" from Try other options: the change shows right away in Best from what you own, and it's locked in
   // the menu so the next "Build it" (and Best possible) keeps it.
   const use = (sel: SlotId, o: Option, next: BuildSpec) => {
+    setSharedOwn(false);
     setSpecs(s => { const n = [...s]; n[0] = next; return n; });
     if (sel.kind === "weapon") { const slot = (["kinetic", "energy", "power"] as const)[sel.i]; setPinned(p => [...p.filter(id => ctx.inv.items.find(i => i.id === id)?.slot !== slot), o.key]); return; }
     setReq(r => {

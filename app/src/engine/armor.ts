@@ -21,6 +21,7 @@ export interface Piece {
   current: Stats; // what the game shows for this piece now
   tuneSocket: number; // -1 if the piece has no tuning socket
   tunings: TuneOpt[]; // tuning plugs this piece can take (Tier 5: Balanced, or +5 to its tuned stat / -5 to one other)
+  set?: number; // armor set hash (legendary sets with 2- and 4-piece bonuses)
 }
 export interface TuneOpt { hash: number; name: string; stats: Stats }
 
@@ -72,7 +73,7 @@ export function readPiece(item: Item, defOf: (h: number) => ItemDef | undefined)
     mwLevel = 0;
   }
   if (item.masterworked && !legacy) mwLevel = 5;
-  const p: Piece = { item, slot: item.slot, exotic: item.exotic, tier: item.gearTier, archetype, base, mwLevel, legacy, tuning, mod, current: item.stats, tuneSocket, tunings: [] };
+  const p: Piece = { item, slot: item.slot, exotic: item.exotic, tier: item.gearTier, archetype, base, mwLevel, legacy, tuning, mod, current: item.stats, tuneSocket, tunings: [], set: item.exotic ? undefined : defOf(item.hash)?.setHash };
   // Tuning choices come from Bungie's list for that socket, so each piece only offers what it can really take.
   if (tuneSocket >= 0 && !legacy && item.gearTier >= 5) {
     for (const h of new Set([...(item.reusable[tuneSocket] ?? []), item.plugs[tuneSocket]])) {

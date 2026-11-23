@@ -134,7 +134,7 @@ function Column({ title, name, grades, rating, delta, grid, foot, featured, test
 function FarmLine({ r, items }: { r: FarmRow; items: Item[] }) {
   const it = itemIn(r.title, items);
   const icon = r.kind === "power" ? "⬆" : r.kind === "upgrade" ? "✦" : "◆";
-  const sub = [r.replaces && `Replaces ${r.replaces}`, r.where, r.kind !== "power" && (r.role === "Max Hunter" ? "All-round" : r.role.replace("Max Hunter", "All-round"))].filter(Boolean).join(" · ");
+  const sub = [r.replaces && `Replaces ${r.replaces}`, r.inBuilds ? `In ${r.inBuilds} top build${r.inBuilds > 1 ? "s" : ""}` : undefined, r.where, r.kind !== "power" && (r.role === "Max Hunter" ? "All-round" : r.role.replace("Max Hunter", "All-round"))].filter(Boolean).join(" · ");
   return (
     <li className="flex items-center gap-3 border-t border-line py-3" data-testid="farm-row">
       {it ? <GearIcon src={iconForItem(it)} size={36} exotic={it.exotic} title={it.name} /> : <span className={cn("grid size-9 shrink-0 place-items-center rounded-md text-lg", r.kind === "farm" ? "bg-exotic/15 text-exotic" : "bg-accent/20 text-accent-hi")}>{icon}</span>}

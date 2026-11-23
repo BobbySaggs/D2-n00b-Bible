@@ -2,7 +2,7 @@ import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
 import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
-import type { ArtifactPerk } from "../knowledge/artifact";
+import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
 import { artifactsOf, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
 import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, withPerks, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
@@ -50,15 +50,43 @@ export interface Ctx {
   ownedMods: Map<number, Set<number>>;
   artifacts: ArtifactChoice[]; // all seven, with the perks each one can take
   perks: Map<string, ArtifactPerk>;
+  sets: Map<number, SetInfo>; // armor sets you own pieces of, with their bonuses as rules
+}
+// An armor set: which slots you own pieces for, and its 2- and 4-piece bonuses as rules the loops can score.
+export interface SetInfo { hash: number; name: string; slots: Set<Slot>; perks: { count: number; k: ArtifactPerk }[] }
+function setsOf(pieces: Piece[], defOf: (h: number) => ItemDef | undefined): Map<number, SetInfo> {
+  const out = new Map<number, SetInfo>();
+  for (const p of pieces) {
+    if (!p.set || p.item.cls !== "Hunter") continue;
+    let s = out.get(p.set);
+    if (!s) {
+      const def = defOf(p.item.hash)?.set;
+      if (!def) continue;
+      s = { hash: p.set, name: def.name, slots: new Set(), perks: def.perks.map(x => ({ count: x.count, k: perkKnowledge(x.hash, x.name, x.desc, "set") })) };
+      out.set(p.set, s);
+    }
+    s.slots.add(p.slot);
+  }
+  return out;
+}
+// The set bonuses a chosen set of armor turns on.
+export function activeSetPerks(armor: Solution | undefined, ctx: Ctx): ArtifactPerk[] {
+  if (!armor) return [];
+  const n = new Map<number, number>();
+  for (const p of Object.values(armor.pieces)) if (p.set) n.set(p.set, (n.get(p.set) ?? 0) + 1);
+  const out: ArtifactPerk[] = [];
+  for (const [h, c] of n) for (const x of ctx.sets.get(h)?.perks ?? []) if (c >= x.count) out.push(x.k);
+  return out;
 }
 
 export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefined, defs: ItemDef[], characterId: string): Ctx {
   const ch = inv.characters.find(c => c.id === characterId)!;
   const artifacts = artifactsOf(inv, defOf, characterId);
+  const pieces = inv.items.map(i => readPiece(i, defOf)).filter((p): p is Piece => !!p);
   return {
     artifacts, perks: perkByName(artifacts),
     inv, defOf, defs, characterId, light: ch.light,
-    pieces: inv.items.map(i => readPiece(i, defOf)).filter((p): p is Piece => !!p),
+    pieces, sets: setsOf(pieces, defOf),
     weapons: ownedWeapons(inv, defOf, ch.light),
     kit: availableKit(inv, defOf, characterId),
     wornIds: new Set(inv.items.filter(i => i.owner === characterId && i.equipped).map(i => i.id)),
@@ -84,6 +112,7 @@ export interface BuildView {
   ratingPlan?: StatPlan; // the plan the rating uses (targets left on Auto)
   coreParts: Part[]; // subclass picks, exotic and subclass marker
   perkParts: Part[]; // artifact perks
+  setPerks: ArtifactPerk[]; // armor set bonuses the chosen armor turns on
   spec: BuildSpec;
   loopScore: number;
   statScore: number;
@@ -122,8 +151,9 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   // Bungie switches artifacts off in Trials and Competitive, so their perks count for nothing there.
   const artifactPerks = spec.goal === "trials" ? [] : (spec.artifactPerks ?? []).map(n => ctx.perks.get(n)).filter((x): x is ArtifactPerk => !!x);
   const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(weapons.filter((w): w is Weapon => !!w)), ...artifactPerks.map(k => ({ k }))];
-  const loops = scoreLoops(loopParts, spec.goal);
-  for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. Add a healing source or damage resistance (Frost Armor, overshield, invisibility).`);
+  let loops = scoreLoops(loopParts, spec.goal);
+  const loopsBase = loops;
+  const pushSurvives = () => { for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. Add a healing source or damage resistance (Frost Armor, overshield, invisibility).`); };
   const bonus = fragmentBonus(fragments, ctx.defs);
 
   let armor: Solution | undefined, plan: StatPlan | undefined, ratingPlan: StatPlan | undefined;
@@ -133,10 +163,28 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
     // Your stat targets steer the armor search, but the rating always uses Steeped's own stat plan, so the same
     // build gets the same rating on Home and in the Builder whatever targets you set. Missed targets show as issues.
     ratingPlan = planFor(shape, spec.goal, {}, settings.style);
-    armor = solve(ctx.pieces, {
-      cls: "Hunter", exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
+    const opts = {
+      cls: "Hunter" as const, exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
       locks: spec.armorLocks, minPower: ctx.light - 60, top: 1, tune: settings.tune,
-    })[0];
+    };
+    armor = solve(ctx.pieces, opts)[0];
+    // Armor sets: try each set you own enough pieces of whose bonus would add to this build, and keep it when
+    // the bonus is worth more than the stats you give up for it.
+    if (armor && ctx.sets.size) {
+      const total = (a: Solution) => scoreLoops([...loopParts, ...activeSetPerks(a, ctx).map(k => ({ k }))], spec.goal).score + statScore(a.stats, ratingPlan);
+      let bestTotal = total(armor);
+      const exoSlot = ctx.pieces.find(p => p.exotic && p.item.name === exotic.name)?.slot;
+      for (const st of ctx.sets.values()) {
+        const free = [...st.slots].filter(sl => sl !== exoSlot && !spec.armorLocks?.[sl]).length;
+        for (const count of [2, 4]) {
+          if (free < count || !st.perks.some(x => x.count === count)) continue;
+          const gain = scoreLoops([...loopParts, ...st.perks.filter(x => x.count <= count).map(x => ({ k: x.k }))], spec.goal).score - loopsBase.score;
+          if (gain <= 0.3) continue; // the bonus does nothing for this build
+          const a = solve(ctx.pieces, { ...opts, set: { hash: st.hash, count } })[0];
+          if (a && total(a) > bestTotal + 0.05) { armor = a; bestTotal = total(a); }
+        }
+      }
+    }
     if (!armor) issues.push(`No armor fits: you don't own ${exotic.name}, or a locked piece conflicts.`);
     else for (const k of STAT_ORDER) {
       const t = settings.targets[k];
@@ -144,14 +192,17 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
     }
   }
   void corePartsOf;
+  const setPerks = activeSetPerks(armor, ctx);
+  if (setPerks.length) loops = scoreLoops([...loopParts, ...setPerks.map(k => ({ k }))], spec.goal);
+  pushSurvives();
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
   const coreParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass)], perkParts = artifactPerks.map(k => ({ k }));
-  return { plan, coreParts, perkParts, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, ratingPlan), score: loops.score + statScore(stats, ratingPlan), ratingPlan, bonus, fragmentSlots: slots, armor, stats, issues };
+  return { plan, coreParts, perkParts, setPerks, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, ratingPlan), score: loops.score + statScore(stats, ratingPlan), ratingPlan, bonus, fragmentSlots: slots, armor, stats, issues };
 }
 
 // Where the points come from. A piece is worth what the build would lose without it, so pieces that only work
 // together each show the full value of the pairing (the numbers overlap on purpose).
-export interface PiecePoints { name: string; group: "Weapons" | "Exotic" | "Subclass" | "Artifact" | "Stats"; points: number; detail?: string }
+export interface PiecePoints { name: string; group: "Weapons" | "Exotic" | "Subclass" | "Artifact" | "Armor set" | "Stats"; points: number; detail?: string }
 export function pointsByPiece(v: BuildView): PiecePoints[] {
   const goal = v.spec.goal, ws = v.weapons.filter((w): w is Weapon => !!w);
   const score = (core: Part[], weps: Weapon[], perks: Part[]) => scoreLoops([...core, ...weaponParts(weps), ...perks], goal).score;
@@ -163,6 +214,8 @@ export function pointsByPiece(v: BuildView): PiecePoints[] {
     out.push({ name: p.k.name, group: p.k.kind === "exotic" ? "Exotic" : "Subclass", points: base - score(v.coreParts.filter(x => x !== p), ws, v.perkParts) });
   }
   for (const p of v.perkParts) out.push({ name: p.k.name, group: "Artifact", points: base - score(v.coreParts, ws, v.perkParts.filter(x => x !== p)) });
+  const setParts = (v.setPerks ?? []).map(k => ({ k }));
+  for (const p of setParts) out.push({ name: p.k.name, group: "Armor set", points: score([...v.coreParts, ...setParts], ws, v.perkParts) - score([...v.coreParts, ...setParts.filter(x => x !== p)], ws, v.perkParts) });
   if (v.plan) for (const k of STAT_ORDER) {
     const w = v.plan[k];
     out.push({ name: STAT_LABEL[k], group: "Stats", points: STAT_SCALE * statValue(v.stats[k], w), detail: `${v.stats[k]}${v.stats[k] < w.floor ? `, under your minimum of ${w.floor}` : ""}` });

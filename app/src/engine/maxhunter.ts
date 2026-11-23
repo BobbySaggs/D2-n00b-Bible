@@ -1,3 +1,4 @@
+import { BUILDS } from "../knowledge/research";
 import type { ItemDef } from "../bungie/defs";
 import type { CatalogEntry } from "../bungie/catalog";
 import type { Inventory, Item } from "../model/inventory";
@@ -48,7 +49,7 @@ export interface Compare {
   best: { view: BuildView; rating: number; grades: Grades; missing: number };
 }
 // One line of the farm list: what to get, what it replaces, where it drops and what it adds to your strongest build.
-export interface FarmRow { kind: "farm" | "upgrade" | "power"; title: string; detail?: string; replaces?: string; where: string; gain?: number; role: string }
+export interface FarmRow { kind: "farm" | "upgrade" | "power"; title: string; detail?: string; replaces?: string; where: string; gain?: number; role: string; inBuilds?: number }
 export interface MaxHunter {
   pct: number;
   pillars: { power: number; gear: number; builds: number };
@@ -257,6 +258,14 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
       if (b.artifact && b.artifact !== a.artifact) changes.push(`Artifact: ${b.artifact}`);
       b.weapons.forEach((id, i) => { const n = nameOf(id); if (n && n !== nameOf(a.weapons[i])) changes.push(n); });
       for (const x of b.fragments) if (!a.fragments.includes(x)) changes.push(x);
+      // Armor set bonuses the strongest build turns on that what you wear doesn't.
+      const setsOf = (v: BuildView) => { const n = new Map<number, number>(); for (const p of Object.values(v.armor?.pieces ?? {})) if (p.set) n.set(p.set, (n.get(p.set) ?? 0) + 1); return n; };
+      const was = setsOf(nowV);
+      for (const [h, c] of setsOf(own)) {
+        const st = ctx.sets.get(h);
+        const on = st?.perks.filter(x => c >= x.count && !((was.get(h) ?? 0) >= x.count)).map(x => x.k.name) ?? [];
+        if (st && on.length) changes.unshift(`${st.name.replace(/ Set$/, "")} set (${c >= 4 ? 4 : 2} pieces): ${on.join(", ")}`);
+      }
     }
     compare.push({
       role, goal,
@@ -293,6 +302,11 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
   for (const r of farm) { const c = byTitle.get(r.title); if (!c || (r.gain ?? -1) > (c.gain ?? -1)) byTitle.set(r.title, c ? { ...r, role: `${c.role} and ${r.role}` } : r); }
   // A piece that makes your strongest build weaker on its own isn't worth farming, whatever a combo elsewhere says.
   farm.splice(0, farm.length, ...[...byTitle.values()].filter(r => r.kind !== "farm" || (r.gain ?? 0) > 0.05));
+  // How many top community builds use it (knowledge/research/builds.json).
+  for (const r of farm) if (r.kind === "farm") {
+    const name = r.title.replace(/^Pull /, "").replace(/ from Collections$/, "");
+    r.inBuilds = BUILDS.filter(b => b.exotic === name || b.weapons.some(w => w.name === name)).length;
+  }
   farm.sort((a, b) => (b.gain ?? 0.5) - (a.gain ?? 0.5));
   if (power < POWER_CAP) farm.unshift({ kind: "power", role: "Power", title: `Any ${lowest.slot} above ${lowest.power} Power`, detail: `Power ${Math.floor(power)} of ${POWER_CAP}, lowest slot: ${lowest.slot}`, where: "Solo Ops at Grade A or better" });
 

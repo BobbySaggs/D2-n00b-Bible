@@ -26,6 +26,7 @@ export interface SolveOptions {
   locks?: Partial<Record<Slot, string>>; // item ids the player picked for a slot
   minPower?: number; // armor below this needs infusing: legendary pieces are skipped, exotic copies only if no better copy exists
   tune?: boolean; // also try every tuning plug each piece can take
+  set?: { hash: number; count: number }; // wear at least this many pieces of this armor set (for its bonus)
 }
 
 export interface Solution {
@@ -122,6 +123,8 @@ export function solve(all: Piece[], o: SolveOptions): Solution[] {
     for (const c of scored) c.w = pieceWeight(c.st, o.plan) + (o.wornIds?.has(c.p.item.id) ? 0.01 : 0);
     scored.sort((a, b) => b.w - a.w);
     const keep = new Set(scored.slice(0, K).map(c => c.p));
+    // A set wish needs set pieces in the pool even when they score lower on stats.
+    if (o.set) for (const c of scored.filter(c => c.p.set === o.set!.hash).slice(0, 3)) keep.add(c.p);
     for (const k of STAT_ORDER) {
       const best = [...scored].sort((a, b) => b.st[k] - a.st[k])[0];
       if (best) keep.add(best.p);
@@ -142,6 +145,7 @@ export function solve(all: Piece[], o: SolveOptions): Solution[] {
   const pick: Piece[] = [];
   const walk = (i: number) => {
     if (i === pools.length) {
+      if (o.set && pick.filter(p => p.set === o.set!.hash).length < o.set.count) return;
       for (const k of STAT_ORDER) raw[k] = o.bonus[k];
       for (const p of pick) { const s = statsOf.get(p)!; for (const k of STAT_ORDER) raw[k] += s[k]; }
       const { stats, mods } = placeMods(raw, o.plan, nMods);

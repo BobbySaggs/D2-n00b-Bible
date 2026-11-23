@@ -1,4 +1,5 @@
 import type { StatKey } from "../bungie/config";
+import { RULES, asK } from "./research";
 
 // Hunter loop knowledge. Written by Claude from Bungie's own rules text (Tyler's snapshot, Nov 18 2026,
 // Monument of Triumph era) and checked by hand. Not taken from anyone's tier list.
@@ -19,7 +20,7 @@ import type { StatKey } from "../bungie/config";
 // "token:2" means a strong effect. In uses, "a|b|c" means any one of them is enough. Debuffs (slow, freeze, weaken, scorch, jolt, sever...) automatically
 // count as kDebuffed when the build also kills things.
 
-export type Kind = "super" | "grenade" | "melee" | "classAbility" | "aspect" | "fragment" | "exotic" | "weapon" | "artifact";
+export type Kind = "super" | "grenade" | "melee" | "classAbility" | "aspect" | "fragment" | "exotic" | "weapon" | "artifact" | "set";
 export type Subclass = "Revenant" | "Nightstalker" | "Gunslinger" | "Arcstrider" | "Threadrunner" | "Prismatic Hunter";
 export const SUBCLASSES: Subclass[] = ["Prismatic Hunter", "Revenant", "Nightstalker", "Gunslinger", "Arcstrider", "Threadrunner"];
 export const ELEMENT: Record<Subclass, string> = {
@@ -325,7 +326,10 @@ export const WEAPON_TYPE: Record<string, K> = Object.fromEntries(([
   ["Grenade Launcher", ["kWeapon"], "Area damage."],
 ] as [string, string[], string][]).map(([n, makes, says]) => [n, { name: n, kind: "weapon", makes, uses: [], says } as K]));
 
+// Researched rules (knowledge/research/rules.json) win over the hand-written ones with the same name.
 export const byName = new Map(HUNTER.map(k => [k.name, k]));
+for (const r of RULES) byName.set(r.name, asK(r));
+for (const r of RULES) if (!HUNTER.some(h => h.name === r.name)) HUNTER.push(asK(r)); else HUNTER.splice(HUNTER.findIndex(h => h.name === r.name), 1, asK(r));
 
 // Fragment slots per subclass when Bungie doesn't tell us (aspect capacity is not in the snapshot yet).
 export const MAX_FRAGMENTS: Record<Subclass, number> = {
