@@ -2,9 +2,9 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { CatalogEntry } from "../bungie/catalog";
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
-import { evaluate, makeCtx, type BuildSpec, type BuildView, type Settings } from "../engine/evaluate";
+import { evaluate, makeCtx, type ArtifactTune, type BuildSpec, type BuildView, type Settings } from "../engine/evaluate";
 import type { Compare, FarmRow, Grade } from "../engine/maxhunter";
-import { equipPlan, saveUndo, snapshotWorn } from "../engine/equip";
+import { artifactPlan, equipPlan, saveUndo, snapshotWorn } from "../engine/equip";
 import { Button, Card, cn } from "../ui/kit";
 import { Segmented } from "../ui/bits";
 import { useMax } from "../ui/useMax";
@@ -32,6 +32,7 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
   const { m, err } = useMax(inv, catalog);
   const [job, setJob] = useState("Max Hunter");
   const [wearing, setWearing] = useState<BuildView | null>(null);
+  const [setArt, setSetArt] = useState<BuildView | null>(null);
   const [more, setMore] = useState(false);
   const ctx = useMemo(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const worn = useMemo(() => (hunter ? gridFromWorn(inv.items, hunter.id) : null), [inv, hunter]);
@@ -59,7 +60,10 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
         <section className="grid gap-4 md:grid-cols-3" data-testid="compare">
           <Column title="Wearing now" name={c.now ? buildName(c.now.spec) : "Hunter"} grades={c.now?.grades} rating={c.now?.rating} testId="col-now"
             grid={<>{worn && <LoadoutGrid {...worn} size={40} />}{c.now && <ArtifactLine name={c.now.spec.artifact} perks={c.now.spec.artifactPerks} />}</>}
-            foot={<p className="text-xs text-ink-dim">Your starting point</p>} />
+            foot={<>
+              <p className="text-xs text-ink-dim">Your starting point</p>
+              {c.now?.artifact && <ArtifactTuneBox t={c.now.artifact.tune} rating={c.now.rating} to={c.now.artifact.rating} gain={c.now.artifact.gain} ownScore={c.own.view.score} onSet={() => setSetArt(c.now!.artifact!.tune.best)} />}
+            </>} />
           <Column title="Strongest you own" name={buildName(c.own.view.spec)} grades={c.own.grades} rating={100} delta={c.now ? 100 - c.now.rating : undefined} featured testId="col-own"
             grid={<><LoadoutGrid {...gridFromView(c.own.view)} size={40} /><ArtifactLine name={c.own.view.artifact?.name} perks={c.own.view.spec.artifactPerks} /></>}
             foot={<>
@@ -90,6 +94,12 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
       {wearing && (
         <EquipDialog title={`Wear this: ${buildName(wearing.spec)}`} steps={equipPlan(wearing, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }} slots={inv.loadouts?.[ctx.characterId]}
           onStart={() => saveUndo(snapshotWorn(ctx))} onClose={() => setWearing(null)} onDone={() => onRefresh?.()} />
+      )}
+
+      {setArt && (
+        <EquipDialog title={`Set your artifact: ${setArt.spec.artifact}`} steps={artifactPlan(setArt, ctx)} who={{ membershipType: inv.account.membershipType, characterId: ctx.characterId }} slots={inv.loadouts?.[ctx.characterId]}
+          intro="Only your artifact and its perks change (armor, weapons, subclass and mods stay as they are)"
+          onStart={() => saveUndo(snapshotWorn(ctx))} onClose={() => setSetArt(null)} onDone={() => onRefresh?.()} />
       )}
 
       <p className="text-center text-xs text-ink-dim">
@@ -144,5 +154,42 @@ function FarmLine({ r, items }: { r: FarmRow; items: Item[] }) {
       </div>
       <span className={cn("shrink-0 text-sm font-semibold", r.gain !== undefined ? "text-good" : "text-ink-dim")}>{r.kind === "power" ? "Power" : r.gain !== undefined ? `+${r.gain.toFixed(1)}%` : "Upgrade"}</span>
     </li>
+  );
+}
+
+// Tune my artifact: same build you wear, the best of all seven artifacts and perks for it.
+function ArtifactTuneBox({ t, rating, to, gain, ownScore, onSet }: { t: ArtifactTune; rating: number; to: number; gain: number; ownScore: number; onSet: () => void }) {
+  const [all, setAll] = useState(false);
+  const why = (perk: string) => {
+    const l = t.best.loops.links;
+    const fedBy = l.find(x => x.to === perk && !x.from.startsWith("__"))?.from;
+    const feeds = l.find(x => x.from === perk && !x.to.startsWith("__"))?.to;
+    return [fedBy && `fed by ${fedBy}`, feeds && `feeds ${feeds}`].filter(Boolean).join(", ") || t.best.artifactPerks.find(k => k.name === perk)?.says;
+  };
+  const switching = t.best.spec.artifact !== t.now.spec.artifact;
+  const better = gain >= 1 && (t.add.length > 0 || switching);
+  return (
+    <div className="space-y-2 rounded-lg border border-line bg-panel-2/60 p-3 text-sm" data-testid="artifact-tune">
+      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-hi">Tune my artifact</div>
+      {better ? <>
+        <p>{switching ? <>Switch to <b>{t.best.spec.artifact}</b></> : <>Re-pick perks on <b>{t.best.spec.artifact}</b></>}: rating {rating} to {to}{to > rating && <span className="text-good"> (+{to - rating})</span>}. Nothing else changes.</p>
+        <ul className="space-y-1 text-xs">
+          {t.add.map(n => <li key={n}><span className="text-good">+ {n}</span>{why(n) && <span className="text-ink-dim">: {why(n)}</span>}</li>)}
+          {t.remove.map(n => <li key={n} className="text-ink-dim">− {n}</li>)}
+        </ul>
+        <Button size="sm" onClick={onSet} data-testid="set-artifact">Set my artifact</Button>
+      </> : <p className="text-ink-dim">Your artifact and perks already fit this build best.</p>}
+      <button type="button" className="text-xs text-accent-hi hover:underline" onClick={() => setAll(!all)}>{all ? "Hide" : "Compare all seven"}</button>
+      {all && (
+        <ol className="space-y-0.5 text-xs" data-testid="artifact-all">
+          {t.options.map(o => (
+            <li key={o.name} className="flex justify-between gap-2">
+              <span className={cn(o.name === t.best.spec.artifact && "font-medium text-ink")}>{o.name}{o.equipped && <span className="text-ink-dim"> (on now)</span>}</span>
+              <span className="tabular-nums text-ink-dim">{Math.min(100, Math.round((100 * o.score) / ownScore))}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }

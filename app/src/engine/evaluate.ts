@@ -3,7 +3,7 @@ import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
 import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
 import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
-import { artifactsOf, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
+import { artifactsOf, bestArtifact, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
 import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, withPerks, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
@@ -255,8 +255,8 @@ export function currentSpec(ctx: Ctx, goal: Goal): BuildSpec | null {
 }
 
 // "Now" uses the game's own numbers: your character screen stats and the mods you actually slotted.
-export function evaluateNow(ctx: Ctx, goal: Goal, settings: Settings): BuildView | null {
-  const spec = currentSpec(ctx, goal);
+export function evaluateNow(ctx: Ctx, goal: Goal, settings: Settings, given?: BuildSpec): BuildView | null {
+  const spec = given ?? currentSpec(ctx, goal);
   if (!spec) return null;
   const v = evaluate(spec, ctx, { ...settings, mw: "asIs" });
   const ch = ctx.inv.characters.find(c => c.id === ctx.characterId)!;
@@ -296,15 +296,40 @@ export function tuneCurrent(ctx: Ctx, goal: Goal): BuildSpec | null {
     if (best === frags) break;
     frags = best;
   }
-  // Same artifact you have on, perks re-picked for this build.
-  const art = ctx.artifacts.find(a => a.name === spec.artifact);
-  let artifactPerks = spec.artifactPerks;
-  if (art) {
-    const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, ...frags, spec.exotic].map(k).filter((x): x is K => !!x).map(x => ({ k: x }));
-    const ws = spec.weapons.map(id => weaponOf(ctx, spec, id)).filter((w): w is Weapon => !!w);
-    artifactPerks = fitArtifact([...parts, subMarker(sub), ...weaponParts(ws)], goal, art).perks.map(p => p.perk.name);
-  }
-  return { ...base, fragments: frags, artifactPerks };
+  // The best of all seven artifacts for this build, with its perks picked for it.
+  const parts = [spec.super, spec.grenade, spec.melee, spec.classAbility, ...spec.aspects, ...frags, spec.exotic].map(k).filter((x): x is K => !!x).map(x => ({ k: x }));
+  const ws = spec.weapons.map(id => weaponOf(ctx, spec, id)).filter((w): w is Weapon => !!w);
+  const fit = goal === "trials" ? undefined : bestArtifact([...parts, subMarker(sub), ...weaponParts(ws)], goal, ctx.artifacts);
+  if (!fit) return { ...base, fragments: frags };
+  return { ...base, fragments: frags, artifact: fit.artifact.name, artifactPerks: fit.perks.map(p => p.perk.name) };
+}
+
+// "Tune my artifact": keep everything you wear and try all seven artifacts, each with the perks that add the most
+// to this exact build (your subclass, exotic, weapons and armor set bonuses). Nothing else changes.
+export interface ArtifactTune {
+  now: BuildView; // what you wear, with the perks you have in
+  best: BuildView; // same build, best artifact and perks
+  gain: number; // score points (same scale as BuildView.score)
+  options: { name: string; equipped: boolean; score: number; perks: string[] }[]; // all seven, best first
+  add: string[]; remove: string[]; // perk changes from what you have now
+}
+export function tuneArtifactNow(ctx: Ctx, goal: Goal, settings: Settings): ArtifactTune | null {
+  const now = evaluateNow(ctx, goal, settings);
+  if (!now || goal === "trials" || !ctx.artifacts.length) return null;
+  const base = [...now.coreParts, ...weaponParts(now.weapons.filter((w): w is Weapon => !!w)), ...now.setPerks.map(k => ({ k }))];
+  const options = ctx.artifacts.map(a => {
+    const perks = fitArtifact(base, goal, a).perks.map(p => p.perk.name);
+    const v = evaluateNow(ctx, goal, settings, { ...now.spec, artifact: a.name, artifactPerks: perks })!;
+    return { name: a.name, equipped: a.equipped, score: v.score, perks, v };
+  }).sort((x, y) => y.score - x.score || Number(y.equipped) - Number(x.equipped));
+  // Only move off what you have for a real gain, so Steeped never asks you to reshuffle for nothing.
+  const top = options[0].score > now.score + 0.5 ? options[0].v : now;
+  const had = now.spec.artifactPerks ?? [], want = top.spec.artifactPerks ?? [];
+  return {
+    now, best: top, gain: top.score - now.score,
+    options: options.map(({ v, ...o }) => { void v; return o; }),
+    add: want.filter(n => !had.includes(n)), remove: top.spec.artifact === now.spec.artifact ? had.filter(n => !want.includes(n)) : had,
+  };
 }
 
 // Switch a build to another artifact (or re-pick perks on the same one), choosing its best perks for this build.

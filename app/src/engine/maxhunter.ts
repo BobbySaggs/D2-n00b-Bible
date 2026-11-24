@@ -5,7 +5,7 @@ import type { Inventory, Item } from "../model/inventory";
 import { STAT_LABEL, STAT_ORDER, type StatKey } from "../bungie/config";
 import type { Goal } from "./loops";
 import { searchBuilds } from "./builds";
-import { evaluate, evaluateNow, makeCtx, specFromBuild, type BuildView, type Settings } from "./evaluate";
+import { evaluate, evaluateNow, makeCtx, specFromBuild, tuneArtifactNow, type ArtifactTune, type BuildView, type Settings } from "./evaluate";
 import { withCatalog, isStandIn, standInSource } from "./catalog";
 
 // One number for "how maxed is this Hunter", and the ordered path to 100%.
@@ -44,7 +44,7 @@ type Grades = Record<"clear" | "boss" | "survive", Grade>;
 // Home's three columns for one job: what you wear, the strongest you own (the 100 mark), and the best possible.
 export interface Compare {
   role: string; goal: Goal;
-  now?: { spec: BuildView["spec"]; rating: number; grades: Grades };
+  now?: { spec: BuildView["spec"]; rating: number; grades: Grades; artifact?: { tune: ArtifactTune; rating: number; gain: number } };
   own: { view: BuildView; rating: number; grades: Grades; changes: string[] };
   best: { view: BuildView; rating: number; grades: Grades; missing: number };
 }
@@ -245,6 +245,12 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
   })) as Grades;
   const full: Settings = { ...settings, mw: "full" };
   const nameOf = (id: string | undefined) => (id ? inv.items.find(i => i.id === id)?.name : undefined);
+  // Tune my artifact: the build you wear with the best of all seven artifacts, rated on the same yardstick.
+  const artTune = (goal: Goal, ownScore: number) => {
+    const tune = tuneArtifactNow(ctx, goal, settings);
+    if (!tune) return undefined;
+    return { tune, rating: Math.min(100, Math.round((100 * tune.best.score) / ownScore)), gain: Math.round((100 * tune.gain) / ownScore) };
+  };
   for (const { role, goal, view: own } of kit) {
     const best = possible.find(p => p.role === role)!.view;
     const nowV = evaluateNow(ctx, goal, settings);
@@ -269,7 +275,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
     }
     compare.push({
       role, goal,
-      now: nowV ? { spec: nowV.spec, rating: Math.min(100, Math.round((100 * nowV.score) / own.score)), grades: gradesOf(nowV, ctx, settings) } : undefined,
+      now: nowV ? { spec: nowV.spec, rating: Math.min(100, Math.round((100 * nowV.score) / own.score)), grades: gradesOf(nowV, ctx, settings), artifact: artTune(goal, own.score) } : undefined,
       own: { view: own, rating: 100, grades: gradesOf(own, ctx, settings), changes },
       best: { view: best, rating: Math.round((100 * best.score) / own.score), grades: gradesOf(best, hasStandIn(best) ? wctx : ctx, full), missing: [...best.weapons.filter(Boolean).map(w => w!.item), ...Object.values(best.armor?.pieces ?? {}).map(p => p.item)].filter(isStandIn).length },
     });

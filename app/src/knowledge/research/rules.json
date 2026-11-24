@@ -1,6 +1,6 @@
 {
  "about": "Rules Steeped learned from research. Each one says what a piece does in Steeped's terms (makes, uses, needs, role), in plain words, and where that comes from. A rule here wins over Steeped's own reading of Bungie's text and over the hand-written rules in hunter.ts. Confidence: bungie = Bungie's own text or patch notes; tested = measured by a public tester; multiple = several independent sources agree; single = one community source.",
- "updated": "2026-11-23",
+ "updated": "2026-11-24",
  "rules": [
   {
    "name": "Widow's Silk",
@@ -890,43 +890,49 @@
    "name": "Thunderous Retort",
    "kind": "artifact",
    "makes": [
-    "dmg"
+    "dmg",
+    "bossDmg"
    ],
    "uses": [
     "amplified"
    ],
-   "says": "Grants bonus Arc Super damage if cast while critically wounded or while amplified. Lasts until the end of the Super activation.",
+   "says": "Casting an Arc Super while amplified or critically wounded boosts its damage for the whole Super.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__sub:Arc",
     "__sub:Prismatic"
+   ],
+   "role": [
+    "bossDps"
    ]
   },
   {
    "name": "Strand Soldier",
    "kind": "artifact",
    "makes": [
+    "unravel"
+   ],
+   "uses": [
     "woven"
    ],
-   "uses": [],
-   "says": "Your Strand weapons gain Unraveling Rounds whenever you gain Woven Mail while your Strand or Prismatic subclass is equipped.",
+   "says": "Gaining Woven Mail gives your Strand weapons Unraveling Rounds (Strand or Prismatic subclass).",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__el:Strand+__sub:Strand",
     "__el:Strand+__sub:Prismatic"
@@ -1002,19 +1008,20 @@
     "dmg"
    ],
    "uses": [
-    "slow|freeze|sever|suspend|unravel"
+    "sever|suspend|unravel"
    ],
-   "says": "Targets affected by Strand debuffs take increased damage from Arc and Void abilities.",
+   "says": "Arc and Void abilities hit harder on Strand-debuffed targets (severed, suspended, unraveled).",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
+    "__sub:Arc",
     "__sub:Void",
     "__sub:Prismatic"
    ]
@@ -1029,18 +1036,23 @@
    "uses": [
     "amplified"
    ],
-   "says": "Arc final blows while you are amplified summon a burst of lightning that damages and jolts targets.",
+   "says": "Arc kills while amplified call down lightning that jolts enemies.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "role": [
     "adClear"
+   ],
+   "needs": [
+    "__el:Arc",
+    "__sub:Arc",
+    "__sub:Prismatic"
    ]
   },
   {
@@ -1164,24 +1176,26 @@
    "makes": [
     "radiant",
     "teamBuff",
-    "dmg"
+    "dmg",
+    "bossDmg"
    ],
-   "uses": [
-    "sEn"
-   ],
-   "says": "Casting your Solar Super grants nearby allies radiant and increases the damage of your Super for each nearby ally.",
+   "uses": [],
+   "says": "Casting a Solar Super makes nearby allies radiant, and your Super hits harder for each ally near you.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__sub:Solar",
     "__sub:Prismatic"
+   ],
+   "role": [
+    "team"
    ]
   },
   {
@@ -1367,18 +1381,19 @@
     "suspend"
    ],
    "uses": [],
-   "says": "Breaking a combatant's shield with a Strand or Stasis weapon has a chance to suspend or freeze that combatant.",
+   "says": "Breaking a shield with a Stasis or Strand weapon can freeze or suspend the enemy.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
-    "__el:Stasis"
+    "__el:Stasis",
+    "__el:Strand"
    ]
   },
   {
@@ -1392,18 +1407,23 @@
    "uses": [
     "slow|freeze"
    ],
-   "says": "Stasis final blows against slowed or frozen targets release a burst that slows combatants and grants Frost Armor to allies caught in the blast.",
+   "says": "Stasis kills on slowed or frozen enemies send out a slowing burst that gives allies in it Frost Armor.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "role": [
     "adClear"
+   ],
+   "needs": [
+    "__el:Stasis",
+    "__sub:Stasis",
+    "__sub:Prismatic"
    ]
   },
   {
@@ -1479,19 +1499,24 @@
     "multikill"
    ],
    "uses": [
-    "kPrecision",
     "radiant"
    ],
-   "says": "While radiant, Solar precision final blows cause combatants to ignite.",
+   "says": "While radiant, Solar precision kills ignite enemies.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-24",
+   "needs": [
+    "__el:Solar"
+   ],
+   "role": [
+    "adClear"
+   ]
   },
   {
    "name": "Solo Operative",
@@ -1518,23 +1543,27 @@
    "kind": "artifact",
    "makes": [
     "dmg",
-    "reload"
+    "reload",
+    "bossDmg"
    ],
    "uses": [
     "armorCharge"
    ],
-   "says": "Firing a Rocket Launcher consumes one stack of Armor Charge, granting increased damage and reload speed until you reload or stow your Rocket Launcher.",
+   "says": "Each Rocket shot spends an Armor Charge for more damage and reload until you reload or stow it.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__type:Rocket Launcher"
+   ],
+   "role": [
+    "bossDps"
    ]
   },
   {
@@ -1545,21 +1574,23 @@
     "multikill"
    ],
    "uses": [
-    "kPrecision",
     "frost"
    ],
-   "says": "While Frost Armor is active, [Stasis]Stasis precision final blows cause combatants to release a freezing burst.",
+   "says": "While you have Frost Armor, Stasis precision kills set off a freezing burst.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "role": [
     "adClear"
+   ],
+   "needs": [
+    "__el:Stasis"
    ]
   },
   {
@@ -1593,19 +1624,16 @@
    "uses": [
     "multikill"
    ],
-   "says": "Rapid final blows with a Kinetic weapon or a weapon matching your equipped Super create an Elemental pickup that matches your equipped Super.",
+   "says": "Fast kills with a Kinetic weapon or one matching your Super's element drop an Elemental pickup.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
-   "needs": [
-    "__el:Kinetic"
-   ]
+   "checked": "2026-11-24"
   },
   {
    "name": "Energy Diffusion Substrate",
@@ -1632,19 +1660,16 @@
     "reload"
    ],
    "uses": [],
-   "says": "Breaking a combatant's shield grants increased weapon stability, handling, and reload speed. Swords gain increased guard resistance.",
+   "says": "Breaking a shield gives your weapons stability, handling and reload; Swords also guard better.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
-   "needs": [
-    "__type:Sword"
-   ]
+   "checked": "2026-11-24"
   },
   {
    "name": "Threaded Blast",
@@ -1682,15 +1707,15 @@
    "says": "Solar Sniper Rifle precision hits scorch targets.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
-    "__type:Sniper Rifle"
+    "__type:Sniper Rifle+__el:Solar"
    ]
   },
   {
@@ -1835,22 +1860,21 @@
    "name": "Prismatic Transfer",
    "kind": "artifact",
    "makes": [
-    "dmg",
     "teamBuff"
    ],
    "uses": [
     "sEn"
    ],
-   "says": "When you cast your Super, each member of your fireteam with a Super type different than yours gains a bonus to weapon damage.",
+   "says": "Casting your Super gives teammates with a different Super a weapon damage bonus. Nothing for you.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "role": [
     "team"
    ]
@@ -1924,19 +1948,21 @@
    "name": "Transference",
    "kind": "artifact",
    "makes": [
-    "dmg"
+    "dmg",
+    "gEn",
+    "mEn"
    ],
    "uses": [],
-   "says": "Gain increased grenade and melee damage while transcendent. Weapon final blows while transcendent refund Light and Dark energy after Transcendence ends.",
+   "says": "Grenades and melees hit harder while transcendent, and weapon kills then refund Light and Dark energy.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__sub:Prismatic"
    ]
@@ -1945,22 +1971,26 @@
    "name": "Sniper's Meditation",
    "kind": "artifact",
    "makes": [
-    "ammo",
-    "reload"
+    "dmg",
+    "reload",
+    "bossDmg"
    ],
    "uses": [],
-   "says": "Sniper Rifle hits grant stacking Sniper Rifle damage, stability, and reload bonuses for a short time. Heavy ammo Sniper Rifle hits count as more than one.",
+   "says": "Sniper Rifle hits stack damage, stability and reload; Heavy Sniper hits count as more than one.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__type:Sniper Rifle"
+   ],
+   "role": [
+    "bossDps"
    ]
   },
   {
@@ -2052,18 +2082,23 @@
    "uses": [
     "sever"
    ],
-   "says": "Defeating an exhausted or severed target with [Arc]Arc damage releases a blinding burst. Exhausted targets deal reduced outgoing damage.",
+   "says": "Arc kills on severed or exhausted enemies set off a blinding burst.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "role": [
     "adClear"
+   ],
+   "needs": [
+    "__el:Arc",
+    "__sub:Arc",
+    "__sub:Prismatic"
    ]
   },
   {
@@ -2072,17 +2107,19 @@
    "makes": [
     "sever"
    ],
-   "uses": [],
-   "says": "Targets hit by your Tangles are severed. Reduce Tangle cooldown by picking one up.",
+   "uses": [
+    "tangle"
+   ],
+   "says": "Your Tangles sever what they hit; picking one up cuts the Tangle cooldown.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-24"
   },
   {
    "name": "Maligned Harvest",
@@ -2198,22 +2235,27 @@
    "name": "Particle Reconstruction",
    "kind": "artifact",
    "makes": [
-    "dmg"
+    "dmg",
+    "reload",
+    "bossDmg"
    ],
    "uses": [],
-   "says": "Dealing sustained damage with Fusion Rifles or Linear Fusion Rifles partially refills the magazine from reserves and grants them bonus damage for a short duration against that target.",
+   "says": "Sustained Fusion or Linear Fusion damage refills the magazine and adds damage against that target.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__type:Linear Fusion Rifle",
     "__type:Fusion Rifle"
+   ],
+   "role": [
+    "bossDps"
    ]
   },
   {
@@ -2319,21 +2361,25 @@
    "name": "Limit Break",
    "kind": "artifact",
    "makes": [
-    "dmg"
+    "dmg",
+    "bossDmg"
    ],
    "uses": [
     "radiant|frost|woven|overshield|amplified|restoration|invis"
    ],
-   "says": "Casting a Super while you are critically wounded or have a elemental buff matching your Super element grants a period of increased Super damage.",
+   "says": "Casting your Super with a buff matching its element (or while critically wounded) boosts Super damage.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-24",
+   "role": [
+    "bossDps"
+   ]
   },
   {
    "name": "Elemental Benevolence",
@@ -2362,21 +2408,23 @@
    "name": "Refresh Threads",
    "kind": "artifact",
    "makes": [
-    "gEn"
+    "gEn",
+    "mEn",
+    "cEn"
    ],
    "uses": [
     "pickup|tangle"
    ],
-   "says": "Picking up an Elemental pickup matching your subclass element or picking up a Tangle while you have a [Strand]Strand Super equipped grants energy to your least charged ability.",
+   "says": "Picking up a matching Elemental pickup (or a Tangle with a Strand Super) refills your least-charged ability.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__sub:Strand",
     "__sub:Prismatic"
@@ -2437,16 +2485,21 @@
    "uses": [
     "slow|freeze|sever|suspend|unravel"
    ],
-   "says": "[Stasis]Stasis or [Strand] Strand debuffed non-boss combatants take increased [Solar]Solar damage from all sources.",
+   "says": "Stasis- or Strand-debuffed enemies (not bosses) take more Solar damage from everything.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-24",
+   "needs": [
+    "__el:Solar",
+    "__sub:Solar",
+    "__sub:Prismatic"
+   ]
   },
   {
    "name": "Elemental Daze",
@@ -2624,21 +2677,25 @@
    "name": "Iron Lord's Vigor",
    "kind": "artifact",
    "makes": [
+    "dr",
     "ammo"
    ],
    "uses": [],
-   "says": "While wielding a Sword, you take decreased damage; rapid final blows grant ammo to the wielder.",
+   "says": "Holding a Sword cuts the damage you take; fast Sword kills give ammo.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__type:Sword"
+   ],
+   "role": [
+    "survival"
    ]
   },
   {
@@ -2735,21 +2792,26 @@
    "name": "Power from Pain",
    "kind": "artifact",
    "makes": [
-    "devour"
+    "devour",
+    "breach",
+    "heal"
    ],
    "uses": [
     "weaken"
    ],
-   "says": "Rapid final blows against weakened combatants grant you Devour.",
+   "says": "Fast kills on weakened enemies give you Devour and leave a Void Breach.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-24",
+   "role": [
+    "survival"
+   ]
   },
   {
    "name": "Fierce Proxemics",
@@ -2825,21 +2887,18 @@
     "multikill"
    ],
    "uses": [
-    "radiant|frost|woven|overshield|amplified|restoration|invis"
+    "overshield|devour|invis"
    ],
-   "says": "While you have a Void elemental buff, melee and Sword hits weaken targets, while melee and Sword final blows create a weakening burst.",
+   "says": "With a Void buff (overshield, Devour, invisibility), melee and Sword hits weaken and their kills set off a weakening burst.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
-   "needs": [
-    "__type:Sword"
-   ],
+   "checked": "2026-11-24",
    "role": [
     "adClear"
    ]
@@ -2983,19 +3042,21 @@
     "jolt",
     "dmg"
    ],
-   "uses": [
-    "mEn"
-   ],
-   "says": "Arc-powered melee hits jolt combatants and deal further damage for a short duration.",
+   "uses": [],
+   "says": "Arc melee hits jolt enemies and deal extra damage for a short time.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-24",
+   "needs": [
+    "__sub:Arc",
+    "__sub:Prismatic"
+   ]
   },
   {
    "name": "Sticker Shock",
@@ -3135,18 +3196,21 @@
     "champion"
    ],
    "uses": [],
-   "says": "When using a Grenade Launcher, damaging a boss, damaging a Champion, or breaking a combatant's shield reloads your stowed weapons and weakens the combatant.",
+   "says": "With a Grenade Launcher, hitting bosses or Champions (or breaking shields) weakens them and reloads your stowed guns.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__type:Grenade Launcher"
+   ],
+   "role": [
+    "bossDps"
    ]
   },
   {
@@ -3230,19 +3294,20 @@
     "dmg"
    ],
    "uses": [
-    "slow|freeze|crystal"
+    "slow|freeze"
    ],
-   "says": "Your [Arc] Arc and [Void] Void abilities deal bonus damage to targets that are affected by a [Stasis] Stasis debuff.",
+   "says": "Arc and Void abilities hit harder on slowed or frozen targets.",
    "sources": [
     {
-     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
      "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
-     "date": "2026-11-18"
+     "date": "2026-11-24"
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
+    "__sub:Arc",
     "__sub:Void",
     "__sub:Prismatic"
    ]
@@ -3314,6 +3379,148 @@
    "checked": "2026-11-23",
    "needs": [
     "__el:Void"
+   ]
+  },
+  {
+   "name": "Crystalline Converter",
+   "kind": "artifact",
+   "makes": [
+    "shard",
+    "crystal"
+   ],
+   "uses": [
+    "dodge"
+   ],
+   "says": "After your class ability, your next Stasis weapon kill drops a shard; shards make your next powered Stasis melee spawn crystals.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-24"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-24",
+   "needs": [
+    "__el:Stasis+__sub:Stasis",
+    "__el:Stasis+__sub:Prismatic"
+   ]
+  },
+  {
+   "name": "Served Cold",
+   "kind": "artifact",
+   "makes": [
+    "cEn",
+    "mEn"
+   ],
+   "uses": [
+    "shard|breach"
+   ],
+   "says": "Picking up a Stasis shard gives class ability energy; picking up a Void Breach gives melee energy.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-24"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-24"
+  },
+  {
+   "name": "Wind Chill",
+   "kind": "artifact",
+   "makes": [
+    "frost",
+    "shard:0.5"
+   ],
+   "uses": [],
+   "says": "Fast Stasis weapon hits build Frost Armor; hits on slowed or frozen enemies also drop shards.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-24"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-24",
+   "needs": [
+    "__el:Stasis"
+   ],
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Frost Renewal",
+   "kind": "artifact",
+   "makes": [
+    "freeze",
+    "frost",
+    "teamBuff"
+   ],
+   "uses": [
+    "frost"
+   ],
+   "says": "With Frost Armor, taking critical damage freezes enemies near you and gives you and allies Frost Armor.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-24"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-24",
+   "role": [
+    "survival"
+   ]
+  },
+  {
+   "name": "Supernova",
+   "kind": "artifact",
+   "makes": [
+    "weaken",
+    "multikill"
+   ],
+   "uses": [
+    "breach"
+   ],
+   "says": "Picking up a Void Breach makes your next Void damage send out a big weakening pulse.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-24"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-24",
+   "role": [
+    "adClear"
+   ]
+  },
+  {
+   "name": "Void Weapon Channeling",
+   "kind": "artifact",
+   "makes": [
+    "dmg:2"
+   ],
+   "uses": [],
+   "says": "Void weapon kills while a Void ability is fully charged boost Void weapon damage, more for each charged ability.",
+   "sources": [
+    {
+     "title": "Bungie item text (Destiny 2 manifest, Nov 2026), audited line by line by Claude",
+     "url": "https://www.bungie.net/Platform/Destiny2/Manifest/",
+     "date": "2026-11-24"
+    }
+   ],
+   "confidence": "bungie",
+   "checked": "2026-11-24",
+   "needs": [
+    "__el:Void+__sub:Void",
+    "__el:Void+__sub:Prismatic"
    ]
   }
  ]

@@ -24,6 +24,11 @@ function socketPlugs(item: Item, i: number, ctx: Ctx): ItemDef[] {
   return [...hashes].map(h => ctx.defOf(h)).filter((d): d is ItemDef => !!d);
 }
 
+// Just the artifact: put it on (if it isn't) and slot its perks. Armor, weapons, subclass and mods stay as they are.
+export function artifactPlan(v: BuildView, ctx: Ctx): EquipStep[] {
+  return equipPlan(v, ctx).filter(s => (s.kind === "equip" ? s.items.every(i => i.kind === "artifact") : s.kind !== "move" && s.group === "artifact"));
+}
+
 export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
   const steps: EquipStep[] = [];
   const cid = ctx.characterId;
@@ -37,7 +42,8 @@ export function equipPlan(v: BuildView, ctx: Ctx): EquipStep[] {
   for (const it of items) if (it.owner !== cid) steps.push({ kind: "move", label: `Move ${it.name} from ${it.owner === "vault" ? "your vault" : "another character"}`, item: it, via: it.owner === "vault" ? "direct" : "vault" });
   // 2) Equip: subclass and legendaries first, exotics last (Bungie allows one exotic weapon and one exotic armor).
   const art = v.artifact && v.spec.artifact ? v.artifact : undefined;
-  const need = [...(sub && !sub.equipped ? [sub] : []), ...(art && !art.equipped ? [art.item] : []), ...items.filter(i => !(i.owner === cid && i.equipped))];
+  if (art && !art.equipped) steps.push({ kind: "equip", label: `Equip ${art.item.name}`, items: [art.item] });
+  const need = [...(sub && !sub.equipped ? [sub] : []), ...items.filter(i => !(i.owner === cid && i.equipped))];
   const legendary = need.filter(i => !i.exotic), exotic = need.filter(i => i.exotic);
   if (legendary.length) steps.push({ kind: "equip", label: `Equip ${legendary.map(i => i.name).join(", ")}`, items: legendary });
   if (exotic.length) steps.push({ kind: "equip", label: `Equip ${exotic.map(i => i.name).join(", ")}`, items: exotic });
