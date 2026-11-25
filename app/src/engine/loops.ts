@@ -1,11 +1,12 @@
 import type { StatKey } from "../bungie/config";
 import { COMBOS, type Combo, type K, type Kind, type Subclass } from "../knowledge/hunter";
+import { isStasis } from "../knowledge/classes";
 
 // ---------- Goals: what you want the build to be good at ----------
 export type Goal = "whole" | "abilities" | "bossDps" | "survival" | "team" | "crucible" | "trials";
 export const isPvp = (g: Goal) => g === "crucible" || g === "trials";
 export const GOAL_LABEL: Record<Goal, string> = {
-  whole: "Max Hunter (clear rooms, hurt bosses, stay alive solo)",
+  whole: "All-round (clear rooms, hurt bosses, stay alive solo)",
   abilities: "Ability loop (general PvE)",
   bossDps: "Boss damage (raids)",
   survival: "Survival (hard content)",
@@ -26,10 +27,10 @@ const PVP: Record<string, number> = {
 const GOAL_WEIGHTS: Record<Goal, Record<string, number>> = {
   crucible: PVP, trials: PVP,
   // Kill power counts most; control (freeze, slow, crystals) only matters once something turns it into kills.
-  whole: { multikill: 4, bossDmg: 3, gEn: 2.5, mEn: 2, cEn: 2, sEn: 1.5, dmg: 2, kGrenade: 1.5, kAbility: 1.5, kMelee: 1.2, kWeapon: 1.5, shatter: 1.5, ignite: 1.5, volatile: 1.5, orb: 1.2, frost: 1.5, overshield: 2, heal: 2, dr: 2, cure: 1.5, restoration: 1.5, invis: 1.2, woven: 1.5, weaken: 1.5, radiant: 1.5, reload: 0.8, ammo: 1, champion: 1, freeze: 0.5, slow: 0.4, crystal: 0.5 },
-  abilities: { multikill: 3, gEn: 3, mEn: 3, cEn: 2.5, kAbility: 1.5, kGrenade: 1.5, kMelee: 1.5, freeze: 0.6, slow: 0.6, shatter: 1.2, crystal: 0.6, ignite: 1.2, jolt: 1, sever: 1, volatile: 1, weaken: 1, orb: 1, frost: 1, invis: 1, heal: 1, dr: 1, overshield: 1, dmg: 1 },
+  whole: { multikill: 4, bossDmg: 3, gEn: 2.5, mEn: 2, cEn: 2, sEn: 1.5, dmg: 2, kGrenade: 1.5, kAbility: 1.5, kMelee: 1.2, kWeapon: 1.5, shatter: 1.5, ignite: 1.5, volatile: 1.5, orb: 1.2, frost: 1.5, overshield: 2, heal: 2, dr: 2, cure: 1.5, restoration: 1.5, invis: 1.2, woven: 1.5, weaken: 1.5, radiant: 1.5, reload: 0.8, ammo: 1, champion: 1, freeze: 0.5, slow: 0.4, crystal: 0.5, devour: 1.5, threadling: 1.2, suspend: 1, unravel: 1, jolt: 1, amplified: 0.8 },
+  abilities: { multikill: 3, gEn: 3, mEn: 3, cEn: 2.5, kAbility: 1.5, kGrenade: 1.5, kMelee: 1.5, freeze: 0.6, slow: 0.6, shatter: 1.2, crystal: 0.6, ignite: 1.2, jolt: 1, sever: 1, volatile: 1, weaken: 1, orb: 1, frost: 1, invis: 1, heal: 1, dr: 1, overshield: 1, dmg: 1, threadling: 1.2, suspend: 1, unravel: 1, devour: 1, amplified: 0.8 },
   bossDps: { bossDmg: 4, sEn: 2.5, radiant: 2, weaken: 2, teamBuff: 1.5, dmg: 1.5, orb: 1.5, heal: 0.8, dr: 0.8, overshield: 0.8, frost: 0.6, reload: 0.8 },
-  survival: { heal: 3, dr: 3, frost: 2.5, overshield: 2.5, invis: 2.5, woven: 2.5, restoration: 2.5, cure: 2, slow: 1.5, freeze: 1.5, weaken: 1.5, suppress: 1.5, blind: 1.5, cEn: 1.5, gEn: 1.2, mEn: 1.2, dmg: 1 },
+  survival: { devour: 2.5, suspend: 1.2, heal: 3, dr: 3, frost: 2.5, overshield: 2.5, invis: 2.5, woven: 2.5, restoration: 2.5, cure: 2, slow: 1.5, freeze: 1.5, weaken: 1.5, suppress: 1.5, blind: 1.5, cEn: 1.5, gEn: 1.2, mEn: 1.2, dmg: 1 },
   team: { teamBuff: 3, radiant: 2.5, weaken: 2.5, heal: 2, restoration: 2, invis: 1.5, dr: 1.5, bossDmg: 1.5, sEn: 1, orb: 1.5 },
 };
 export const weightOf = (goal: Goal, token: string) => GOAL_WEIGHTS[goal][token] ?? 0.3;
@@ -102,7 +103,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
     addMade("orbPickup", 0.5, "orbs from teammates");
     if (made.has("freeze")) addMade("shatter", 0.5, "your weapons breaking frozen enemies");
     // Stasis shards are built into every Stasis subclass now: shatters and slowed or frozen kills drop them.
-    if (live.some(p => p.k.subs?.includes("Revenant")) && ["freeze", "slow", "shatter"].some(t => made.has(t))) addMade("shard", 1, "Stasis (built in)");
+    if (live.some(p => p.k.subs?.some(isStasis)) && ["freeze", "slow", "shatter"].some(t => made.has(t))) addMade("shard", 1, "Stasis (built in)");
     // Signature combos add what the pairing really produces.
     for (const c of combos) for (const raw of c.makes) { const [t, n] = parse(raw); addMade(t, n, c.name); }
     return made;

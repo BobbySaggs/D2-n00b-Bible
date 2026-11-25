@@ -12,14 +12,16 @@ import { searchBuilds } from "../src/engine/builds";
 import { withCatalog } from "../src/engine/catalog";
 import { byName } from "../src/knowledge/hunter";
 import { BUILDS, type CommunityBuild } from "../src/knowledge/research";
+import { CLASS_SUBS } from "../src/knowledge/classes";
 import type { Goal } from "../src/engine/loops";
 
 const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
-const builds: CommunityBuild[] = process.argv[3] ? JSON.parse(readFileSync(process.argv[3], "utf8")).builds : BUILDS;
+const builds: CommunityBuild[] = (process.argv[3] ? JSON.parse(readFileSync(process.argv[3], "utf8")).builds : BUILDS)
+  .filter((b: CommunityBuild) => CLASS_SUBS[(process.env.CLS ?? "Hunter") as "Hunter"].includes(b.subclass as never));
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const defOf = (h: number) => defs.get(h);
 const inv0 = buildInventory(s.profile, defOf, s.account);
-const hunter = inv0.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv0.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const { inv } = withCatalog(inv0, defOf, s.catalog ?? [], hunter.id);
 const ctx = makeCtx(inv, defOf, [...defs.values()], hunter.id);
 const full: Settings = { targets: {}, mw: "full", style: "peaks", tune: true };

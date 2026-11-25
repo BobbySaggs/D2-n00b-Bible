@@ -9,7 +9,7 @@ import type { Goal } from "../src/engine/loops";
 const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
 console.log("artifacts:", ctx.artifacts.map(a => `${a.name}${a.equipped ? " (on)" : ""}: ${a.sockets.length} sockets, ${new Set(a.sockets.flatMap(x => x.options.map(o => o.name))).size} perks`).join("; "));
 const guessed = [...ctx.perks.values()].filter(p => p.read === "description").map(p => p.name);

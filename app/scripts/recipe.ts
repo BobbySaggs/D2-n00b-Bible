@@ -7,7 +7,7 @@ import { STAT_ORDER, ARMOR_SLOTS } from "../src/bungie/config";
 const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
 const v = evaluate(tuneCurrent(ctx, "whole")!, ctx, { healthFloor: 100, mw: "asIs", style: "peaks" });
 const sp = v.spec;

@@ -51,6 +51,7 @@ export interface Compare {
 // One line of the farm list: what to get, what it replaces, where it drops and what it adds to your strongest build.
 export interface FarmRow { kind: "farm" | "upgrade" | "power"; title: string; detail?: string; replaces?: string; where: string; gain?: number; role: string; inBuilds?: number }
 export interface MaxHunter {
+  cls: string; // Hunter, Warlock
   pct: number;
   pillars: { power: number; gear: number; builds: number };
   partial: boolean; // true while the best-possible check hasn't run yet
@@ -317,7 +318,7 @@ export function maxHunter(inv: Inventory, defOf: DefOf, defs: ItemDef[], charact
   if (power < POWER_CAP) farm.unshift({ kind: "power", role: "Power", title: `Any ${lowest.slot} above ${lowest.power} Power`, detail: `Power ${Math.floor(power)} of ${POWER_CAP}, lowest slot: ${lowest.slot}`, where: "Solo Ops at Grade A or better" });
 
   const pct = 100 * (WEIGHT.power * powerPct + WEIGHT.gear * gearPct + WEIGHT.builds * buildsPct);
-  return { partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now, possible, targets, compare, farm };
+  return { cls: inv.characters.find(c => c.id === characterId)?.cls ?? "Hunter", partial: !withBest, pct, pillars: { power: powerPct * 100, gear: gearPct * 100, builds: buildsPct * 100 }, power, lowestSlot: lowest, kit, best, path, reports, now, possible, targets, compare, farm };
 }
 
 const hasStandIn = (v: BuildView) => [...v.weapons.filter(Boolean).map(w => w!.item), ...Object.values(v.armor?.pieces ?? {}).map(p => p.item)].some(isStandIn);

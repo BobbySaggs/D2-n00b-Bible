@@ -3,6 +3,7 @@ import type { Inventory } from "../model/inventory";
 import { CAMPAIGNS, REMOVED_CAMPAIGNS, type Campaign } from "../knowledge/campaigns";
 import { loadStory, normMission, scanStory, type Quest, type StoryHistory } from "../bungie/quests";
 import { Badge, Button, Card, cn } from "../ui/kit";
+import { useCharacter } from "../ui/character";
 import { Spinner } from "../ui/bits";
 
 // Your path: where you are in every campaign (live quest step from Bungie plus your story history), what to do
@@ -32,7 +33,7 @@ function questFor(c: Campaign, quests: Quest[], cid: string): Quest | undefined 
 }
 
 export function Path({ inv, quests }: { inv: Inventory; quests: Quest[] }) {
-  const hunter = inv.characters.find(c => c.cls === "Hunter") ?? inv.characters[0];
+  const hunter = useCharacter(inv) ?? inv.characters[0];
   const [story, setStory] = useState<StoryHistory | null>(loadStory);
   const [ov, setOv] = useState<Override>(readOverride);
   const [busy, setBusy] = useState("");
@@ -88,7 +89,7 @@ export function Path({ inv, quests }: { inv: Inventory; quests: Quest[] }) {
 
       {others.length > 0 && (
         <details className="rounded-md border border-line p-3" data-testid="other-quests">
-          <summary className="cursor-pointer font-display text-base">Other quests on your Hunter ({others.length})</summary>
+          <summary className="cursor-pointer font-display text-base">Other quests on your {hunter?.cls ?? "character"} ({others.length})</summary>
           <ul className="mt-2 space-y-1.5 text-sm">
             {others.slice(0, 40).map(q => { const o = q.objectives.find(x => !x.done); return (
               <li key={`${q.hash}`}><b>{q.line || q.name}</b><div className="text-xs text-ink-dim">{q.line && q.line !== q.name ? `${q.name}: ` : ""}{o ? `${o.text}${o.goal > 1 ? ` (${o.progress} / ${o.goal})` : ""}` : q.description.slice(0, 160)}</div></li>

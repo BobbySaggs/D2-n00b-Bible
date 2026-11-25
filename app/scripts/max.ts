@@ -8,7 +8,7 @@ const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const defOf = (h: number) => defs.get(h);
 const inv = buildInventory(s.profile, defOf, s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const m = maxHunter(inv, defOf, [...defs.values()], hunter.id, s.catalog ?? [], x => console.error(x));
 console.log(`MAX HUNTER ${m.pct.toFixed(1)}% | power ${m.pillars.power.toFixed(1)} gear ${m.pillars.gear.toFixed(1)} builds ${m.pillars.builds.toFixed(1)} | P ${m.power.toFixed(1)} lowest ${m.lowestSlot?.slot} ${m.lowestSlot?.power}`);
 for (const k of m.kit) { const v = k.view, sp = v.spec;

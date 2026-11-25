@@ -17,7 +17,7 @@ export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro
 
   const groups = useMemo(() => {
     const g: { name: string; idx: number[] }[] = [
-      { name: "Bring gear to your Hunter", idx: [] }, { name: "Equip", idx: [] }, { name: "Subclass", idx: [] }, { name: "Armor mods", idx: [] }, { name: "Artifact", idx: [] }, { name: "Weapon perks", idx: [] },
+      { name: "Bring gear to this character", idx: [] }, { name: "Equip", idx: [] }, { name: "Subclass", idx: [] }, { name: "Armor mods", idx: [] }, { name: "Artifact", idx: [] }, { name: "Weapon perks", idx: [] },
     ];
     steps.forEach((s, i) => {
       if (s.kind === "move") g[0].idx.push(i);
@@ -81,7 +81,7 @@ export function EquipDialog({ title, steps, who, onClose, onDone, onStart, intro
           <div>
             <h3 className="text-xl">Equip {title}</h3>
             <p className="text-sm text-ink-dim">
-              {phase === "confirm" && <>{intro ?? "This changes your Hunter's gear, subclass and mods"}: {steps.filter(s => s.kind !== "manual").length} steps. Stand in orbit or a social space first.{!intro && " Steeped saves what you're wearing first, so you can undo this."}</>}
+              {phase === "confirm" && <>{intro ?? "This changes this character's gear, subclass and mods"}: {steps.filter(s => s.kind !== "manual").length} steps. Stand in orbit or a social space first.{!intro && " Steeped saves what you're wearing first, so you can undo this."}</>}
               {phase === "running" && "Working… keep the game where it is until this finishes."}
               {phase === "finished" && <span data-testid="equip-summary">{count("done")} done{count("failed") ? `, ${count("failed")} failed` : ""}{count("manual") ? `, ${count("manual")} to do in game` : ""}.</span>}
             </p>

@@ -9,7 +9,7 @@ const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
 const pieces = inv.items.map(i => readPiece(i, h => defs.get(h))).filter(Boolean) as Piece[];
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const worn = inv.items.filter(i => i.owner === hunter.id && i.equipped && i.kind === "armor");
 const wornIds = new Set(worn.map(i => i.id));
 const plan: StatPlan = { health: { floor: 60, low: 0.8, high: 0.3 }, melee: { floor: 50, low: 0.5, high: 0.1 }, grenade: { floor: 50, low: 1.2, high: 0.6 },

@@ -10,7 +10,7 @@ export function SignIn({ error }: { error?: string }) {
         <p className="text-sm text-ink-dim">by Bobby Saggs</p>
       </div>
       <Card className="space-y-4 p-6">
-        <h2 className="text-2xl">Max out your Hunter without the homework.</h2>
+        <h2 className="text-2xl">Max out your Hunter or Warlock without the homework.</h2>
         <p className="text-ink-dim">
           Steeped reads your characters and vault from Bungie, builds your strongest loadouts, and tells you what to play and chase next.
         </p>

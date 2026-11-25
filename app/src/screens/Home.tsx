@@ -11,6 +11,7 @@ import { useMax } from "../ui/useMax";
 import { GearIcon, iconForItem } from "../ui/gear";
 import { ArtifactLine, LoadoutGrid, Moment, gradeClass, gridFromView, gridFromWorn } from "../ui/visual";
 import { EquipDialog } from "./EquipDialog";
+import { useCharacter } from "../ui/character";
 import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "../bungie/clarity";
 
 // Home answers two questions. What's the strongest I can wear right now (and put it on)? What should I farm, and why?
@@ -28,7 +29,7 @@ export function itemIn(text: string, items: Item[]): Item | undefined {
 const JOBS = [{ value: "Max Hunter", label: "All-round" }, { value: "Boss damage", label: "Boss damage" }];
 
 export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory; catalog: CatalogEntry[]; onOpen: (spec: BuildSpec) => void; onGo: (screen: "builds" | "journey" | "inventory") => void; onRefresh?: () => void }) {
-  const hunter = inv.characters.find(c => c.cls === "Hunter");
+  const hunter = useCharacter(inv);
   const { m, err } = useMax(inv, catalog);
   const [job, setJob] = useState("Max Hunter");
   const [wearing, setWearing] = useState<BuildView | null>(null);
@@ -37,9 +38,9 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
   const ctx = useMemo(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const worn = useMemo(() => (hunter ? gridFromWorn(inv.items, hunter.id) : null), [inv, hunter]);
 
-  if (!hunter || !ctx) return <Moment pose="ghost" title="No Hunter on this account">Steeped builds for Hunters. Make one and come back.</Moment>;
+  if (!hunter || !ctx) return <Moment pose="ghost" title="No Hunter or Warlock on this account">Steeped builds for Hunters and Warlocks. Make one and come back.</Moment>;
   if (err) return <Moment pose="ghost" title="Something went wrong">{err}</Moment>;
-  if (!m) return <Moment pose="mug" title="Brewing your Hunter…">Checking every build you can make from your characters and vault. Under a minute, once per refresh.</Moment>;
+  if (!m) return <Moment pose="mug" title={`Brewing your ${hunter.cls}…`}>Checking every build you can make from your characters and vault. Under a minute, once per refresh.</Moment>;
 
   const c: Compare | undefined = m.compare?.find(x => x.role === job) ?? m.compare?.[0];
   const big = (m.farm ?? []).filter(r => r.kind === "power" || r.gain === undefined || r.gain >= 1);
@@ -50,7 +51,7 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
     <div className="space-y-6" data-testid="home">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Your strongest Hunter</h1>
+          <h1 className="font-display text-3xl font-semibold">Your strongest {hunter.cls}</h1>
           <p className="text-ink-dim">Power {Math.floor(m.power)} of 550{m.partial && " · still checking every exotic and weapon in the game"}</p>
         </div>
         <Segmented label="Job" value={job} options={JOBS} onChange={setJob} />
@@ -58,7 +59,7 @@ export function Home({ inv, catalog, onOpen, onGo, onRefresh }: { inv: Inventory
 
       {c && (
         <section className="grid gap-4 md:grid-cols-3" data-testid="compare">
-          <Column title="Wearing now" name={c.now ? buildName(c.now.spec) : "Hunter"} grades={c.now?.grades} rating={c.now?.rating} testId="col-now"
+          <Column title="Wearing now" name={c.now ? buildName(c.now.spec) : hunter.cls} grades={c.now?.grades} rating={c.now?.rating} testId="col-now"
             grid={<>{worn && <LoadoutGrid {...worn} size={40} />}{c.now && <ArtifactLine name={c.now.spec.artifact} perks={c.now.spec.artifactPerks} />}</>}
             foot={<>
               <p className="text-xs text-ink-dim">Your starting point</p>

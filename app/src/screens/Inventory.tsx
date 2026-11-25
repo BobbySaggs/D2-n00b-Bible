@@ -6,6 +6,7 @@ import type { Inventory as Inv, Item } from "../model/inventory";
 import { Badge, Button, Card, cn } from "../ui/kit";
 import { Segmented } from "../ui/bits";
 import { GearIcon, iconForItem } from "../ui/gear";
+import { useCharacter } from "../ui/character";
 import { cleanup, type Junk } from "../engine/cleanup";
 
 // Your whole collection in one place: every character and the vault, with search, filters, item details,
@@ -14,11 +15,11 @@ type Kind = "all" | "weapon" | "armor";
 type Action = { kind: "move"; to: string } | { kind: "equip"; on: string };
 
 export function Inventory({ inv }: { inv: Inv }) {
-  const hunter = inv.characters.find(c => c.cls === "Hunter");
+  const hunter = useCharacter(inv);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<Kind>("all");
   const [where, setWhere] = useState("all");
-  const [cls, setCls] = useState<"Hunter" | "all">(hunter ? "Hunter" : "all");
+  const [cls, setCls] = useState<"mine" | "all">(hunter ? "mine" : "all");
   const [flags, setFlags] = useState({ exotic: false, infuse: false, t5: false, notMw: false, junk: false });
   const [sort, setSort] = useState<"power" | "tier" | "name">("power");
   const [open, setOpen] = useState<Item | null>(null);
@@ -38,7 +39,7 @@ export function Inventory({ inv }: { inv: Inv }) {
     return items.filter(i => {
       if (kind !== "all" && i.kind !== kind) return false;
       if (where !== "all" && i.owner !== where) return false;
-      if (cls === "Hunter" && i.kind === "armor" && i.cls !== "Hunter" && i.cls !== "Any") return false;
+      if (cls === "mine" && i.kind === "armor" && i.cls !== hunter?.cls && i.cls !== "Any") return false;
       if (flags.exotic && !i.exotic) return false;
       if (flags.infuse && !(i.power < light - 10)) return false;
       if (flags.t5 && i.gearTier < 5) return false;
@@ -86,8 +87,8 @@ export function Inventory({ inv }: { inv: Inv }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" aria-pressed={cls === "Hunter"} onClick={() => setCls(c => (c === "Hunter" ? "all" : "Hunter"))}
-            className={cn("rounded-full border px-3 py-1.5 text-sm", cls === "Hunter" ? "border-accent-hi/60 bg-accent/25" : "border-line text-ink-dim")}>Hunter armor only</button>
+          <button type="button" aria-pressed={cls === "mine"} onClick={() => setCls(c => (c === "mine" ? "all" : "mine"))}
+            className={cn("rounded-full border px-3 py-1.5 text-sm", cls === "mine" ? "border-accent-hi/60 bg-accent/25" : "border-line text-ink-dim")}>{hunter?.cls ?? "Hunter"} armor only</button>
           {flag("exotic", "Exotic")}
           {flag("t5", "Tier 5")}
           {flag("infuse", "Needs infusing")}

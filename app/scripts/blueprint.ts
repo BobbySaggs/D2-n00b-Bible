@@ -14,7 +14,7 @@ const s = JSON.parse(gunzipSync(readFileSync(file)).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const defOf = (h: number) => defs.get(h);
 let inv = buildInventory(s.profile, defOf, s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 let catalog = s.catalog ?? [];
 if (sim) {
   const drop = ["Star-Eater Scales", "Monte Carlo", "Still Hunt"];

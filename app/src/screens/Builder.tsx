@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
-import { HUNTER, SUBCLASSES, byName, type K, type Subclass } from "../knowledge/hunter";
+import { ALL, CLASS_SUBS, byName, type K, type Subclass } from "../knowledge/hunter";
 import { breakdown, currentSlotMods, evaluate, pointsByPiece, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import type { Require } from "../engine/builds";
 import { clearUndo, equipPlan, loadUndo, restorePlan, saveUndo, snapshotWorn, type WornSnapshot } from "../engine/equip";
@@ -21,6 +21,7 @@ import { Delta, Pick, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, MwLegend, iconForItem, iconForName } from "../ui/gear";
 import { StatTargetsBar, loadTargets } from "../ui/targets";
 import { MODE_NOTES, PVP_NOTES, WSTAT_LABEL } from "../knowledge/pvp";
+import { useCharacter } from "../ui/character";
 import { isPvp } from "../engine/loops";
 
 export const GOALS: { value: Goal; label: string }[] = [
@@ -54,7 +55,7 @@ const gearOf = (v: BuildView) => [...v.weapons.filter(Boolean).map(w => w!.item)
 const needsFarm = (v: BuildView | null) => !!v && gearOf(v).some(isStandIn);
 
 export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed }: { inv: Inventory; catalog?: CatalogEntry[]; onRefresh?: () => void; incoming?: { col: Col; spec: BuildSpec } | null; onIncomingUsed?: () => void }) {
-  const hunter = inv.characters.find(c => c.cls === "Hunter");
+  const hunter = useCharacter(inv);
   // Gear you don't own joins as stand-ins, so the "best possible" column and the menu can use anything in the game.
   const ctx = useMemo<Ctx | null>(() => {
     if (!hunter) return null;
@@ -149,7 +150,7 @@ export function Builder({ inv, catalog = [], onRefresh, incoming, onIncomingUsed
   }, [bestView, now, views]);
   const full = useMemo(() => specs.map(s => (s && ctx && settings.mw === "asIs" ? evaluate({ ...s, goal }, ctx, { ...settings, mw: "full" }) : null)), [specs, ctx, goal, settings]);
 
-  if (!hunter || !ctx) return <Moment pose="ghost" title="No Hunter on this account">Steeped builds for Hunters. Titan and Warlock are next.</Moment>;
+  if (!hunter || !ctx) return <Moment pose="ghost" title="No Hunter or Warlock on this account">Steeped builds for Hunters and Warlocks. Titan is next.</Moment>;
   // "Use this" from Try other options: the change shows right away in Best from what you own, and it's locked in
   // the menu so the next "Build it" (and Best possible) keeps it.
   const use = (sel: SlotId, o: Option, next: BuildSpec) => {
@@ -422,8 +423,8 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
   pinned: string[]; setPinned: (p: string[]) => void; search: (c: Col[], o?: { onlySubclass?: Subclass; onlyExotic?: string }) => void; busy: [boolean, boolean];
   focus: Col; showWhere: boolean; settings: Settings;
 }) {
-  const kitOf = (sub: Subclass, kind: K["kind"]) => HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && ctx.kit.get(sub)?.has(k.name));
-  const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
+  const kitOf = (sub: Subclass, kind: K["kind"]) => ALL.filter(k => k.kind === kind && k.subs?.includes(sub) && ctx.kit.get(sub)?.has(k.name));
+  const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === ctx.cls).map(p => p.item.name))].filter(n => byName.has(n)).sort();
   const cid = ctx.characterId;
 
   const kName = (n: string) => n
@@ -526,7 +527,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
         cells={cols.map(c => {
           const v = views[c]; if (!v) return null;
           const chosen = v.armor?.pieces[slot];
-          const opts = ctx.pieces.filter(p => p.slot === slot && p.item.cls === "Hunter" && (p.exotic ? p.item.name === v.spec.exotic : true) && (p.item.power >= ctx.light - 60 || p.item.id === chosen?.item.id))
+          const opts = ctx.pieces.filter(p => p.slot === slot && p.item.cls === ctx.cls && (p.exotic ? p.item.name === v.spec.exotic : true) && (p.item.power >= ctx.light - 60 || p.item.id === chosen?.item.id))
             .sort((a, b) => Number(b.exotic) - Number(a.exotic) || b.tier - a.tier || b.item.power - a.item.power);
           const locked = v.spec.armorLocks[slot];
           return (
@@ -573,7 +574,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
               return (
                 <Pick aria-label={`Subclass for build ${c ? "B" : "A"}`} changed={v.spec.subclass !== now?.spec.subclass} value={v.spec.subclass} disabled={busy[c]}
                   onChange={e => search([c], { onlySubclass: e.target.value as Subclass })}>
-                  {SUBCLASSES.filter(s => ctx.kit.has(s)).map(s => <option key={s} value={s}>{s}</option>)}
+                  {CLASS_SUBS[ctx.cls].filter(s => ctx.kit.has(s)).map(s => <option key={s} value={s}>{s}</option>)}
                 </Pick>
               );
             })} />
@@ -743,10 +744,10 @@ function BuildAround({ ctx, req, setReq, busy, onApply, pinned, setPinned }: { c
   const guns = (slot: string) => [...new Map(ctx.inv.items.filter(i => i.kind === "weapon" && i.slot === slot && !isStandIn(i)).sort((a, b) => b.power - a.power).map(i => [i.name, i])).values()].sort((a, b) => Number(b.exotic) - Number(a.exotic) || a.name.localeCompare(b.name));
   const pinIn = (slot: string) => ctx.inv.items.find(i => pinned.includes(i.id) && i.slot === slot);
   const pin = (slot: string, id: string) => setPinned([...pinned.filter(p => ctx.inv.items.find(i => i.id === p)?.slot !== slot), ...(id ? [id] : [])]);
-  const subs = SUBCLASSES.filter(s => ctx.kit.has(s));
+  const subs = CLASS_SUBS[ctx.cls].filter(s => ctx.kit.has(s));
   const inKit = (k: K) => (req.subclass ? [req.subclass] : subs).some(s => k.subs?.includes(s) && ctx.kit.get(s)?.has(k.name));
-  const opts = (kind: K["kind"]) => [...new Map(HUNTER.filter(k => k.kind === kind && inKit(k)).map(k => [k.name, k])).values()];
-  const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n)).sort();
+  const opts = (kind: K["kind"]) => [...new Map(ALL.filter(k => k.kind === kind && inKit(k)).map(k => [k.name, k])).values()];
+  const exotics = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === ctx.cls).map(p => p.item.name))].filter(n => byName.has(n)).sort();
   const unowned = new Set(ctx.pieces.filter(p => p.exotic && isStandIn(p.item)).map(p => p.item.name));
   const picked = [req.subclass, req.super, req.grenade, req.melee, req.classAbility, ...(req.aspects ?? []), ...(req.fragments ?? []), req.exotic, req.artifact, ...(req.artifactPerks ?? [])].filter(Boolean) as string[];
   const perkNames = [...new Set(ctx.artifacts.filter(a => !req.artifact || a.name === req.artifact).flatMap(a => a.sockets.flatMap(s => s.options.map(o => o.name))))].sort();

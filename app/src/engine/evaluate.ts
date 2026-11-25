@@ -1,7 +1,7 @@
 import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
-import { byName, MAX_FRAGMENTS, type K, type Subclass } from "../knowledge/hunter";
+import { byName, MAX_FRAGMENTS, type ClassName, type K, type Subclass } from "../knowledge/hunter";
 import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
 import { artifactsOf, bestArtifact, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
@@ -42,6 +42,7 @@ export interface Ctx {
   defOf: (h: number) => ItemDef | undefined;
   defs: ItemDef[];
   characterId: string;
+  cls: ClassName;
   light: number;
   pieces: Piece[];
   weapons: Weapon[]; // every weapon you own (any Power), for editing
@@ -54,10 +55,10 @@ export interface Ctx {
 }
 // An armor set: which slots you own pieces for, and its 2- and 4-piece bonuses as rules the loops can score.
 export interface SetInfo { hash: number; name: string; slots: Set<Slot>; perks: { count: number; k: ArtifactPerk }[] }
-function setsOf(pieces: Piece[], defOf: (h: number) => ItemDef | undefined): Map<number, SetInfo> {
+function setsOf(pieces: Piece[], defOf: (h: number) => ItemDef | undefined, cls: ClassName): Map<number, SetInfo> {
   const out = new Map<number, SetInfo>();
   for (const p of pieces) {
-    if (!p.set || p.item.cls !== "Hunter") continue;
+    if (!p.set || p.item.cls !== cls) continue;
     let s = out.get(p.set);
     if (!s) {
       const def = defOf(p.item.hash)?.set;
@@ -85,8 +86,8 @@ export function makeCtx(inv: Inventory, defOf: (h: number) => ItemDef | undefine
   const pieces = inv.items.map(i => readPiece(i, defOf)).filter((p): p is Piece => !!p);
   return {
     artifacts, perks: perkByName(artifacts),
-    inv, defOf, defs, characterId, light: ch.light,
-    pieces, sets: setsOf(pieces, defOf),
+    inv, defOf, defs, characterId, cls: ch.cls, light: ch.light,
+    pieces, sets: setsOf(pieces, defOf, ch.cls),
     weapons: ownedWeapons(inv, defOf, ch.light),
     kit: availableKit(inv, defOf, characterId),
     wornIds: new Set(inv.items.filter(i => i.owner === characterId && i.equipped).map(i => i.id)),
@@ -164,7 +165,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
     // build gets the same rating on Home and in the Builder whatever targets you set. Missed targets show as issues.
     ratingPlan = planFor(shape, spec.goal, {}, settings.style);
     const opts = {
-      cls: "Hunter" as const, exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
+      cls: ctx.cls, exotic: exotic.name, plan, bonus, mw: settings.mw, wornIds: ctx.wornIds,
       locks: spec.armorLocks, minPower: ctx.light - 60, top: 1, tune: settings.tune,
     };
     armor = solve(ctx.pieces, opts)[0];

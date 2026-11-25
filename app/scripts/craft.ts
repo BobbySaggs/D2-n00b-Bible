@@ -9,7 +9,7 @@ const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const defOf = (h: number) => defs.get(h);
 const inv = buildInventory(s.profile, defOf, s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const ctx = makeCtx(inv, defOf, [...defs.values()], hunter.id);
 const goal = "bossDps" as any;
 const best = (n: string) => inv.items.filter(i => i.name === n).sort((a, b) => b.power - a.power)[0];

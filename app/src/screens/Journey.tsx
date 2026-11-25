@@ -35,7 +35,7 @@ export function Journey({ inv, catalog, catalysts, artifact, quests }: {
         <div className="flex items-center gap-4">
           <Mascot pose="point" size={72} />
           <div>
-            <h1 className="font-display text-3xl font-semibold">Journey to a maxed Hunter</h1>
+            <h1 className="font-display text-3xl font-semibold">Journey to a maxed {m?.cls ?? "Guardian"}</h1>
             <p className="text-ink-dim">Every max that matters, and what to run to get there.</p>
           </div>
         </div>

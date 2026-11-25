@@ -18,7 +18,9 @@ export interface CatalogEntry {
 export const TIER_SOCKET = "weapon_tiering.plugs.mods.enhancers";
 const NO_SOURCE = /cannot be reacquired|^$/i;
 
-type Cached = { version: string; entries: CatalogEntry[]; catalysts?: CatalystDef[]; legendary?: boolean };
+type Cached = { version: string; entries: CatalogEntry[]; catalysts?: CatalystDef[]; legendary?: boolean; classes?: number };
+// Bump when the catalog covers more classes, so old caches (Hunter only) are rebuilt once.
+const CLASSES_V = 2;
 const store = typeof indexedDB !== "undefined" ? createStore("steeped-catalog", "v1") : null;
 let CATALOG: CatalogEntry[] = [];
 export const getCatalog = () => CATALOG;
@@ -68,7 +70,7 @@ async function table(path: string): Promise<Record<string, any>> {
   return r.json();
 }
 
-// Collectibles under Collections > Exotic, minus the Titan and Warlock armor branches.
+// Collectibles under Collections > Exotic, every class (each character only gets its own class's armor later).
 function exoticCollectibles(nodes: Record<string, any>): number[] {
   const name = (h: number | string) => String(nodes[h]?.displayProperties?.name ?? "").trim();
   const roots = Object.keys(nodes).filter(h => /^exotics?$/i.test(name(h)));
@@ -76,7 +78,6 @@ function exoticCollectibles(nodes: Record<string, any>): number[] {
   const walk = (h: number | string, depth: number) => {
     const n = nodes[h];
     if (!n || depth > 6) return;
-    if (/^(titan|warlock)$/i.test(name(h))) return;
     for (const c of n.children?.collectibles ?? []) out.add(c.collectibleHash);
     for (const c of n.children?.presentationNodes ?? []) walk(c.presentationNodeHash, depth + 1);
   };
@@ -89,7 +90,7 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
   const version = String(m?.version ?? "");
   if (store) {
     const cached = await get<Cached>("catalog", store).catch(() => undefined);
-    if (cached && cached.version === version && cached.entries.length && cached.catalysts) {
+    if (cached && cached.version === version && cached.entries.length && cached.catalysts && cached.classes === CLASSES_V) {
       CATALYST_DEFS = cached.catalysts;
       CATALOG = withStates(cached.entries, profile);
       await loadDefs([...CATALOG.map(e => e.hash)]);
@@ -109,10 +110,10 @@ export async function loadCatalog(profile: any, progress?: (msg: string) => void
   await loadDefs(entries.map(e => e.hash), (d, t) => progress?.(`Reading exotics (${d} of ${t})`));
   entries = entries.filter(e => {
     const d = def(e.hash);
-    return d && d.tier === 6 && (d.itemType === 3 || (d.itemType === 2 && d.cls === 1));
+    return d && d.tier === 6 && (d.itemType === 3 || (d.itemType === 2 && d.cls <= 2));
   });
   await loadDefs(plugsOf(entries), (d, t) => progress?.(`Reading exotic perks (${d} of ${t})`));
-  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS } satisfies Cached, store).catch(() => undefined);
+  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS, classes: CLASSES_V } satisfies Cached, store).catch(() => undefined);
   CATALOG = withStates(entries, profile);
   return CATALOG;
 }
@@ -140,7 +141,7 @@ export async function extendCatalog(profile: any, progress?: (msg: string) => vo
   const m: any = await api("/Destiny2/Manifest/");
   const version = String(m?.version ?? "");
   const cached = store ? await get<Cached>("catalog", store).catch(() => undefined) : undefined;
-  if (cached?.legendary && cached.version === version) return null;
+  if (cached?.legendary && cached.version === version && cached.classes === CLASSES_V) return null;
   const paths = m?.jsonWorldComponentContentPaths?.en ?? {};
   if (!paths.DestinyCollectibleDefinition || !paths.DestinyPresentationNodeDefinition || !paths.DestinyPlugSetDefinition) return null;
   progress?.("Reading every legendary weapon (once per Destiny update)");
@@ -162,7 +163,7 @@ export async function extendCatalog(profile: any, progress?: (msg: string) => vo
   await loadDefs(legs.flatMap(e => e.rolls!.flat()), (d, t) => progress?.(`Reading weapon perks (${d} of ${t})`));
   const base = (cached?.version === version ? cached.entries : CATALOG).filter(e => !e.rolls);
   const entries = [...base, ...legs];
-  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS, legendary: true } satisfies Cached, store).catch(() => undefined);
+  if (store) await set("catalog", { version, entries, catalysts: CATALYST_DEFS, legendary: true, classes: CLASSES_V } satisfies Cached, store).catch(() => undefined);
   CATALOG = withStates(entries, profile);
   return CATALOG;
 }

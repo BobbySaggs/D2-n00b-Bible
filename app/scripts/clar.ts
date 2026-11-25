@@ -11,7 +11,7 @@ if (process.argv[3]) { const perks = parseClarity(JSON.parse(readFileSync(proces
   for (const n of ["Kill Clip", "Bait and Switch", "Demolitionist", "Explosive Light", "Adrenaline Junkie"]) { const p = perks.find(x => x.name === n); console.log(" ", n, p?.dmgPct, p?.drPct, JSON.stringify(p?.energy)); } }
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const m = maxHunter(inv, h => defs.get(h), [...defs.values()], hunter.id, s.catalog ?? [], undefined, false);
 for (const r of m.reports) { const v = r.view;
   console.log(`\n[${r.role}] ${v.score.toFixed(1)} ${r.confidence} | ${r.confidenceWhy}`);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
 import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
-import { HUNTER, byName, type K, type Subclass } from "../knowledge/hunter";
+import { ALL, byName, type K, type Subclass } from "../knowledge/hunter";
 import type { ArtifactPerk } from "../knowledge/artifact";
 import { breakdown, currentSpec, evaluate, evaluateNow, fragmentSlots, makeCtx, refitArtifact, tuneCurrent, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
 import { placePerks } from "../engine/artifact";
@@ -14,6 +14,7 @@ import { Badge, Button, Card, cn } from "../ui/kit";
 import { Delta, Segmented, Spinner } from "../ui/bits";
 import { GearIcon, LoadoutFigure, iconForName } from "../ui/gear";
 import { StatTargetsBar, loadTargets } from "../ui/targets";
+import { useCharacter } from "../ui/character";
 import { GOALS, HowItWorks, HowToPlay, PointsPanel, word } from "./Builder";
 
 // The Workshop: you pick, Steeped explains. Click a slot and every option you own for it is tried in your build
@@ -60,7 +61,7 @@ const writeJSON = (k: string, v: unknown) => { try { localStorage.setItem(k, JSO
 const pct = (x: number, of: number) => (of > 0 ? Math.round((100 * x) / of) : 0);
 
 export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) => void }) {
-  const hunter = inv.characters.find(c => c.cls === "Hunter");
+  const hunter = useCharacter(inv);
   const ctx = useMemo<Ctx | null>(() => (hunter ? makeCtx(inv, h => DEFS.get(h), [...DEFS.values()], hunter.id) : null), [inv, hunter]);
   const [goal, setGoal] = useState<Goal>(() => readJSON<BuildSpec | null>(WS_KEY, null)?.goal ?? "whole");
   const [locks, setLocks] = useState<Set<string>>(new Set());
@@ -98,7 +99,7 @@ export function Workshop({ inv, onSend }: { inv: Inventory; onSend: (s: Sent) =>
   const options = useMemo(() => (ctx && view ? optionsFor(sel, view, ctx) : []), [sel, view, ctx]);
   const tried = useMemo<Tried[]>(() => (ctx && view ? tryOptions(options, view, ctx, goal, settings) : []), [options, view, ctx, goal, settingsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!hunter || !ctx) return <Card>The Workshop knows Hunters first.</Card>;
+  if (!hunter || !ctx) return <Card>The Workshop works on Hunters and Warlocks.</Card>;
   if (!spec || !view) return <Card><Spinner label="Reading your build" /></Card>;
 
   const r = (v: BuildView) => (ref ? pct(v.score, ref.score) : 0);
@@ -295,8 +296,8 @@ function SaveBox({ onSave }: { onSave: (n: string) => void }) {
 }
 
 // ---------- options ----------
-const bungieText = (name: string) => [...DEFS.values()].find(d => d.name === name && d.desc && /hunter|shared|fragments|trinkets|totems|supers|grenades|melee|class_abilities|aspects/.test(d.plugCat))?.desc;
-const whereOf = (it: Item, cid: string) => (it.owner === "vault" ? "in your vault" : it.owner === cid ? "on your Hunter" : "on another character");
+const bungieText = (name: string) => [...DEFS.values()].find(d => d.name === name && d.desc && /hunter|warlock|shared|fragments|trinkets|totems|supers|grenades|melee|class_abilities|aspects/.test(d.plugCat))?.desc;
+const whereOf = (it: Item, cid: string) => (it.owner === "vault" ? "in your vault" : it.owner === cid ? "on this character" : "on another character");
 
 // Each option tried in the build and ranked by what it really does (score, combos it starts or breaks).
 export function tryOptions(options: Option[], view: BuildView, ctx: Ctx, goal: Goal, settings: Settings): Tried[] {
@@ -318,7 +319,7 @@ export function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
   const s = v.spec, sub = s.subclass, cid = ctx.characterId;
   const kit = ctx.kit.get(sub) ?? new Set<string>();
   const ability = (kind: K["kind"], cur: string, set: (n: string) => Partial<BuildSpec>): Option[] =>
-    HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name)).map(k => ({
+    ALL.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name)).map(k => ({
       key: k.name, label: k.name, icon: iconForName(k.name), apply: sp => ({ ...sp, ...set(k.name) }), quick: false,
       source: "checked", says: k.says, bungie: bungieText(k.name), current: k.name === cur,
     }));
@@ -340,10 +341,10 @@ export function optionsFor(sel: SlotId, v: BuildView, ctx: Ctx): Option[] {
         .filter(o => !others.includes(o.key));
     }
     case "exotic": {
-      const names = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === "Hunter").map(p => p.item.name))].filter(n => byName.has(n));
+      const names = [...new Set(ctx.pieces.filter(p => p.exotic && p.item.cls === ctx.cls).map(p => p.item.name))].filter(n => byName.has(n));
       return names.map(n => {
         const k = byName.get(n)!;
-        const copies = ctx.pieces.filter(p => p.item.name === n && p.item.cls === "Hunter");
+        const copies = ctx.pieces.filter(p => p.item.name === n && p.item.cls === ctx.cls);
         const bestCopy = copies.sort((a, b) => b.item.power - a.item.power)[0];
         return {
           key: n, label: n, icon: iconForName(n), quick: false, source: "checked" as Source, says: k.says, current: n === s.exotic,

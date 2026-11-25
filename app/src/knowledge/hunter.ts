@@ -21,11 +21,12 @@ import { RULES, asK } from "./research";
 // count as kDebuffed when the build also kills things.
 
 export type Kind = "super" | "grenade" | "melee" | "classAbility" | "aspect" | "fragment" | "exotic" | "weapon" | "artifact" | "set";
-export type Subclass = "Revenant" | "Nightstalker" | "Gunslinger" | "Arcstrider" | "Threadrunner" | "Prismatic Hunter";
-export const SUBCLASSES: Subclass[] = ["Prismatic Hunter", "Revenant", "Nightstalker", "Gunslinger", "Arcstrider", "Threadrunner"];
-export const ELEMENT: Record<Subclass, string> = {
-  Revenant: "Stasis", Nightstalker: "Void", Gunslinger: "Solar", Arcstrider: "Arc", Threadrunner: "Strand", "Prismatic Hunter": "Prismatic",
-};
+import { CLASS_SUBS, ELEMENT, MAX_FRAGMENTS, subsOfElement, type ClassName, type Subclass } from "./classes";
+import { SHARED } from "./shared";
+import { WARLOCK, WARLOCK_COMBOS } from "./warlock";
+export { CLASS_SUBS, ELEMENT, MAX_FRAGMENTS, type ClassName, type Subclass };
+// Hunter subclasses (older code imports SUBCLASSES); use CLASS_SUBS[cls] for a character's own list.
+export const SUBCLASSES: Subclass[] = CLASS_SUBS.Hunter;
 
 export interface K {
   name: string;
@@ -328,11 +329,15 @@ export const WEAPON_TYPE: Record<string, K> = Object.fromEntries(([
 ] as [string, string[], string][]).map(([n, makes, says]) => [n, { name: n, kind: "weapon", makes, uses: [], says } as K]));
 
 // Researched rules (knowledge/research/rules.json) win over the hand-written ones with the same name.
-export const byName = new Map(HUNTER.map(k => [k.name, k]));
-for (const r of RULES) byName.set(r.name, asK(r));
 for (const r of RULES) if (!HUNTER.some(h => h.name === r.name)) HUNTER.push(asK(r)); else HUNTER.splice(HUNTER.findIndex(h => h.name === r.name), 1, asK(r));
 
-// Fragment slots per subclass when Bungie doesn't tell us (aspect capacity is not in the snapshot yet).
-export const MAX_FRAGMENTS: Record<Subclass, number> = {
-  Revenant: 6, Nightstalker: 6, Gunslinger: 6, Arcstrider: 6, Threadrunner: 6, "Prismatic Hunter": 6,
-};
+// Every class in one list. Grenades and fragments are shared by all classes, so a shared piece written with
+// Hunter subclasses is offered to every subclass of the same element (Bungie's subclass data says which one a
+// character really has). Class pieces (Supers, aspects, melees, class abilities, exotics) keep their own subclasses.
+const shareable = (k: K) => k.kind === "grenade" || k.kind === "fragment";
+const widen = (k: K): K => (shareable(k) && k.subs ? { ...k, subs: [...new Set(k.subs.flatMap(s => subsOfElement(ELEMENT[s])))] } : k);
+export const ALL: K[] = [...HUNTER, ...SHARED, ...WARLOCK].map(widen);
+export const byName = new Map(ALL.map(k => [k.name, k]));
+COMBOS.push(...WARLOCK_COMBOS);
+// The pieces one class can use: its own plus everything shared.
+export const kitFor = (cls: ClassName) => ALL.filter(k => !k.subs || k.subs.some(s => CLASS_SUBS[cls].includes(s)));

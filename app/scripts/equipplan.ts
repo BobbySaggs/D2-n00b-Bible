@@ -8,7 +8,7 @@ import { searchBuilds } from "../src/engine/builds";
 const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
 const set = { healthFloor: 50, mw: "asIs" as const, style: "peaks" as const };
 for (const [n, spec] of [["A tuned", tuneCurrent(ctx, "abilities")!], ["B best raid", specFromBuild(searchBuilds({ inv, defOf: ctx.defOf, defs: ctx.defs, characterId: hunter.id, goal: "bossDps", top: 1 })[0])]] as const) {

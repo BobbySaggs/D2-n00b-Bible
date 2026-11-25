@@ -3,6 +3,7 @@ import type { ItemDef } from "../bungie/defs";
 import type { Piece } from "./armor";
 import type { BuildView } from "./evaluate";
 import { isPvp, type Goal } from "./loops";
+import { ELEMENT } from "../knowledge/classes";
 
 // Armor mod planner: fills every non-stat mod slot on every piece from the mods you've unlocked, within energy,
 // and says why each one is there. Rules are written from Bungie's mod text (Nov 18, 2026 snapshot).
@@ -22,7 +23,7 @@ function needs(v: BuildView): Need {
   const goal = v.spec.goal;
   const ws = v.weapons.filter(Boolean);
   const superEl = v.parts.find(p => p.kind === "super")?.subs?.[0] ?? "";
-  const map: Record<string, string> = { Revenant: "Stasis", Nightstalker: "Void", Gunslinger: "Solar", Arcstrider: "Arc", Threadrunner: "Strand" };
+  const map = ELEMENT as Record<string, string>;
   const cap = (x: number) => Math.min(4, x);
   return {
     g: cap(1 + e("grenade") + lean("grenade")), m: cap(1 + e("melee") + lean("melee")), c: cap(1 + e("classAbility") + lean("class")), s: cap(1 + e("super") + lean("super")),

@@ -19,15 +19,19 @@ export const standInSource = (id: string) => SOURCES.get(id);
 export interface StandIn { item: Item; source: string; acquired: boolean; assumedRoll: boolean; from?: string }
 
 export function withCatalog(inv: Inventory, defOf: (h: number) => ItemDef | undefined, entries: CatalogEntry[], characterId: string): { inv: Inventory; standIns: StandIn[] } {
-  const light = inv.characters.find(c => c.id === characterId)?.light ?? 0;
+  const ch = inv.characters.find(c => c.id === characterId);
+  const light = ch?.light ?? 0;
+  const clsNum = ({ Titan: 0, Hunter: 1, Warlock: 2 } as const)[ch?.cls ?? "Hunter"];
   const ownedNames = new Set(inv.items.map(i => i.name));
-  const exoticPieces = inv.items.filter(i => i.kind === "armor" && i.exotic && i.cls === "Hunter")
+  const exoticPieces = inv.items.filter(i => i.kind === "armor" && i.exotic && i.cls === (ch?.cls ?? "Hunter"))
     .map(i => readPiece(i, defOf)).filter((p): p is NonNullable<typeof p> => !!p)
     .sort((a, b) => total(b.base) - total(a.base));
   const standIns: StandIn[] = [];
+  const seen = new Set<number>(); // a few exotics sit in two Collections folders
   for (const e of entries) {
     const d = defOf(e.hash);
-    if (!d) continue;
+    if (!d || seen.has(d.hash)) continue;
+    seen.add(d.hash);
     if (e.rolls) {
       // Legendaries join even when you own one: your copy may be a lower tier or a worse roll. Ties go to yours.
       const slot = BUCKET[d.bucket] ?? null;
@@ -47,6 +51,7 @@ export function withCatalog(inv: Inventory, defOf: (h: number) => ItemDef | unde
     const slot = BUCKET[d.bucket] ?? null;
     if (!slot) continue;
     if (d.itemType === 2) {
+      if (d.cls !== clsNum) continue; // another class's armor
       const tpl = exoticPieces.find(p => p.slot === slot) ?? exoticPieces[0];
       if (!tpl) continue;
       // What the exotic does lives on its intrinsic perk; read it unless it's one Steeped already knows.

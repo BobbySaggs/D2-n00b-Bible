@@ -5,6 +5,10 @@ import type { Item } from "../model/inventory";
 import type { BuildView } from "../engine/evaluate";
 import { cn } from "./kit";
 import silHunter from "../assets/sil-hunter.webp";
+import silWarlock from "../assets/sil-warlock.webp";
+import silTitan from "../assets/sil-titan.webp";
+import { classOfSub } from "../knowledge/classes";
+const SIL = { Hunter: silHunter, Warlock: silWarlock, Titan: silTitan };
 
 // Icons come straight from Bungie (displayProperties.icon on every item and plug definition).
 const PLUG_CATS = /supers|grenades|melee|class_abilities|aspects|totems|fragments|trinkets|movement/;
@@ -66,7 +70,7 @@ export function LoadoutFigure({ v, compact }: { v: BuildView; compact?: boolean 
           ))}
         </div>
         <div className="flex justify-center">
-          <img src={silHunter} alt="" aria-hidden className={cn("pointer-events-none select-none opacity-90 drop-shadow-[0_0_24px_rgba(123,63,242,0.45)]", compact ? "h-36" : "h-48")} />
+          <img src={SIL[classOfSub(v.spec.subclass) ?? "Hunter"]} alt="" aria-hidden className={cn("pointer-events-none select-none opacity-90 drop-shadow-[0_0_24px_rgba(123,63,242,0.45)]", compact ? "h-36" : "h-48")} />
         </div>
         <div className="flex flex-col gap-1">
           {ARMOR_ORDER.map(slot => {

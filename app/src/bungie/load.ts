@@ -50,6 +50,14 @@ export async function loadEverything(progress: (msg: string) => void): Promise<L
   return { inventory, quests, catalog, catalysts, artifact, raw: P };
 }
 
+// Dev only: open a snapshot instead of signing in (npm run dev, then /?snap with dev/snap.json in place).
+export function fromSnapshot(s: any): LoadResult {
+  for (const [h, d] of Object.entries(s.defs ?? {})) DEFS.set(Number(h), d as ItemDef);
+  const P = s.profile;
+  const ap = P?.profileProgression?.data?.seasonalArtifact?.pointProgression;
+  return { inventory: buildInventory(P, def, s.account), quests: s.quests ?? [], catalog: s.catalog ?? [], catalysts: s.catalysts ?? [], artifact: ap ? { level: ap.level ?? 0, cap: ap.levelCap ?? 0 } : undefined, raw: P };
+}
+
 // Everything Claude needs to test the engine on your real gear. No sign-in token is included.
 export function makeSnapshot(r: LoadResult) {
   const used = new Set<number>([...itemHashes(r.raw), ...plugHashes(r.raw), ...plugSetHashes(r.raw, def)]);

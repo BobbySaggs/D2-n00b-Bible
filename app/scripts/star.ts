@@ -8,7 +8,7 @@ import { count100 } from "../src/engine/solve";
 const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const ctx = makeCtx(inv, h => defs.get(h), [...defs.values()], hunter.id);
 const base = { ...tuneCurrent(ctx, "whole")!, exotic: "Star-Eater Scales", armorLocks: {} };
 for (const hf of [50, 70, 100]) for (const style of ["peaks", "even"] as const) {

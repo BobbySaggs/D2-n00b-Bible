@@ -1,6 +1,6 @@
 {
- "about": "Current top community Hunter builds. Each records the build's parts (not anyone's write-up), who made it, where, and when. Steeped tests every one against your vault, tries to beat it, and uses them as a referee for its own scoring.",
- "updated": "2026-11-23",
+ "about": "Current top community builds (Hunter and Warlock). Each records the build's parts (not anyone's write-up), who made it, where, and when. Steeped tests every one against your vault, tries to beat it, and uses them as a referee for its own scoring.",
+ "updated": "2026-11-25",
  "builds": [
   {
    "id": "bb-gift-tempest",
@@ -668,6 +668,40 @@
     "date": "2026-06-15"
    },
    "added": "2026-11-23"
+  },
+  {
+   "id": "mob-imnexusss-void",
+   "name": "Ultimate Void Warlock",
+   "role": "allround",
+   "subclass": "Voidwalker",
+   "super": "Nova Bomb: Cataclysm",
+   "grenade": "Magnetic Grenade",
+   "classAbility": "Healing Rift",
+   "aspects": [
+    "Feed the Void",
+    "Soul Siphon"
+   ],
+   "fragments": [
+    "Echo of Expulsion",
+    "Echo of Exchange",
+    "Echo of Harvest"
+   ],
+   "exotic": "Skull of Dire Ahamkara",
+   "weapons": [],
+   "source": {
+    "title": "Mobalytics: imnexusss Ultimate Void Warlock",
+    "url": "https://mobalytics.gg/destiny-2/builds/warlock/void/imnexusss-ultimate-void-warlock",
+    "creator": "imnexusss",
+    "date": "2026-06-22"
+   },
+   "added": "2026-11-25",
+   "stats": [
+    "super",
+    "melee",
+    "grenade"
+   ],
+   "activity": "Endgame",
+   "melee": "Pocket Singularity"
   }
  ]
 }

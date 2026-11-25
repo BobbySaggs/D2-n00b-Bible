@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { finishSignIn, getToken, signOut } from "./bungie/auth";
 import { BungieError } from "./bungie/api";
 import { extendCatalog } from "./bungie/catalog";
-import { loadEverything, makeSnapshot, type LoadResult } from "./bungie/load";
+import { fromSnapshot, loadEverything, makeSnapshot, type LoadResult } from "./bungie/load";
 import { downloadSnapshot } from "./snapshot";
 import { SignIn } from "./screens/SignIn";
 import { Roster } from "./screens/Roster";
@@ -15,6 +15,7 @@ import { Journey } from "./screens/Journey";
 import { Segmented } from "./ui/bits";
 import { Button, Card } from "./ui/kit";
 import { BRAND, Moment } from "./ui/visual";
+import { pickCharacter, setCharacterClass, supportedCharacters, useCharacterClass } from "./ui/character";
 
 type Screen = "home" | "builds" | "journey" | "inventory" | "workshop" | "roster";
 const ADVANCED: Screen[] = ["workshop", "roster"];
@@ -41,6 +42,9 @@ export default function App() {
   // A link can open a screen directly (…/beta/#builder).
   const [screen, setScreen] = useState<Screen>(() => { const h = location.hash.slice(1) as Screen; const alias: Record<string, Screen> = { path: "journey", builder: "builds" }; const s = alias[h] ?? h; return (["home", "builds", "journey", "inventory", ...ADVANCED] as string[]).includes(s) ? s : "home"; });
   const [sent, setSent] = useState<Sent | null>(null); // a Workshop build on its way to a Builder column
+  const chosenCls = useCharacterClass();
+  const me = st.at === "ready" ? pickCharacter(st.data.inventory, chosenCls) : undefined;
+  const cid = me?.id ?? "none"; // screens restart when you switch character
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
 
   const load = useCallback(async () => {
@@ -61,6 +65,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has("snap")) {
+      fetch("/dev/snap.json").then(r => r.json()).then(s => setSt({ at: "ready", data: fromSnapshot(s) }), e => setSt({ at: "error", error: String(e) }));
+      return;
+    }
     signInOnce ??= finishSignIn();
     signInOnce.then(load, e => setSt({ at: "signedOut", error: e instanceof Error ? e.message : String(e) }));
   }, [load]);
@@ -101,13 +109,19 @@ export default function App() {
           <Segmented label="Screen" value={ADVANCED.includes(screen) ? "home" : screen} onChange={setScreen}
             options={[{ value: "home", label: "Home" }, { value: "builds", label: "Builds" }, { value: "journey", label: "Journey" }, { value: "inventory", label: "Inventory" }]} />
           {ADVANCED.includes(screen) && <span className="text-sm text-ink-dim">{screen === "workshop" ? "Workshop" : "My roster"}</span>}
+          {supportedCharacters(st.data.inventory).length > 1 && me && (
+            <div className="ml-auto" data-testid="character-switch">
+              <Segmented label="Character" value={me.cls} onChange={setCharacterClass}
+                options={supportedCharacters(st.data.inventory).map(c => ({ value: c.cls, label: `${c.cls} ${Math.floor(c.light)}` }))} />
+            </div>
+          )}
         </nav>
       )}
-      {st.at === "ready" && screen === "home" && <Home inv={st.data.inventory} catalog={st.data.catalog ?? []} onGo={setScreen} onRefresh={load} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builds"); }} />}
-      {st.at === "ready" && screen === "journey" && <Journey inv={st.data.inventory} catalog={st.data.catalog ?? []} catalysts={st.data.catalysts ?? []} artifact={st.data.artifact} quests={st.data.quests ?? []} />}
-      {st.at === "ready" && screen === "inventory" && <Inventory inv={st.data.inventory} />}
-      {st.at === "ready" && screen === "builds" && <Builder inv={st.data.inventory} catalog={st.data.catalog ?? []} onRefresh={load} incoming={sent} onIncomingUsed={() => setSent(null)} />}
-            {st.at === "ready" && screen === "workshop" && <Workshop inv={st.data.inventory} onSend={x => { setSent(x); setScreen("builds"); }} />}
+      {st.at === "ready" && screen === "home" && <Home key={cid} inv={st.data.inventory} catalog={st.data.catalog ?? []} onGo={setScreen} onRefresh={load} onOpen={spec => { setSent({ col: 0, spec }); setScreen("builds"); }} />}
+      {st.at === "ready" && screen === "journey" && <Journey key={cid} inv={st.data.inventory} catalog={st.data.catalog ?? []} catalysts={st.data.catalysts ?? []} artifact={st.data.artifact} quests={st.data.quests ?? []} />}
+      {st.at === "ready" && screen === "inventory" && <Inventory key={cid} inv={st.data.inventory} />}
+      {st.at === "ready" && screen === "builds" && <Builder key={cid} inv={st.data.inventory} catalog={st.data.catalog ?? []} onRefresh={load} incoming={sent} onIncomingUsed={() => setSent(null)} />}
+            {st.at === "ready" && screen === "workshop" && <Workshop key={cid} inv={st.data.inventory} onSend={x => { setSent(x); setScreen("builds"); }} />}
       {st.at === "ready" && screen === "roster" && (
         <Roster
           inv={st.data.inventory}

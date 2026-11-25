@@ -6,7 +6,7 @@ import { searchBuilds } from "../src/engine/builds";
 const s = JSON.parse(gunzipSync(readFileSync(process.argv[2])).toString());
 const defs = new Map<number, ItemDef>(Object.entries(s.defs).map(([h, d]) => [Number(h), d as ItemDef]));
 const inv = buildInventory(s.profile, h => defs.get(h), s.account);
-const hunter = inv.characters.find(c => c.cls === "Hunter")!;
+const hunter = inv.characters.find(c => c.cls === (process.env.CLS ?? "Hunter"))!;
 const t = Date.now();
 searchBuilds({ inv, defOf: h => defs.get(h), defs: [...defs.values()], characterId: hunter.id, goal: (process.argv[3] ?? "whole") as any, top: 5 });
 console.log("search ms", Date.now() - t);

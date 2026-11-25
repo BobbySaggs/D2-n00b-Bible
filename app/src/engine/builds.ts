@@ -1,7 +1,8 @@
 import { STAT_HASH, STAT_ORDER, type StatKey } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import { zeroStats, type Inventory, type Item, type Stats } from "../model/inventory";
-import { byName, ELEMENT, HUNTER, MAX_FRAGMENTS, SUBCLASSES, WEAPON_TYPE, type K, type Subclass } from "../knowledge/hunter";
+import { ALL, byName, CLASS_SUBS, ELEMENT, MAX_FRAGMENTS, WEAPON_TYPE, type ClassName, type K, type Subclass } from "../knowledge/hunter";
+import { LIGHT_ELEMENTS } from "../knowledge/classes";
 import { readPiece, type Piece } from "./armor";
 import { isPvp, scoreLoops, weightOf, statLean, type Goal, type LoopReport, type Part } from "./loops";
 import { solve, type Solution, type StatPlan } from "./solve";
@@ -41,21 +42,22 @@ export interface Build {
 
 type DefOf = (h: number) => ItemDef | undefined;
 
-const LIGHT: Subclass[] = ["Gunslinger", "Arcstrider", "Nightstalker"];
+const isLight = (sub: Subclass) => LIGHT_ELEMENTS.has(ELEMENT[sub]);
+export const clsOf = (inv: Inventory, characterId: string): ClassName => inv.characters.find(c => c.id === characterId)?.cls ?? "Hunter";
 
-// What the Hunter can actually equip: Light subclass options are free for everyone; Stasis, Strand and
-// Prismatic use Tyler's unlocks (plus anything already socketed, since Bungie's flags can lag).
+// What a character can actually equip: Light subclass options are free for everyone; Stasis, Strand and
+// Prismatic use the player's unlocks (plus anything already socketed, since Bungie's flags can lag).
 export function availableKit(inv: Inventory, defOf: DefOf, characterId: string): Map<Subclass, Set<string>> {
   const out = new Map<Subclass, Set<string>>();
-  for (const sub of SUBCLASSES) {
+  for (const sub of CLASS_SUBS[clsOf(inv, characterId)]) {
     const names = new Set<string>();
-    if (LIGHT.includes(sub)) HUNTER.filter(k => k.subs?.includes(sub)).forEach(k => names.add(k.name));
+    if (isLight(sub)) ALL.filter(k => k.subs?.includes(sub)).forEach(k => names.add(k.name));
     const item = inv.items.find(i => i.kind === "subclass" && i.owner === characterId && i.name === sub);
     if (item) {
       for (const h of item.plugs) { const d = defOf(h); if (d?.name) names.add(d.name); }
       for (const list of Object.values(item.options)) for (const h of list) { const d = defOf(h); if (d?.name) names.add(d.name); }
     }
-    if (item || LIGHT.includes(sub)) out.set(sub, names);
+    if (item || isLight(sub)) out.set(sub, names);
   }
   return out;
 }
@@ -118,7 +120,7 @@ export const STAT_POINT = 0.15;
 export const statTotal = (s: Stats) => STAT_ORDER.reduce((t, k) => t + s[k], 0);
 
 export const pick = (kit: Set<string>, sub: Subclass, kind: K["kind"]) =>
-  HUNTER.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name));
+  ALL.filter(k => k.kind === kind && k.subs?.includes(sub) && kit.has(k.name));
 
 // Each weapon also carries its element and frame as markers, so perks like Volatile Flow ("needs a Void weapon") can check.
 const marker = (name: string): K => ({ name, kind: "weapon", makes: [], uses: [], says: "" });
@@ -284,7 +286,7 @@ export interface Require { subclass?: Subclass; super?: string; grenade?: string
 
 export function searchBuilds(o: SearchInput): Build[] {
   const kit = availableKit(o.inv, o.defOf, o.characterId);
-  const exotics = [...new Set(o.inv.items.filter(i => i.kind === "armor" && i.exotic && i.cls === "Hunter").map(i => i.name))]
+  const exotics = [...new Set(o.inv.items.filter(i => i.kind === "armor" && i.exotic && i.cls === clsOf(o.inv, o.characterId)).map(i => i.name))]
     .map(n => byName.get(n)).filter((k): k is K => !!k && k.kind === "exotic")
     .filter(k => !o.onlyExotic || k.name === o.onlyExotic)
     .filter(k => !o.require?.exotic || k.name === o.require.exotic);
@@ -438,9 +440,9 @@ export function planFor(b: Pick<Build, "super" | "grenade" | "melee" | "classAbi
   return plan;
 }
 
-export function fitArmor(b: Build, pieces: Piece[], o: { mw: "asIs" | "full"; wornIds?: Set<string>; minPower?: number; style?: StatStyle }) {
+export function fitArmor(b: Build, pieces: Piece[], o: { cls: ClassName; mw: "asIs" | "full"; wornIds?: Set<string>; minPower?: number; style?: StatStyle }) {
   const plan = planFor(b, b.goal, {}, o.style);
-  return solve(pieces, { cls: "Hunter", exotic: b.exotic.name, plan, bonus: b.bonus, mw: o.mw, wornIds: o.wornIds, top: 1, minPower: o.minPower })[0];
+  return solve(pieces, { cls: o.cls, exotic: b.exotic.name, plan, bonus: b.bonus, mw: o.mw, wornIds: o.wornIds, top: 1, minPower: o.minPower })[0];
 }
 
 export { readPiece };
