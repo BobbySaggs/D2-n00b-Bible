@@ -1997,11 +1997,11 @@
    "name": "Hold the Line",
    "kind": "artifact",
    "makes": [
-    "heal",
+    "heal:0.5",
     "reload"
    ],
    "uses": [],
-   "says": "While surrounded, Machine Guns and Glaives gain increased reload speed and stability; final blows heal you.",
+   "says": "While surrounded, Machine Guns and Glaives reload faster and their kills heal you (heavy Machine Gun out, in a crowd).",
    "sources": [
     {
      "title": "Bungie item text (Destiny 2 manifest, Nov 2026), reviewed by Claude",
@@ -2010,7 +2010,7 @@
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23",
+   "checked": "2026-11-24",
    "needs": [
     "__type:Glaive",
     "__type:Machine Gun"

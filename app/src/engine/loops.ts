@@ -150,7 +150,13 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   const survives: string[] = [];
   if (goal === "whole") {
     const has = (ts: string[]) => ts.some(t => (made.get(t)?.total ?? 0) > 0);
-    if (!has(["heal", "cure", "restoration", "devour"])) { score -= 25; survives.push("no way to heal"); }
+    // Armor 3.0: Health stat up to 100 heals you on every Orb of Power you pick up, so a build that makes its own
+    // orbs can heal, just not on demand. It costs a little instead of the full penalty.
+    const healing = ["heal", "cure", "restoration", "devour"].reduce((t, k) => t + (made.get(k)?.total ?? 0), 0);
+    if (healing < 1) {
+      if (healing > 0 || has(["orb"])) { score -= 6; survives.push(healing > 0 ? "heals only in some fights" : "only heals from Orbs of Power"); }
+      else { score -= 25; survives.push("no way to heal"); }
+    }
     if (!has(["dr", "overshield", "frost", "invis", "woven"])) { score -= 25; survives.push("nothing that cuts the damage you take"); }
   }
   const isArtifact = (n: string) => parts.find(p => p.k.name === n)?.k.kind === "artifact";
