@@ -35,6 +35,10 @@ const GOAL_WEIGHTS: Record<Goal, Record<string, number>> = {
 };
 export const weightOf = (goal: Goal, token: string) => GOAL_WEIGHTS[goal][token] ?? 0.3;
 const ENERGY: Record<string, Kind> = { gEn: "grenade", mEn: "melee", cEn: "classAbility", sEn: "super" };
+const ENERGY_OF: Partial<Record<Kind, string>> = { grenade: "gEn", melee: "mEn", classAbility: "cEn" };
+// How much feeding speeds a piece up: diminishing, so a second source still helps but less (tops out near 1.7x).
+export const SPEED = 0.7;
+const speedUp = (r: number) => 1 + SPEED * (1 - Math.exp(-r / 3));
 const DEBUFFS = ["slow", "freeze", "weaken", "scorch", "jolt", "sever", "suppress", "blind", "volatile", "unravel", "suspend", "ignite"];
 // Things you can always do, so they never count as missing.
 const ALWAYS = new Set(["kWeapon", "sprint", "airborne", "finisher"]);
@@ -55,6 +59,7 @@ export interface LoopReport {
   energy: { kind: Kind; ability: string; refills: string[] }[];
   unfed: { name: string; token: string }[];
   survives: string[]; // Max Hunter: what the build is missing to survive solo (empty = solo-ready)
+  speeds: Map<string, number>; // how hard each piece runs: 1 = normal, up to about 1.7 when it's fed a lot
 }
 
 // "__el:Void" -> "a Void weapon", "__sub:Void" -> "a Void subclass", "__type:Auto Rifle" -> "an Auto Rifle".
@@ -91,10 +96,11 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
     }
     // Derived: abilities make kills of their kind; debuffs plus any kill make "kDebuffed"; orbs get picked up.
     for (const p of live) {
-      if (p.k.kind === "grenade") addMade("kGrenade", 0.5, p.k.name);
-      if (p.k.kind === "melee") addMade("kMelee", 0.5, p.k.name);
-      if (["grenade", "melee"].includes(p.k.kind)) addMade("kAbility", 0.5, p.k.name);
-      if (p.k.kind === "classAbility") addMade("dodge", 1, p.k.name);
+      const f = Math.max(1, factor(p)); // a faster ability gets more kills and casts
+      if (p.k.kind === "grenade") addMade("kGrenade", 0.5 * f, p.k.name);
+      if (p.k.kind === "melee") addMade("kMelee", 0.5 * f, p.k.name);
+      if (["grenade", "melee"].includes(p.k.kind)) addMade("kAbility", 0.5 * f, p.k.name);
+      if (p.k.kind === "classAbility") addMade("dodge", 1 * f, p.k.name);
     }
     const debuffers = DEBUFFS.filter(d => made.has(d));
     if (debuffers.length) addMade("kDebuffed", 1, made.get(debuffers[0])!.by[0]);
@@ -127,7 +133,37 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   // Pass 1 decides which pieces get triggered; pass 2 counts an untriggered piece's effects at 40%.
   const first = buildMade(() => 1);
   const triggered = new Set(live.filter(p => { const tr = triggers(p); return !tr.length || tr.some(([t]) => sourceFor(first, t, p.k.name)); }).map(p => p.k.name));
-  const made = buildMade(p => (triggered.has(p.k.name) ? 1 : p.k.kind === "artifact" ? 0 : 0.4)); // an idle artifact perk does nothing at all
+  const base = (p: Part) => (triggered.has(p.k.name) ? 1 : p.k.kind === "artifact" ? 0 : 0.4); // an idle artifact perk does nothing at all
+  // Loop speed: a piece fires as often as what feeds it. An ability comes back faster with more of its energy
+  // (Monte Carlo and Mask of Fealty both refill melee), and a piece triggered by a token runs harder when that
+  // token is made a lot (many blades: many crystals, many shatters, many shards). Two passes carry the speed
+  // down a chain (melee energy, then blades, then crystals, then shards, then Frost Armor).
+  const others = (m: Map<string, { total: number; by: string[] }>, t: string, self: K) =>
+    Math.max(0, (m.get(t)?.total ?? 0) - self.makes.filter(x => parse(x)[0] === t).reduce((a, x) => a + parse(x)[1], 0));
+  // Pieces that fire on an ability cast (Mask of Fealty on Withering Blade hits, a perk on dodging) run exactly
+  // as fast as that ability.
+  const CAST: Record<string, Kind[]> = { kMelee: ["melee"], kGrenade: ["grenade"], kAbility: ["melee", "grenade"], dodge: ["classAbility"] };
+  const speedOf = (p: Part, m: Map<string, { total: number; by: string[] }>, sp: Map<string, number>) => {
+    if (base(p) < 1 || p.k.kind === "super") return 1;
+    const own = ENERGY_OF[p.k.kind];
+    if (own) return speedUp(others(m, own, p.k));
+    const tr = triggers(p);
+    if (!tr.length) return 1;
+    let best = 1;
+    for (const [t] of tr) for (const alt of t.split("|")) {
+      const kinds = CAST[alt];
+      const cast = kinds ? Math.max(1, ...live.filter(x => kinds.includes(x.k.kind)).map(x => sp.get(x.k.name) ?? 1)) : 1;
+      best = Math.max(best, cast, speedUp(Math.max(others(m, alt, p.k) - 1, 0)));
+    }
+    return best;
+  };
+  let made = buildMade(base);
+  let speeds = new Map<string, number>(live.map(p => [p.k.name, 1]));
+  for (let pass = 0; pass < 3; pass++) {
+    const prev = made, sp = speeds;
+    speeds = new Map(live.map(p => [p.k.name, speedOf(p, prev, sp)]));
+    made = buildMade(p => base(p) * (speeds.get(p.k.name) ?? 1));
+  }
 
   const W = GOAL_WEIGHTS[goal];
   let score = 0;
@@ -181,7 +217,7 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
       score += (W[t] ?? 1) * Math.min(refills.length, 3);
     }
   }
-  return { score, combos, made, links, energy, unfed, survives };
+  return { score, combos, made, links, energy, unfed, survives, speeds };
 }
 
 // Which stats this build leans on, from what its pieces want and which abilities it refills.
