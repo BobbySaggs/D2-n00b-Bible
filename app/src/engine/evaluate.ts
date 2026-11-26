@@ -160,7 +160,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(loopGuns(weapons.filter((w): w is Weapon => !!w), spec.goal)), ...artifactPerks.map(k => ({ k }))];
   let loops = scoreLoops(loopParts, spec.goal);
   const loopsBase = loops;
-  const pushSurvives = () => { for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. Add a healing source or damage resistance (Frost Armor, overshield, invisibility).`); };
+  const pushSurvives = () => { for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. ${/damage you take/.test(w) ? "Add damage resistance (Frost Armor, overshield, invisibility, Woven Mail)." : "Add a healing source (Restoration, Devour, Cure, or a Harvest aspect that heals on shard pickup)."}`); };
   const bonus = fragmentBonus(fragments, ctx.defs);
 
   let armor: Solution | undefined, plan: StatPlan | undefined, ratingPlan: StatPlan | undefined;

@@ -104,6 +104,8 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
     if (made.has("freeze")) addMade("shatter", 0.5, "your weapons breaking frozen enemies");
     // Stasis shards are built into every Stasis subclass now: shatters and slowed or frozen kills drop them.
     if (live.some(p => p.k.subs?.some(isStasis)) && ["freeze", "slow", "shatter"].some(t => made.has(t))) addMade("shard", 1, "Stasis (built in)");
+    // Picking up a Stasis shard gives Frost Armor on every Stasis subclass (Final Shape onward).
+    if (made.has("shard") && live.some(p => p.k.subs?.some(isStasis))) addMade("frost", 1, "Stasis shards (built in)");
     // Signature combos add what the pairing really produces.
     for (const c of combos) for (const raw of c.makes) { const [t, n] = parse(raw); addMade(t, n, c.name); }
     return made;
