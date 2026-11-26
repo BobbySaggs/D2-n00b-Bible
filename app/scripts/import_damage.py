@@ -14,12 +14,17 @@ TYPE = {"sword": "Sword", "sniper": "Sniper Rifle", "shotgun": "Shotgun", "rocke
 AMMO = {"primary": 1, "special": 2, "power": 3}
 TYPE_WORDS = r"(linear fusion rifle|burst linear fusion rifle|fusion rifle|rocket launcher|grenade launcher|machine gun|slug shotgun|shotgun|sniper|sword|glaive|bow|trace rifle)$"
 
+# Team buffs and setups in the notes that are not perks on the gun itself.
+NOT_GUN = {"Pack Hunter", "Turncoat transfer", "Sentinel flicker", "simulated"}
+
 def tokens(setup: str) -> list[str]:
     out = []
     for part in re.split(r",|\+|\band\b", setup):
         t = re.sub(r"\([^)]*\)", "", part)
         t = re.sub(r"\bx\s?\d+\b|\bx$", "", t).strip()
         t = re.sub(r"^e\.\s*", "", t).strip(" .")
+        if t in NOT_GUN:
+            continue
         if 2 < len(t) < 40 and not re.search(r"\d+%|consistency|pre-|swap|spam|combo|cycle|includes|assum", t, re.I):
             out.append(t)
     return out
@@ -28,6 +33,8 @@ def main(path: str):
     ws = openpyxl.load_workbook(path, data_only=True)["Sustained"]
     rows = []
     for r in list(ws.iter_rows(values_only=True))[1:]:
+        if r[0] and re.search(r"exploit", str(r[0]), re.I):
+            continue  # needs a bug or exploit, not normal play
         if not r[0] or r[1] not in AMMO or r[2] not in TYPE or not isinstance(r[19], (int, float)):
             continue
         name, _, setup = str(r[0]).partition("\n")

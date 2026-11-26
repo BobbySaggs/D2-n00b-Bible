@@ -152,6 +152,20 @@ export function corePartsOf(b: CoreLike): Part[] {
 export const damageFor = (w: Weapon): DamageRead | null =>
   damageOf({ name: w.item.name, exotic: w.item.exotic, frame: w.frame, type: w.type, ammo: w.ammo, perks: w.ks.map(k => k.name) });
 
+// For boss damage, a gun the sheet has tested is judged on its tested DPS, so its perks' and type's own
+// boss-damage guesses drop out of the loops (otherwise they'd count twice). The weapon's own entry stays:
+// exotics like Gjallarhorn carry team buffs that a solo DPS number doesn't show.
+const NO_BOSS = new WeakMap<K, K>();
+// What the tested DPS already measures: boss damage, damage perks and reloading (sustained DPS includes reloads).
+const MEASURED = /^(bossDmg|dmg|reload)(:|$)/;
+const noBoss = (k: K): K => {
+  let x = NO_BOSS.get(k);
+  if (!x) { x = k.makes.some(m => MEASURED.test(m)) ? { ...k, makes: k.makes.filter(m => !MEASURED.test(m)) } : k; NO_BOSS.set(k, x); }
+  return x;
+};
+export const loopGuns = (ws: Weapon[], goal: Goal): Weapon[] => goal !== "bossDps" ? ws
+  : ws.map(w => (w.ammo > 1 && damageFor(w) ? { ...w, ks: w.ks.map(k => (w.base.includes(k) && k !== WEAPON_TYPE[w.type] ? k : noBoss(k))) } : w));
+
 function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
   let s = 0;
   const el = ELEMENT[sub];
@@ -250,7 +264,7 @@ function chooseWeapons(base: Part[], allWeapons: Weapon[], sub: Subclass, exotic
     const pin = weapons.find(w => w.item.slot === slot && pinned.has(w.item.id));
     if (pin) { chosen.push(pin); continue; }
     const cands = weapons.filter(w => w.item.slot === slot && !(w.item.exotic && chosen.some(c => c.item.exotic)));
-    const scoreOf = (w: Weapon) => scoreLoops([...base, ...weaponParts([...chosen, w])], goal).score + weaponFit(w, sub, exotic, goal);
+    const scoreOf = (w: Weapon) => scoreLoops([...base, ...weaponParts(loopGuns([...chosen, w], goal))], goal).score + weaponFit(w, sub, exotic, goal);
     // Rank on the slotted perks, then let the leaders try the other perks in their columns.
     const ranked = cands.map(w => ({ w, sc: scoreOf(w) })).sort((a, b) => b.sc - a.sc);
     let best: Weapon | undefined, bestScore = -Infinity;
@@ -264,7 +278,7 @@ function chooseWeapons(base: Part[], allWeapons: Weapon[], sub: Subclass, exotic
   }
   if (quick) return chosen;
   // One more pass with all three guns on: a gun that pairs with the heavy (or the heavy with it) can now win its slot.
-  const total = (ws: Weapon[]) => scoreLoops([...base, ...weaponParts(ws)], goal).score + ws.reduce((t, w) => t + weaponFit(w, sub, exotic, goal), 0);
+  const total = (ws: Weapon[]) => scoreLoops([...base, ...weaponParts(loopGuns(ws, goal))], goal).score + ws.reduce((t, w) => t + weaponFit(w, sub, exotic, goal), 0);
   for (let i = 0; i < chosen.length; i++) {
     const slot = chosen[i].item.slot;
     if (pinned.has(chosen[i].item.id)) continue;

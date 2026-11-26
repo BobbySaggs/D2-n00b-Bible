@@ -1,3 +1,4 @@
+import { dpsPoints } from "./damage";
 import { ARMOR_SLOTS, STAT_LABEL, STAT_ORDER, type Slot } from "../bungie/config";
 import type { ItemDef } from "../bungie/defs";
 import type { Inventory, Stats } from "../model/inventory";
@@ -5,7 +6,7 @@ import { byName, MAX_FRAGMENTS, type ClassName, type K, type Subclass } from "..
 import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
 import { artifactsOf, bestArtifact, fitArtifact, perkByName, type ArtifactChoice } from "./artifact";
 import { readPiece, type MwMode, type Piece } from "./armor";
-import { availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, withPerks, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
+import { damageFor, loopGuns, availableKit, corePartsOf, subMarker, type StatTargets, fragmentBonus, ownedWeapons, planFor, withPerks, statTotal, weaponParts, type Build, type StatStyle, type Weapon } from "./builds";
 import { scoreLoops, type Goal, type LoopReport } from "./loops";
 import { count100, lowest, planValue, solve, statValue, type Solution, type StatPlan } from "./solve";
 import type { Part } from "./loops";
@@ -136,6 +137,11 @@ export function fragmentSlots(aspects: string[], sub: Subclass): number {
   return Math.min(MAX_FRAGMENTS[sub], aspects.reduce((t, a) => t + (k(a)?.slotsBy?.[sub] ?? k(a)?.slots ?? 2), 0));
 }
 
+// Boss builds earn points for tested boss DPS on their special and heavy guns (Aegis's sheet), on top of
+// the perk judgment in the loops. Guns the sheet never tested only get the judgment.
+export const damagePoints = (ws: (Weapon | undefined)[], goal: Goal) => goal !== "bossDps" ? 0
+  : ws.reduce((t, w) => { const d = w && w.ammo > 1 ? damageFor(w) : null; return t + (d ? dpsPoints(d, w!.ammo) : 0); }, 0);
+
 export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildView {
   const issues: string[] = [];
   const need = (n: string, what: string) => { const x = k(n); if (!x) issues.push(`Pick a ${what}.`); return x; };
@@ -151,7 +157,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   const artifact = ctx.artifacts.find(a => a.name === spec.artifact) ?? ctx.artifacts.find(a => a.equipped);
   // Bungie switches artifacts off in Trials and Competitive, so their perks count for nothing there.
   const artifactPerks = spec.goal === "trials" ? [] : (spec.artifactPerks ?? []).map(n => ctx.perks.get(n)).filter((x): x is ArtifactPerk => !!x);
-  const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(weapons.filter((w): w is Weapon => !!w)), ...artifactPerks.map(k => ({ k }))];
+  const loopParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass), ...weaponParts(loopGuns(weapons.filter((w): w is Weapon => !!w), spec.goal)), ...artifactPerks.map(k => ({ k }))];
   let loops = scoreLoops(loopParts, spec.goal);
   const loopsBase = loops;
   const pushSurvives = () => { for (const w of loops.survives) issues.push(`Not solo-ready: ${w}. Add a healing source or damage resistance (Frost Armor, overshield, invisibility).`); };
@@ -198,7 +204,7 @@ export function evaluate(spec: BuildSpec, ctx: Ctx, settings: Settings): BuildVi
   pushSurvives();
   const stats = armor?.stats ?? { health: 0, melee: 0, grenade: 0, super: 0, class: 0, weapons: 0 };
   const coreParts = [...parts.map(x => ({ k: x })), subMarker(spec.subclass)], perkParts = artifactPerks.map(k => ({ k }));
-  return { plan, coreParts, perkParts, setPerks, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, ratingPlan), score: loops.score + statScore(stats, ratingPlan), ratingPlan, bonus, fragmentSlots: slots, armor, stats, issues };
+  return { plan, coreParts, perkParts, setPerks, artifact, artifactPerks, spec, parts, weapons, loops, loopScore: loops.score, statScore: statScore(stats, ratingPlan), score: loops.score + statScore(stats, ratingPlan) + damagePoints(weapons, spec.goal), ratingPlan, bonus, fragmentSlots: slots, armor, stats, issues };
 }
 
 // Where the points come from. A piece is worth what the build would lose without it, so pieces that only work

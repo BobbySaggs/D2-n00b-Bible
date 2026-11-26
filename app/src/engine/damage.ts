@@ -50,4 +50,4 @@ export function damageOf(g: Gun): DamageRead | null {
 
 // Points for the boss-damage goal, on the same scale as Steeped's other weapon points. The top heavy setups sit near 18,000.
 export const DPS_REF = 15000;
-export const dpsPoints = (d: DamageRead, ammo: number) => (ammo === 3 ? 8 : ammo === 2 ? 5 : 3) * d.dps / DPS_REF;
+export const dpsPoints = (d: DamageRead, ammo: number) => (ammo === 3 ? 24 : ammo === 2 ? 12 : 3) * d.dps / DPS_REF;

@@ -29,11 +29,7 @@
 "Lasting Impression",
 "Reaper's Tithe",
 "Forge's Kin",
-"Pack Hunter",
-"Argent Ordnance",
-"Sentinel flicker",
-"Turncoat transfer",
-"simulated"
+"Argent Ordnance"
 ],
 "dps": 16231,
 "total": 153611
@@ -48,10 +44,8 @@
 "Cluster Bomb",
 "Elemental Honing",
 "Timelost Magazine",
-"Pack Hunter",
 "Argent Ordnance",
-"Shoot to Loot",
-"Turncoat transfer"
+"Shoot to Loot"
 ],
 "dps": 13514,
 "total": 118926
@@ -65,23 +59,10 @@
 "perks": [
 "Archer's Tempo",
 "Moebius Quiver",
-"Argent Quiver",
-"simulated"
+"Argent Quiver"
 ],
 "dps": 12904,
 "total": 223610
-},
-{
-"name": "Duality",
-"frame": "",
-"type": "Shotgun",
-"ammo": 2,
-"setup": "Ice Breaker loadout swap exploit, 80% consistency, simulated",
-"perks": [
-"simulated"
-],
-"dps": 12059,
-"total": 358145
 },
 {
 "name": "Aggressive rocket launcher",
@@ -93,7 +74,6 @@
 "Cluster Bomb",
 "Elemental Honing",
 "Timelost Magazine",
-"Pack Hunter",
 "Argent Ordnance",
 "Shoot to Loot"
 ],
@@ -126,8 +106,7 @@
 "Guidance Ring",
 "Moebius Quiver",
 "Argent Quiver",
-"fireteam scaling",
-"simulated"
+"fireteam scaling"
 ],
 "dps": 10964,
 "total": null
@@ -141,7 +120,6 @@
 "perks": [
 "Supercharged Magazine",
 "Gear Shift",
-"Pack Hunter",
 "Argent Ordnance",
 "Light Shift *"
 ],
@@ -173,7 +151,6 @@
 "perks": [
 "Slideshot",
 "Surrounded",
-"Pack Hunter",
 "Argent Ordnance"
 ],
 "dps": 9909,
@@ -205,8 +182,7 @@
 "Rampage",
 "Redirection",
 "Forge's Kin",
-"Argent Blade",
-"simulated"
+"Argent Blade"
 ],
 "dps": 8687,
 "total": 146952
@@ -221,7 +197,6 @@
 "Timelost Magazine",
 "Envious Arsenal",
 "Elemental Honing",
-"Pack Hunter",
 "Argent Ordnance"
 ],
 "dps": 8226,
@@ -237,7 +212,6 @@
 "Cluster Bomb",
 "Elemental Honing",
 "Timelost Magazine",
-"Pack Hunter",
 "Argent Ordnance"
 ],
 "dps": 7888,
@@ -270,8 +244,7 @@
 "Forceful Blade III",
 "Gyro Core",
 "Upper Hand",
-"Argent Blade",
-"simulated"
+"Argent Blade"
 ],
 "dps": 7558,
 "total": null
@@ -285,8 +258,7 @@
 "perks": [
 "Guidance Ring",
 "Moebius Quiver",
-"Argent Quiver",
-"simulated"
+"Argent Quiver"
 ],
 "dps": 7492,
 "total": null
@@ -347,7 +319,6 @@
 "perks": [
 "Supercharged Magazine",
 "Gear Shift",
-"Pack Hunter",
 "Argent Ordnance"
 ],
 "dps": 7233,
@@ -364,7 +335,6 @@
 "The Perfect Fifth",
 "Jagged Edge",
 "Lucent Blades",
-"Pack Hunter",
 "Transcendent",
 "Argent Blade",
 "Dawn Chorus",
@@ -401,8 +371,7 @@
 "10 lights to regenerate",
 "Outbreak Perfected max nanites",
 "Argent Blade",
-"Solar Fulmination",
-"simulated"
+"Solar Fulmination"
 ],
 "dps": 6686,
 "total": 320471
@@ -555,7 +524,6 @@
 "Impact",
 "Collective Action",
 "Elemental Honing",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 6331,
@@ -572,7 +540,6 @@
 "Impact",
 "Burning Ambition",
 "Chaos Reshaped",
-"Pack Hunter",
 "Argent Blade",
 "Solar Fulmination",
 "Dawn Chorus"
@@ -635,7 +602,6 @@
 "Jolting Feedback",
 "Surrounded",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5971,
@@ -653,7 +619,6 @@
 "Relentless Strikes",
 "Surrounded",
 "Tenacity",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5936,
@@ -684,7 +649,6 @@
 "Jolting Feedback",
 "Elemental Honing",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5692,
@@ -702,7 +666,6 @@
 "Relentless Strikes",
 "Elemental Honing",
 "Tenacity",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5651,
@@ -737,7 +700,6 @@
 "Impact",
 "Burning Ambition",
 "Chaos Reshaped",
-"Pack Hunter",
 "Argent Blade",
 "Solar Fulmination"
 ],
@@ -789,7 +751,6 @@
 "The Perfect Fifth",
 "Jagged Edge",
 "Lucent Blades",
-"Pack Hunter",
 "Transcendent",
 "Argent Blade",
 "Solar Fulmination"
@@ -856,7 +817,6 @@
 "Relentless Strikes",
 "Surrounded",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5281,
@@ -888,8 +848,7 @@
 "Lucent Blades",
 "Burning Ambition",
 "Combination Argent Blade",
-"Dawn Chorus",
-"simulated"
+"Dawn Chorus"
 ],
 "dps": 5200,
 "total": 197074
@@ -905,7 +864,6 @@
 "Impact",
 "Vorpal Weapon",
 "Whirlwind Blade",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5154,
@@ -922,7 +880,6 @@
 "Unplanned Reprieve",
 "Tempered Edge",
 "Lucent Blades",
-"Pack Hunter",
 "Transcendent",
 "Argent Blade"
 ],
@@ -940,7 +897,6 @@
 "Unplanned Reprieve",
 "Jagged Edge",
 "Lucent Blades",
-"Pack Hunter",
 "Transcendent",
 "Argent Blade",
 "boss against wall"
@@ -975,7 +931,6 @@
 "Relentless Strikes",
 "Elemental Honing",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5078,
@@ -1006,7 +961,6 @@
 "Relentless Strikes",
 "Elemental Honing",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 5028,
@@ -1093,7 +1047,6 @@
 "Unplanned Reprieve",
 "Jagged Edge",
 "Lucent Blades",
-"Pack Hunter",
 "Transcendent",
 "Argent Blade"
 ],
@@ -1234,7 +1187,6 @@
 "Frenzy",
 "Surrounded",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 4718,
@@ -1311,8 +1263,7 @@
 "Spike Grenades",
 "Slideshot",
 "Elemental Honing",
-"Energy Acceleration",
-"simulated"
+"Energy Acceleration"
 ],
 "dps": 4531,
 "total": 57426
@@ -1343,7 +1294,6 @@
 "Frenzy",
 "Elemental Honing",
 "Lucent Blades",
-"Pack Hunter",
 "Argent Blade"
 ],
 "dps": 4492,
@@ -2728,8 +2678,7 @@
 "setup": "full grenade uptime, Property: Irreducible, Transcendent but excludes 5%, simulated",
 "perks": [
 "full grenade uptime",
-"Property: Irreducible",
-"simulated"
+"Property: Irreducible"
 ],
 "dps": 2181,
 "total": 154322
@@ -2930,8 +2879,7 @@
 "perks": [
 "Redirection",
 "Bait",
-"Switch",
-"simulated"
+"Switch"
 ],
 "dps": 1771,
 "total": 50483
@@ -3163,8 +3111,7 @@
 "ammo": 1,
 "setup": "Arc Conductor, simulated",
 "perks": [
-"Arc Conductor",
-"simulated"
+"Arc Conductor"
 ],
 "dps": 1100,
 "total": null

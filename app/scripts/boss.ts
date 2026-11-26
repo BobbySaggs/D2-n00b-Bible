@@ -18,6 +18,6 @@ for (const sp of found) {
   const v = evaluate({ ...sp, goal }, ctx, set);
   console.log(`\nscore ${v.score.toFixed(1)} loops ${v.loopScore.toFixed(1)} | ${STAT_ORDER.map(k => v.stats[k]).join("/")} | ${v.issues.join(" ")}`);
   console.log(`  ${sp.subclass} | ${sp.super} | ${sp.grenade} | ${sp.melee} | ${sp.classAbility} | ${sp.aspects.join(" + ")} | ${sp.exotic}`);
-  console.log(`  weapons ${v.weapons.map((w: any) => `${w?.item.name} [${w?.type}]`).join(" | ")} | ${sp.artifact}`);
+  console.log(`  weapons ${v.weapons.map((w: any) => `${w?.item.name} [${w?.type}] (${w?.ks.slice(w.base.length).map((k: any) => k.name).join(", ")})`).join(" | ")} | ${sp.artifact}`);
   console.log(`  combos ${v.loops.combos.map((c: any) => c.name).join(", ")} | bossDmg ${(v.loops.made.get("bossDmg")?.total ?? 0).toFixed(1)} by ${(v.loops.made.get("bossDmg")?.by ?? []).join(", ")}`);
 }
