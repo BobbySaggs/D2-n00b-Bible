@@ -4,7 +4,7 @@ import { DEFS } from "../bungie/defs";
 import type { Inventory, Item } from "../model/inventory";
 import { ALL, CLASS_SUBS, byName, type K, type Subclass } from "../knowledge/hunter";
 import { breakdown, currentSlotMods, evaluate, pointsByPiece, refitArtifact, evaluateNow, fragmentSlots, fullModPlan, makeCtx, modPlan, modSteps, stepsFrom, type BuildSpec, type BuildView, type Ctx, type Settings } from "../engine/evaluate";
-import type { Require } from "../engine/builds";
+import { damageFor, type Require, type Weapon } from "../engine/builds";
 import { clearUndo, equipPlan, loadUndo, restorePlan, saveUndo, snapshotWorn, type WornSnapshot } from "../engine/equip";
 import { EquipDialog } from "./EquipDialog";
 import { count100, lowest } from "../engine/solve";
@@ -446,6 +446,16 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
       })} />
   );
 
+  // Tested boss damage from Aegis's sheet, for special and heavy guns it covers.
+  const dpsLine = (w: Weapon) => {
+    const d = w.ammo > 1 ? damageFor(w) : null;
+    if (!d) return null;
+    return (
+      <div className="text-xs text-ink-dim" title={`Tested setup: ${d.row.name}, ${d.row.setup}`}>
+        Boss DPS about <b className="text-ink">{d.dps.toLocaleString()}</b>{d.exact ? " (tested roll)" : ` · tested best ${d.best.toLocaleString()} with ${d.missing.join(", ")}`}
+      </div>
+    );
+  };
   const weaponLabel = (id: string) => {
     const w = ctx.weapons.find(x => x.item.id === id);
     if (!w) return <span className="text-ink-dim">None</span>;
@@ -456,6 +466,7 @@ function Table({ now, views, ctx, edit, pinned, setPinned, search, busy, focus, 
         <div>
           <div className={cn(w.item.exotic && "text-exotic")}>{w.item.name}</div>
           <div className="text-xs text-ink-dim">{w.element} · Power {w.item.power} · {where(w.item, cid)}{perks.length ? ` · ${perks.join(", ")}` : ""}</div>
+          {dpsLine(w)}
         </div>
       </div>
     );

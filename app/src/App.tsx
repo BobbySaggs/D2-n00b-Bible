@@ -10,6 +10,7 @@ import { Builder } from "./screens/Builder";
 import { Workshop, type Sent } from "./screens/Workshop";
 import { Home } from "./screens/Home";
 import { CLARITY_DISCORD, CLARITY_ON, CLARITY_SITE } from "./bungie/clarity";
+import { DAMAGE } from "./engine/damage";
 import { Inventory } from "./screens/Inventory";
 import { Journey } from "./screens/Journey";
 import { Segmented } from "./ui/bits";
@@ -133,6 +134,7 @@ export default function App() {
       )}
       <footer className="mt-10 space-y-1 text-center text-xs text-ink-dim">
         {CLARITY_ON && <div>Perk values from <a href={CLARITY_SITE} target="_blank" rel="noreferrer">Clarity</a>{CLARITY_DISCORD && <> · <a href={CLARITY_DISCORD} target="_blank" rel="noreferrer">Clarity Discord</a></>}</div>}
+        <div>Boss damage numbers from <a href={DAMAGE.url} target="_blank" rel="noreferrer">Aegis's Boss Damage sheet</a></div>
         {st.at === "ready" && <div className="space-x-3"><button type="button" className="hover:text-ink" onClick={() => setScreen("workshop")}>Workshop</button><button type="button" className="hover:text-ink" onClick={() => setScreen("roster")}>My roster and snapshot</button></div>}
         <div>Steeped beta {__APP_VERSION__} · © Bobby Saggs. All rights reserved. Not affiliated with Bungie.</div>
       </footer>

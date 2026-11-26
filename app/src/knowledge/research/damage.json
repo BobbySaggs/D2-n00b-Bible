@@ -1,0 +1,3291 @@
+{
+"source": "Aegis, Destiny 2: Boss Damage (Sustained tab), patch 9.7.0",
+"url": "https://docs.google.com/spreadsheets/d/1_5wtBjRYHHxuF4oJKDb_iOGZs-wTkzB6RYbnyNLbuz4/edit",
+"rows": [
+{
+"name": "High-impact bow",
+"frame": "High-impact",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Heavy Bolts, Envious Arsenal + High Ground + e. Accelerated Assault (A Good Shout), Guidance Ring x3, Moebius Quiver",
+"perks": [
+"Heavy Bolts",
+"Envious Arsenal",
+"High Ground",
+"Accelerated Assault",
+"Guidance Ring",
+"Moebius Quiver"
+],
+"dps": 17960,
+"total": 167925
+},
+{
+"name": "Adaptive rocket launcher",
+"frame": "Adaptive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Lasting Impression + Reaper's Tithe x4 + Forge's Kin x3 (Bellowing Giant), Pack Hunter, Argent Ordnance, Sentinel flicker (no buff), Turncoat transfer, simulated",
+"perks": [
+"Lasting Impression",
+"Reaper's Tithe",
+"Forge's Kin",
+"Pack Hunter",
+"Argent Ordnance",
+"Sentinel flicker",
+"Turncoat transfer",
+"simulated"
+],
+"dps": 16231,
+"total": 153611
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Cluster Bomb + Elemental Honing x5 + Timelost Magazine (Hezen Vengeance), Pack Hunter, Argent Ordnance, assumes normal clusters, Shoot to Loot, Turncoat transfer",
+"perks": [
+"Cluster Bomb",
+"Elemental Honing",
+"Timelost Magazine",
+"Pack Hunter",
+"Argent Ordnance",
+"Shoot to Loot",
+"Turncoat transfer"
+],
+"dps": 13514,
+"total": 118926
+},
+{
+"name": "Leviathan's Breath",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Archer's Tempo, Moebius Quiver, Argent Quiver, simulated",
+"perks": [
+"Archer's Tempo",
+"Moebius Quiver",
+"Argent Quiver",
+"simulated"
+],
+"dps": 12904,
+"total": 223610
+},
+{
+"name": "Duality",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Ice Breaker loadout swap exploit, 80% consistency, simulated",
+"perks": [
+"simulated"
+],
+"dps": 12059,
+"total": 358145
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Cluster Bomb + Elemental Honing x5 + Timelost Magazine (Hezen Vengeance), Pack Hunter, Argent Ordnance, assumes normal clusters, Shoot to Loot",
+"perks": [
+"Cluster Bomb",
+"Elemental Honing",
+"Timelost Magazine",
+"Pack Hunter",
+"Argent Ordnance",
+"Shoot to Loot"
+],
+"dps": 11384,
+"total": 100178
+},
+{
+"name": "High-impact bow",
+"frame": "High-impact",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Heavy Bolts, Envious Arsenal + High Ground + e. Accelerated Assault (A Good Shout), Moebius Quiver",
+"perks": [
+"Heavy Bolts",
+"Envious Arsenal",
+"High Ground",
+"Accelerated Assault",
+"Moebius Quiver"
+],
+"dps": 11196,
+"total": 104681
+},
+{
+"name": "Hierarchy of Needs",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 1,
+"setup": "Guidance Ring x2, Moebius Quiver, Argent Quiver, fireteam scaling, simulated",
+"perks": [
+"Guidance Ring",
+"Moebius Quiver",
+"Argent Quiver",
+"fireteam scaling",
+"simulated"
+],
+"dps": 10964,
+"total": null
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Supercharged Magazine + Gear Shift x5 (Heretic), Pack Hunter, Argent Ordnance, Light Shift x4*",
+"perks": [
+"Supercharged Magazine",
+"Gear Shift",
+"Pack Hunter",
+"Argent Ordnance",
+"Light Shift *"
+],
+"dps": 10590,
+"total": 122840
+},
+{
+"name": "High-impact bow",
+"frame": "High-impact",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Heavy Bolts, Envious Arsenal + High Ground + e. Accelerated Assault (A Good Shout), Guidance Ring x3",
+"perks": [
+"Heavy Bolts",
+"Envious Arsenal",
+"High Ground",
+"Accelerated Assault",
+"Guidance Ring"
+],
+"dps": 10263,
+"total": 95957
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Slideshot + e. Surrounded (Crux Termination IV), Pack Hunter, Argent Ordnance",
+"perks": [
+"Slideshot",
+"Surrounded",
+"Pack Hunter",
+"Argent Ordnance"
+],
+"dps": 9909,
+"total": 87195
+},
+{
+"name": "Truth",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Prototype Truthseeker, Reaper's Tithe x4, Argent Ordnance",
+"perks": [
+"Prototype Truthseeker",
+"Reaper's Tithe",
+"Argent Ordnance"
+],
+"dps": 8973,
+"total": 119636
+},
+{
+"name": "Aggressive sword",
+"frame": "Aggressive",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H1L combo, Jagged Edge + e. Impact, Rampage x3 + e. Redirection x30 + e. Forge's Kin x3 (Stryker's Sure-Hand), Argent Blade, simulated",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Rampage",
+"Redirection",
+"Forge's Kin",
+"Argent Blade",
+"simulated"
+],
+"dps": 8687,
+"total": 146952
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Timelost Magazine, Envious Arsenal + Elemental Honing x5 (Hezen Vengeance), Pack Hunter, Argent Ordnance",
+"perks": [
+"Timelost Magazine",
+"Envious Arsenal",
+"Elemental Honing",
+"Pack Hunter",
+"Argent Ordnance"
+],
+"dps": 8226,
+"total": 83902
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Cluster Bomb + Elemental Honing x5 + Timelost Magazine (Hezen Vengeance), Pack Hunter, Argent Ordnance, assumes normal clusters",
+"perks": [
+"Cluster Bomb",
+"Elemental Honing",
+"Timelost Magazine",
+"Pack Hunter",
+"Argent Ordnance"
+],
+"dps": 7888,
+"total": 100178
+},
+{
+"name": "Still Hunt",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "pre-popped into 6 shot cycle, Celestial Nighthawk, Sniper's Meditation, Incendiary Rifle Rounds, Solar Fulmination, assumes at least 2 orb pickups per mag",
+"perks": [
+"Celestial Nighthawk",
+"Sniper's Meditation",
+"Incendiary Rifle Rounds",
+"Solar Fulmination"
+],
+"dps": 7567,
+"total": 133562
+},
+{
+"name": "Praxic Blade",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "throw spam with double hits, Lucent Blades x3, Offensive Form, Forceful Blade III, Gyro Core (solar), Upper Hand, Argent Blade, simulated",
+"perks": [
+"Lucent Blades",
+"Offensive Form",
+"Forceful Blade III",
+"Gyro Core",
+"Upper Hand",
+"Argent Blade",
+"simulated"
+],
+"dps": 7558,
+"total": null
+},
+{
+"name": "Hierarchy of Needs",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 1,
+"setup": "Guidance Ring, Moebius Quiver, Argent Quiver, simulated",
+"perks": [
+"Guidance Ring",
+"Moebius Quiver",
+"Argent Quiver",
+"simulated"
+],
+"dps": 7492,
+"total": null
+},
+{
+"name": "Aggressive sniper",
+"frame": "Aggressive",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Extended Mag, Triple Tap + e. Redirection x30 + e. Accelerated Assault (Something Something), Networked Targeting x5, Sniper's Meditation, Kinetic Synthesis reloads",
+"perks": [
+"Extended Mag",
+"Triple Tap",
+"Redirection",
+"Accelerated Assault",
+"Networked Targeting",
+"Sniper's Meditation",
+"Kinetic Synthesis reloads"
+],
+"dps": 7364,
+"total": 85884
+},
+{
+"name": "Still Hunt",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "pre-popped into 6 shot cycle, Celestial Nighthawk, Sniper's Meditation, assumes at least 2 orb pickups per mag",
+"perks": [
+"Celestial Nighthawk",
+"Sniper's Meditation"
+],
+"dps": 7358,
+"total": 129880
+},
+{
+"name": "Aggressive sword",
+"frame": "Aggressive",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H1L combo, Jagged Edge + e. Impact, e. Redirection x30 + e. Forge's Kin x3 (Stryker's Sure-Hand), Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Redirection",
+"Forge's Kin",
+"Argent Blade"
+],
+"dps": 7309,
+"total": 123642
+},
+{
+"name": "Aggressive rocket launcher",
+"frame": "Aggressive",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Supercharged Magazine + Gear Shift x5 (Heretic), Pack Hunter, Argent Ordnance",
+"perks": [
+"Supercharged Magazine",
+"Gear Shift",
+"Pack Hunter",
+"Argent Ordnance"
+],
+"dps": 7233,
+"total": 83902
+},
+{
+"name": "Ergo Sum",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "caster frame, The Perfect Fifth, Jagged Edge, 1H2L combo, Lucent Blades x3, Pack Hunter, Transcendent, excludes Transcendence 5% bonus, Argent Blade, Dawn Chorus, Solar Fulmination",
+"perks": [
+"caster frame",
+"The Perfect Fifth",
+"Jagged Edge",
+"Lucent Blades",
+"Pack Hunter",
+"Transcendent",
+"Argent Blade",
+"Dawn Chorus",
+"Solar Fulmination"
+],
+"dps": 7112,
+"total": 125168
+},
+{
+"name": "Pinpoint slug shotgun",
+"frame": "Pinpoint",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Assault Mag, e. Redirection x30 + Elemental Honing x5 (Unvoiced), reload cancelling",
+"perks": [
+"Assault Mag",
+"Redirection",
+"Elemental Honing",
+"reload cancelling"
+],
+"dps": 6691,
+"total": 78028
+},
+{
+"name": "Wolfsbane",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "swapping after HLLHLLHLLHLLH, Honed Edge + Jagged Edge, Burning Ambition, 10 lights to regenerate, Outbreak Perfected max nanites, Argent Blade, Solar Fulmination, simulated",
+"perks": [
+"Honed Edge",
+"Jagged Edge",
+"Burning Ambition",
+"10 lights to regenerate",
+"Outbreak Perfected max nanites",
+"Argent Blade",
+"Solar Fulmination",
+"simulated"
+],
+"dps": 6686,
+"total": 320471
+},
+{
+"name": "Izanagi's Burden",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "includes rehone time, hone before rally, Sniper's Meditation (assume stacked)",
+"perks": [
+"hone before rally",
+"Sniper's Meditation"
+],
+"dps": 6623,
+"total": 56856
+},
+{
+"name": "One Thousand Voices",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 3,
+"setup": "Ember of Ashes, catalyst, Dawn Chorus, Particle Reconstruction",
+"perks": [
+"Ember of Ashes",
+"catalyst",
+"Dawn Chorus",
+"Particle Reconstruction"
+],
+"dps": 6580,
+"total": 120613
+},
+{
+"name": "Adaptive sniper",
+"frame": "Adaptive",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Appended Mag, Vorpal Weapon + e. Redirection x30 (Embraced Identity), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Appended Mag",
+"Vorpal Weapon",
+"Redirection",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 6520,
+"total": 74552
+},
+{
+"name": "Disruption sniper",
+"frame": "Disruption",
+"type": "Sniper Rifle",
+"ammo": 3,
+"setup": "Aggregate Charge x3 + e. Accelerated Assault (Refurbished A499), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Aggregate Charge",
+"Accelerated Assault",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 6503,
+"total": 168909
+},
+{
+"name": "Dynamic sniper",
+"frame": "Dynamic",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Ionized Heatsink, Dynamic Heat Limiter, Vorpal + Bait and Switch + e. Imperial Allegiance x3 (Conspiracy Honed), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Ionized Heatsink",
+"Dynamic Heat Limiter",
+"Vorpal",
+"Bait",
+"Switch",
+"Imperial Allegiance",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 6482,
+"total": 88910
+},
+{
+"name": "Rapid-fire sniper",
+"frame": "Rapid-fire",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Tactical Mag, e. Fourth Time's the Charm + Redirection x30 + Frame of Reference x5 (Lance Ephemeral), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Tactical Mag",
+"Fourth Time's the Charm",
+"Redirection",
+"Frame of Reference",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 6417,
+"total": 47348
+},
+{
+"name": "Truth",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Prototype Truthseeker, Argent Ordnance",
+"perks": [
+"Prototype Truthseeker",
+"Argent Ordnance"
+],
+"dps": 6409,
+"total": 85454
+},
+{
+"name": "High-impact bow",
+"frame": "High-impact",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Heavy Bolts, Envious Arsenal + High Ground + e. Accelerated Assault (A Good Shout)",
+"perks": [
+"Heavy Bolts",
+"Envious Arsenal",
+"High Ground",
+"Accelerated Assault"
+],
+"dps": 6398,
+"total": 59818
+},
+{
+"name": "Legend of Acrius",
+"frame": "",
+"type": "Shotgun",
+"ammo": 3,
+"setup": "body, Trench Barrel, Arc Compounding",
+"perks": [
+"body",
+"Trench Barrel",
+"Arc Compounding"
+],
+"dps": 6363,
+"total": 129383
+},
+{
+"name": "Aggressive sword",
+"frame": "Aggressive",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H1L combo, Jagged Edge + e. Impact, e. Collective Action + Elemental Honing x5 (Hero of Ages), Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Collective Action",
+"Elemental Honing",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 6331,
+"total": 152997
+},
+{
+"name": "Lightweight sword",
+"frame": "Lightweight",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H2L combo, Jagged Edge + e. Impact, e. Burning Ambition + Chaos Reshaped x2 (Terciopelo-4bl), Pack Hunter, Argent Blade, Solar Fulmination, Dawn Chorus",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Burning Ambition",
+"Chaos Reshaped",
+"Pack Hunter",
+"Argent Blade",
+"Solar Fulmination",
+"Dawn Chorus"
+],
+"dps": 6309,
+"total": 167438
+},
+{
+"name": "Wolfsbane",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "swapping after HLLHLLHLLHLLH, Honed Edge + Jagged Edge, Burning Ambition, 10 lights to regenerate, Argent Blade, Solar Fulmination, Dawn Chorus",
+"perks": [
+"Honed Edge",
+"Jagged Edge",
+"Burning Ambition",
+"10 lights to regenerate",
+"Argent Blade",
+"Solar Fulmination",
+"Dawn Chorus"
+],
+"dps": 6190,
+"total": 296708
+},
+{
+"name": "Still Hunt",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "pre-popped into 6 shot cycle, Celestial Nighthawk, Sniper's Meditation",
+"perks": [
+"Celestial Nighthawk",
+"Sniper's Meditation"
+],
+"dps": 6140,
+"total": 129880
+},
+{
+"name": "Merciless",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Impetus, two kills",
+"perks": [
+"Impetus",
+"two kills"
+],
+"dps": 6013,
+"total": 70355
+},
+{
+"name": "Bequest",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H1L combo, Jagged Edge, e. Jolting Feedback + e. Surrounded, Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Jolting Feedback",
+"Surrounded",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5971,
+"total": 142101
+},
+{
+"name": "Wave frame sword",
+"frame": "Wave frame",
+"type": "Sword",
+"ammo": 3,
+"setup": "heavy spam, Jagged Edge + e. Impact, Relentless Strikes + e. Surrounded + Tenacity x20 (Synanceia), Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Relentless Strikes",
+"Surrounded",
+"Tenacity",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5936,
+"total": 186093
+},
+{
+"name": "Disruption sniper",
+"frame": "Disruption",
+"type": "Sniper Rifle",
+"ammo": 3,
+"setup": "Aggregate Charge x3 + e. Accelerated Assault (Refurbished A499), Sniper's Meditation",
+"perks": [
+"Aggregate Charge",
+"Accelerated Assault",
+"Sniper's Meditation"
+],
+"dps": 5730,
+"total": 148819
+},
+{
+"name": "Bequest",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H1L combo, Jagged Edge, e. Jolting Feedback + Elemental Honing x5, Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Jolting Feedback",
+"Elemental Honing",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5692,
+"total": 135481
+},
+{
+"name": "Wave frame sword",
+"frame": "Wave frame",
+"type": "Sword",
+"ammo": 3,
+"setup": "heavy spam, Jagged Edge + e. Impact, Relentless Strikes + e. Elemental Honing x5 + Tenacity x20 (Synanceia), Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Relentless Strikes",
+"Elemental Honing",
+"Tenacity",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5651,
+"total": 177169
+},
+{
+"name": "Dynamic sniper",
+"frame": "Dynamic",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Ionized Heatsink, Dynamic Heat Limiter, Vorpal + Bait and Switch + e. Imperial Allegiance x3 (Conspiracy Honed), Sniper's Meditation",
+"perks": [
+"Ionized Heatsink",
+"Dynamic Heat Limiter",
+"Vorpal",
+"Bait",
+"Switch",
+"Imperial Allegiance",
+"Sniper's Meditation"
+],
+"dps": 5636,
+"total": 77313
+},
+{
+"name": "Lightweight sword",
+"frame": "Lightweight",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H2L combo, Jagged Edge + e. Impact, e. Burning Ambition + Chaos Reshaped x2 (Terciopelo-4bl), Pack Hunter, Argent Blade, Solar Fulmination",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Burning Ambition",
+"Chaos Reshaped",
+"Pack Hunter",
+"Argent Blade",
+"Solar Fulmination"
+],
+"dps": 5474,
+"total": 145269
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "2L1H combo, Lucent Blades x3, Burning Ambition, Argent Blade, Dawn Chorus, Solar Fulmination",
+"perks": [
+"Lucent Blades",
+"Burning Ambition",
+"Argent Blade",
+"Dawn Chorus",
+"Solar Fulmination"
+],
+"dps": 5419,
+"total": 217268
+},
+{
+"name": "Aggressive shotgun",
+"frame": "Aggressive",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, Assault Mag, Timelost Magazine, e. Aggregate Charge x3 + Trench Barrel (Found Verdict), melee damage excluded, Arc Compounding",
+"perks": [
+"body",
+"Assault Mag",
+"Timelost Magazine",
+"Aggregate Charge",
+"Trench Barrel",
+"melee damage excluded",
+"Arc Compounding"
+],
+"dps": 5398,
+"total": 108395
+},
+{
+"name": "Ergo Sum",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "caster frame, The Perfect Fifth, Jagged Edge, 1H2L combo, Lucent Blades x3, Pack Hunter, Transcendent, excludes Transcendence 5% bonus, Argent Blade, Solar Fulmination",
+"perks": [
+"caster frame",
+"The Perfect Fifth",
+"Jagged Edge",
+"Lucent Blades",
+"Pack Hunter",
+"Transcendent",
+"Argent Blade",
+"Solar Fulmination"
+],
+"dps": 5372,
+"total": 94548
+},
+{
+"name": "Precision linear fusion rifle",
+"frame": "Precision",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Enhanced Battery, Charge MW, e. Mega Kill Clip + Sword Logic x4 + Heretical Behavior (Eyes Unveiled)",
+"perks": [
+"Enhanced Battery",
+"Charge MW",
+"Mega Kill Clip",
+"Sword Logic",
+"Heretical Behavior"
+],
+"dps": 5372,
+"total": 132366
+},
+{
+"name": "Wolfsbane",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "swapping after HLLHLLHLLHLLH, Honed Edge + Jagged Edge, Burning Ambition, 10 lights to regenerate, Argent Blade, Solar Fulmination",
+"perks": [
+"Honed Edge",
+"Jagged Edge",
+"Burning Ambition",
+"10 lights to regenerate",
+"Argent Blade",
+"Solar Fulmination"
+],
+"dps": 5362,
+"total": 257006
+},
+{
+"name": "One Thousand Voices",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 3,
+"setup": "Ember of Ashes, catalyst, Particle Reconstruction",
+"perks": [
+"Ember of Ashes",
+"catalyst",
+"Particle Reconstruction"
+],
+"dps": 5321,
+"total": 97543
+},
+{
+"name": "Caster sword",
+"frame": "Caster",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H2L combo, Jagged Edge + e. Impact, Relentless Strikes + e. Surrounded (Ill Omen), Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Relentless Strikes",
+"Surrounded",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5281,
+"total": 139428
+},
+{
+"name": "Compressed wave grenade launcher",
+"frame": "Compressed wave",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "Envious Arsenal + Elemental Honing x5 (Love and Death), impact included, Kinetic Impacts",
+"perks": [
+"Envious Arsenal",
+"Elemental Honing  (Love",
+"Death)",
+"impact included",
+"Kinetic Impacts"
+],
+"dps": 5244,
+"total": 81413
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "3L1H1R combo, Lucent Blades x3, Burning Ambition, Combination Argent Blade, Sword Storm Combo, Dawn Chorus, simulated",
+"perks": [
+"Lucent Blades",
+"Burning Ambition",
+"Combination Argent Blade",
+"Dawn Chorus",
+"simulated"
+],
+"dps": 5200,
+"total": 197074
+},
+{
+"name": "Lightweight sword",
+"frame": "Lightweight",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H2L combo, Jagged Edge + e. Impact, Vorpal Weapon + Whirlwind Blade (Sullen Claw), Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Vorpal Weapon",
+"Whirlwind Blade",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5154,
+"total": 157840
+},
+{
+"name": "Ergo Sum",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "vortex frame, Unplanned Reprieve, Tempered Edge, heavy spam, Lucent Blades x3, Pack Hunter, Transcendent, excludes Transcendence 5% bonus, Argent Blade",
+"perks": [
+"vortex frame",
+"Unplanned Reprieve",
+"Tempered Edge",
+"Lucent Blades",
+"Pack Hunter",
+"Transcendent",
+"Argent Blade"
+],
+"dps": 5147,
+"total": 108087
+},
+{
+"name": "Ergo Sum",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "wave frame, Unplanned Reprieve, Jagged Edge, heavy spam, Lucent Blades x3, Pack Hunter, Transcendent, excludes Transcendence 5% bonus, Argent Blade, boss against wall",
+"perks": [
+"wave frame",
+"Unplanned Reprieve",
+"Jagged Edge",
+"Lucent Blades",
+"Pack Hunter",
+"Transcendent",
+"Argent Blade",
+"boss against wall"
+],
+"dps": 5145,
+"total": 101863
+},
+{
+"name": "High-impact bow",
+"frame": "High-impact",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Heavy Bolts, e. Aggregate Charge x3 (Submersion), Guidance Ring x3, Argent Quiver",
+"perks": [
+"Heavy Bolts",
+"Aggregate Charge",
+"Guidance Ring",
+"Argent Quiver"
+],
+"dps": 5115,
+"total": null
+},
+{
+"name": "Adaptive sword",
+"frame": "Adaptive",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H1L combo*, Jagged Edge + e. Impact, Relentless Strikes + Elemental Honing x5 (Abide the Return), Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Relentless Strikes",
+"Elemental Honing",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5078,
+"total": 126198
+},
+{
+"name": "Deathbringer",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "max projectile height, Argent Ordnance",
+"perks": [
+"max projectile height",
+"Argent Ordnance"
+],
+"dps": 5052,
+"total": 116197
+},
+{
+"name": "Caster sword",
+"frame": "Caster",
+"type": "Sword",
+"ammo": 3,
+"setup": "1H2L combo, Jagged Edge + e. Impact, Relentless Strikes + Elemental Honing x5 (Night Terror), Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Relentless Strikes",
+"Elemental Honing",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 5028,
+"total": 132742
+},
+{
+"name": "The Chaperone",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "The Roadborn, Triple Tap, Kinetic Synthesis",
+"perks": [
+"The Roadborn",
+"Triple Tap",
+"Kinetic Synthesis"
+],
+"dps": 4997,
+"total": null
+},
+{
+"name": "The Fourth Horseman",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, Arc Compounding",
+"perks": [
+"body",
+"Arc Compounding"
+],
+"dps": 4978,
+"total": 47544
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "2L1H combo, Lucent Blades x3, Burning Ambition, Argent Blade, Solar Fulmination",
+"perks": [
+"Lucent Blades",
+"Burning Ambition",
+"Argent Blade",
+"Solar Fulmination"
+],
+"dps": 4944,
+"total": 198217
+},
+{
+"name": "Duality",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "3 body pellet shots into On Black Wings x3 slugs",
+"perks": [],
+"dps": 4892,
+"total": 73569
+},
+{
+"name": "Aggressive sniper",
+"frame": "Aggressive",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Extended Mag, Triple Tap + Elemental Honing x5 + e. Accelerated Assault (Something Something), Networked Targeting x5, Sniper's Meditation, Kinetic Synthesis reloads",
+"perks": [
+"Extended Mag",
+"Triple Tap",
+"Elemental Honing",
+"Accelerated Assault",
+"Networked Targeting",
+"Sniper's Meditation",
+"Kinetic Synthesis reloads"
+],
+"dps": 4867,
+"total": null
+},
+{
+"name": "Ergo Sum",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "lightweight frame, Unplanned Reprieve, Jagged Edge, 1H2L combo, Lucent Blades x3, Pack Hunter, Transcendent, excludes Transcendence 5% bonus, Argent Blade",
+"perks": [
+"lightweight frame",
+"Unplanned Reprieve",
+"Jagged Edge",
+"Lucent Blades",
+"Pack Hunter",
+"Transcendent",
+"Argent Blade"
+],
+"dps": 4842,
+"total": 98852
+},
+{
+"name": "Rapid-fire shotgun",
+"frame": "Rapid-fire",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, Elemental Honing x5 + Forge's Kin x3 (Threat Level), Kinetic Synthesis reloads",
+"perks": [
+"body",
+"Elemental Honing",
+"Forge's Kin",
+"Kinetic Synthesis reloads"
+],
+"dps": 4835,
+"total": null
+},
+{
+"name": "Precision linear fusion rifle",
+"frame": "Precision",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Enhanced Battery, Charge MW, e. Mega Kill Clip + Elemental Honing x5 + Heretical Behavior (Eyes Unveiled)",
+"perks": [
+"Enhanced Battery",
+"Charge MW",
+"Mega Kill Clip",
+"Elemental Honing",
+"Heretical Behavior"
+],
+"dps": 4835,
+"total": 119130
+},
+{
+"name": "Adaptive grenade launcher",
+"frame": "Adaptive",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "Spike Grenades, Envious Arsenal + e. Bait and Switch (Bitter/Sweet), Arc Compounding, Kinetic Impacts",
+"perks": [
+"Spike Grenades",
+"Envious Arsenal",
+"Bait",
+"Switch",
+"Arc Compounding",
+"Kinetic Impacts"
+],
+"dps": 4833,
+"total": 74503
+},
+{
+"name": "Wolfsbane",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "swapping after HLLHLLHLLHLLH, Honed Edge + Jagged Edge, 10 lights to regenerate, Argent Blade",
+"perks": [
+"Honed Edge",
+"Jagged Edge",
+"10 lights to regenerate",
+"Argent Blade"
+],
+"dps": 4800,
+"total": 230085
+},
+{
+"name": "Two-Tailed Fox",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Ember of Ashes, Dawn Chorus, Argent Ordnance",
+"perks": [
+"Ember of Ashes",
+"Dawn Chorus",
+"Argent Ordnance"
+],
+"dps": 4776,
+"total": 95292
+},
+{
+"name": "Rapid-fire sniper",
+"frame": "Rapid-fire",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Tactical Mag, Timelost Magazine, e. Fourth Time's the Charm + Elemental Honing x5 (Praedyth's Revenge), Networked Targeting x5, Sniper's Meditation, Kinetic Synthesis reloads",
+"perks": [
+"Tactical Mag",
+"Timelost Magazine",
+"Fourth Time's the Charm",
+"Elemental Honing",
+"Networked Targeting",
+"Sniper's Meditation",
+"Kinetic Synthesis reloads"
+],
+"dps": 4769,
+"total": null
+},
+{
+"name": "One Thousand Voices",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 3,
+"setup": "catalyst, Particle Reconstruction",
+"perks": [
+"catalyst",
+"Particle Reconstruction"
+],
+"dps": 4766,
+"total": 87367
+},
+{
+"name": "The Prospector",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "typical boss model, Arc Compounding, Kinetic Impacts",
+"perks": [
+"typical boss model",
+"Arc Compounding",
+"Kinetic Impacts"
+],
+"dps": 4736,
+"total": 84807
+},
+{
+"name": "Vortex sword",
+"frame": "Vortex",
+"type": "Sword",
+"ammo": 3,
+"setup": "heavy spam, Jagged Edge + e. Impact, Frenzy + e. Surrounded (Falling Guillotine), Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Frenzy",
+"Surrounded",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 4718,
+"total": 132100
+},
+{
+"name": "Adaptive sniper",
+"frame": "Adaptive",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Appended Mag, e. Rewind Rounds + Elemental Honing x5 (Tranquility), Networked Targeting x5, Sniper's Meditation, Kinetic Synthesis reloads",
+"perks": [
+"Appended Mag",
+"Rewind Rounds",
+"Elemental Honing",
+"Networked Targeting",
+"Sniper's Meditation",
+"Kinetic Synthesis reloads"
+],
+"dps": 4654,
+"total": null
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "3L1H1R combo, Lucent Blades x3, Burning Ambition, Combination Argent Blade, Sword Storm Combo",
+"perks": [
+"Lucent Blades",
+"Burning Ambition",
+"Combination Argent Blade"
+],
+"dps": 4646,
+"total": 176080
+},
+{
+"name": "Whisper of the Worm",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 3,
+"setup": "Whispered Breathing, Sniper's Meditation, Incendiary Rifle Rounds, Solar Fulmination",
+"perks": [
+"Whispered Breathing",
+"Sniper's Meditation",
+"Incendiary Rifle Rounds",
+"Solar Fulmination"
+],
+"dps": 4544,
+"total": 134672
+},
+{
+"name": "Rapid-fire grenade launcher",
+"frame": "Rapid-fire",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "Spike Grenades, Envious Arsenal + Elemental Honing x5 (VS Chill Inhibitor), Kinetic Impacts",
+"perks": [
+"Spike Grenades",
+"Envious Arsenal",
+"Elemental Honing",
+"Kinetic Impacts"
+],
+"dps": 4540,
+"total": 65487
+},
+{
+"name": "Micro-missile grenade launcher",
+"frame": "Micro-missile",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "Spike Grenades, Slideshot + Elemental Honing x5 (Gizmo Weft), Energy Acceleration, simulated",
+"perks": [
+"Spike Grenades",
+"Slideshot",
+"Elemental Honing",
+"Energy Acceleration",
+"simulated"
+],
+"dps": 4531,
+"total": 57426
+},
+{
+"name": "Euphony",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 2,
+"setup": "starts at 0 stacks, Thread of Evolution, includes Threadlings, Pack Tactics (simplified underestimate of 3 stack start)",
+"perks": [
+"starts at 0 stacks",
+"Thread of Evolution",
+"Pack Tactics"
+],
+"dps": 4528,
+"total": 142542
+},
+{
+"name": "Vortex sword",
+"frame": "Vortex",
+"type": "Sword",
+"ammo": 3,
+"setup": "heavy spam, Jagged Edge + e. Impact, Frenzy + Elemental Honing x5 (Falling Guillotine), Lucent Blades x3, Pack Hunter, Argent Blade",
+"perks": [
+"Jagged Edge",
+"Impact",
+"Frenzy",
+"Elemental Honing",
+"Lucent Blades",
+"Pack Hunter",
+"Argent Blade"
+],
+"dps": 4492,
+"total": 125765
+},
+{
+"name": "Adaptive sniper",
+"frame": "Adaptive",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Appended Mag, e. Fourth Time's the Charm + Elemental Honing x5 + e. Accelerated Assault (Adored), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Appended Mag",
+"Fourth Time's the Charm",
+"Elemental Honing",
+"Accelerated Assault",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 4487,
+"total": 141720
+},
+{
+"name": "Adaptive grenade launcher",
+"frame": "Adaptive",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "Spike Grenades, Envious Arsenal + Elemental Honing x5 (Edge Transit), Kinetic Impacts",
+"perks": [
+"Spike Grenades",
+"Envious Arsenal",
+"Elemental Honing",
+"Kinetic Impacts"
+],
+"dps": 4446,
+"total": 68541
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "2L1H1R combo, Lucent Blades x3, Burning Ambition, Argent Blade",
+"perks": [
+"Lucent Blades",
+"Burning Ambition",
+"Argent Blade"
+],
+"dps": 4414,
+"total": 178796
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "4L1H1R combo, Lucent Blades x3, Burning Ambition, Combination Argent Blade, Sword Storm Combo",
+"perks": [
+"Lucent Blades",
+"Burning Ambition",
+"Combination Argent Blade"
+],
+"dps": 4409,
+"total": 165335
+},
+{
+"name": "Hierarchy of Needs",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 1,
+"setup": "Guidance Ring x2, Argent Quiver, fireteam scaling",
+"perks": [
+"Guidance Ring",
+"Argent Quiver",
+"fireteam scaling"
+],
+"dps": 4385,
+"total": null
+},
+{
+"name": "New Land Beyond",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "starts at The Master x20, sprint cancelling, Kinetic Synthesis, Sniper's Meditation",
+"perks": [
+"starts at The Master",
+"sprint cancelling",
+"Kinetic Synthesis",
+"Sniper's Meditation"
+],
+"dps": 4372,
+"total": null
+},
+{
+"name": "Whisper of the Worm",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 3,
+"setup": "Whispered Breathing, Sniper's Meditation",
+"perks": [
+"Whispered Breathing",
+"Sniper's Meditation"
+],
+"dps": 4344,
+"total": 128747
+},
+{
+"name": "Merciless",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "",
+"perks": [],
+"dps": 4341,
+"total": 54552
+},
+{
+"name": "Compressed wave grenade launcher",
+"frame": "Compressed wave",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "Envious Arsenal + Elemental Honing x5 (Love and Death), Kinetic Impacts",
+"perks": [
+"Envious Arsenal",
+"Elemental Honing  (Love",
+"Death)",
+"Kinetic Impacts"
+],
+"dps": 4322,
+"total": 67103
+},
+{
+"name": "Choir of One",
+"frame": "",
+"type": "Auto Rifle",
+"ammo": 2,
+"setup": "projectile mode, spaced*",
+"perks": [
+"projectile mode",
+"spaced*"
+],
+"dps": 4320,
+"total": 76676
+},
+{
+"name": "Lightweight shotgun",
+"frame": "Lightweight",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, Assault Mag, Elemental Honing x5 (Starscape Null), reload cancelling",
+"perks": [
+"body",
+"Assault Mag",
+"Elemental Honing",
+"reload cancelling"
+],
+"dps": 4314,
+"total": 52680
+},
+{
+"name": "Precision linear fusion rifle",
+"frame": "Precision",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Enhanced Battery + e. Backup Mag, Charge MW, e. Fourth Time's the Charm + Elemental Honing x5 + Heretical Behavior (Eyes Unveiled), Particle Reconstruction",
+"perks": [
+"Enhanced Battery",
+"Backup Mag",
+"Charge MW",
+"Fourth Time's the Charm",
+"Elemental Honing",
+"Heretical Behavior",
+"Particle Reconstruction"
+],
+"dps": 4246,
+"total": 178694
+},
+{
+"name": "Lord of Wolves",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Release the Wolves, hip-fire, precision, includes ignition",
+"perks": [
+"Release the Wolves",
+"hip-fire",
+"precision"
+],
+"dps": 4238,
+"total": 86586
+},
+{
+"name": "High-impact sniper",
+"frame": "High-impact",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "sprint cancelling, Elemental Honing x5 + e. Accelerated Assault (The Helmsman), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"sprint cancelling",
+"Elemental Honing",
+"Accelerated Assault",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 4217,
+"total": 231130
+},
+{
+"name": "Leviathan's Breath",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Archer's Tempo",
+"perks": [
+"Archer's Tempo"
+],
+"dps": 4129,
+"total": 71555
+},
+{
+"name": "Euphony",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 2,
+"setup": "starts at 0 stacks, includes Threadlings, Pack Tactics (simplified underestimate of 3 stack start)",
+"perks": [
+"starts at 0 stacks",
+"Pack Tactics"
+],
+"dps": 4088,
+"total": 128701
+},
+{
+"name": "One Thousand Voices",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 3,
+"setup": "Ember of Ashes, Particle Reconstruction",
+"perks": [
+"Ember of Ashes",
+"Particle Reconstruction"
+],
+"dps": 4078,
+"total": 74750
+},
+{
+"name": "One Thousand Voices",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 3,
+"setup": "Ember of Ashes, catalyst, Particle Reconstruction, no ignitions",
+"perks": [
+"Ember of Ashes",
+"catalyst",
+"Particle Reconstruction",
+"no ignitions"
+],
+"dps": 4063,
+"total": 74472
+},
+{
+"name": "Praxic Blade",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "3L1H combo, Offensive Form, Forceful Blade III, Impact Core (solar), Kinetic Synthesis, Combination Argent Blade, Sword Storm Combo",
+"perks": [
+"Offensive Form",
+"Forceful Blade III",
+"Impact Core",
+"Kinetic Synthesis",
+"Combination Argent Blade"
+],
+"dps": 4062,
+"total": null
+},
+{
+"name": "Rapid-fire sniper",
+"frame": "Rapid-fire",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Tactical Mag, e. Fourth Time's the Charm + Elemental Honing x5 (Omniscient Eye), Networked Targeting x5, Sniper's Meditation, Incendiary Rifle Rounds, Solar Fulmination",
+"perks": [
+"Tactical Mag",
+"Fourth Time's the Charm",
+"Elemental Honing",
+"Networked Targeting",
+"Sniper's Meditation",
+"Incendiary Rifle Rounds",
+"Solar Fulmination"
+],
+"dps": 4027,
+"total": 127650
+},
+{
+"name": "Bastion",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Saint's Fury, includes melee time",
+"perks": [
+"Saint's Fury"
+],
+"dps": 4008,
+"total": 119327
+},
+{
+"name": "High-impact bow",
+"frame": "High-impact",
+"type": "Combat Bow",
+"ammo": 3,
+"setup": "Heavy Bolts, e. Aggregate Charge x3 (Submersion), Argent Quiver",
+"perks": [
+"Heavy Bolts",
+"Aggregate Charge",
+"Argent Quiver"
+],
+"dps": 3986,
+"total": null
+},
+{
+"name": "Adaptive burst linear fusion rifle",
+"frame": "Adaptive",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Accelerated Coils, Charge MW, e. Rewind Rounds + Chaos Reshaped x2 (Briar's Contempt), Particle Reconstruction",
+"perks": [
+"Accelerated Coils",
+"Charge MW",
+"Rewind Rounds",
+"Chaos Reshaped",
+"Particle Reconstruction"
+],
+"dps": 3977,
+"total": 105143
+},
+{
+"name": "The Lament",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "2L1H1R combo, Lucent Blades x3, Argent Blade",
+"perks": [
+"Lucent Blades",
+"Argent Blade"
+],
+"dps": 3964,
+"total": 160593
+},
+{
+"name": "New Land Beyond",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "starts at The Master x20, Rally Barricade, Sniper's Meditation",
+"perks": [
+"starts at The Master",
+"Rally Barricade",
+"Sniper's Meditation"
+],
+"dps": 3953,
+"total": 212985
+},
+{
+"name": "Two-Tailed Fox",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Ember of Ashes, Argent Ordnance",
+"perks": [
+"Ember of Ashes",
+"Argent Ordnance"
+],
+"dps": 3907,
+"total": 77957
+},
+{
+"name": "Sleeper Simulant",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "",
+"perks": [],
+"dps": 3900,
+"total": 87747
+},
+{
+"name": "Parasite",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "Envious Arsenal, x20 first shot",
+"perks": [
+"Envious Arsenal",
+"first shot"
+],
+"dps": 3883,
+"total": 95708
+},
+{
+"name": "Ager's Scepter",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 2,
+"setup": "Will Given Form, Facet of Command, Harsh Refraction",
+"perks": [
+"Will Given Form",
+"Facet of Command",
+"Harsh Refraction"
+],
+"dps": 3841,
+"total": 120982
+},
+{
+"name": "Ticuu's Divination",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 1,
+"setup": "alternating modes, Causality Arrows x6, Guidance Ring x2, assumes one ignition every other shot",
+"perks": [
+"alternating modes",
+"Causality Arrows",
+"Guidance Ring"
+],
+"dps": 3730,
+"total": null
+},
+{
+"name": "Rapid-fire sniper",
+"frame": "Rapid-fire",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Tactical Mag, e. Fourth Time's the Charm + Elemental Honing x5 (Omniscient Eye), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Tactical Mag",
+"Fourth Time's the Charm",
+"Elemental Honing",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 3706,
+"total": 117486
+},
+{
+"name": "The Queenbreaker",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Rewind Rounds, Combat Sights",
+"perks": [
+"Rewind Rounds",
+"Combat Sights"
+],
+"dps": 3704,
+"total": 97261
+},
+{
+"name": "Still Hunt",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "pre-popped into 6 shot cycle, Sniper's Meditation",
+"perks": [
+"Sniper's Meditation"
+],
+"dps": 3690,
+"total": 81119
+},
+{
+"name": "Fafnir",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "includes Quantum Nova windup and splash, 9 ammo consumed",
+"perks": [
+"splash",
+"9 ammo consumed"
+],
+"dps": 3591,
+"total": 58657
+},
+{
+"name": "D.A.R.C.I.",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 3,
+"setup": "Networked Targeting x5, Target Acquired, includes jolt, Sniper's Meditation",
+"perks": [
+"Networked Targeting",
+"Target Acquired",
+"Sniper's Meditation"
+],
+"dps": 3566,
+"total": 73429
+},
+{
+"name": "New Land Beyond",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "starts at The Master x0, Rally Barricade, manual reloads until The Grandmaster, Sniper's Meditation",
+"perks": [
+"starts at The Master",
+"Rally Barricade",
+"manual reloads until The Grandmaster",
+"Sniper's Meditation"
+],
+"dps": 3562,
+"total": 198345
+},
+{
+"name": "Microcosm",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 3,
+"setup": "Paracausal Imbuement, Harsh Refraction",
+"perks": [
+"Paracausal Imbuement",
+"Harsh Refraction"
+],
+"dps": 3552,
+"total": 102579
+},
+{
+"name": "Slayer's Fang",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Assault Mag, includes submunitions",
+"perks": [
+"Assault Mag"
+],
+"dps": 3524,
+"total": 83139
+},
+{
+"name": "Finality's Auger",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Bait and Switch, Linear Fusion Mode",
+"perks": [
+"Bait",
+"Switch",
+"Linear Fusion Mode"
+],
+"dps": 3490,
+"total": 82158
+},
+{
+"name": "One Thousand Voices",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 3,
+"setup": "Particle Reconstruction",
+"perks": [
+"Particle Reconstruction"
+],
+"dps": 3475,
+"total": 63705
+},
+{
+"name": "Cloudstrike",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Triple Tap, excludes Bolt Charge, Sniper's Meditation",
+"perks": [
+"Triple Tap",
+"excludes Bolt Charge",
+"Sniper's Meditation"
+],
+"dps": 3458,
+"total": 86535
+},
+{
+"name": "Heartshadow",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "heavy attacks, Shot in the Dark, Lucent Blades x3, Argent Blade",
+"perks": [
+"heavy attacks",
+"Shot in the Dark",
+"Lucent Blades",
+"Argent Blade"
+],
+"dps": 3433,
+"total": 103813
+},
+{
+"name": "Lightweight grenade launcher",
+"frame": "Lightweight",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "Spike Grenades, Trickle Charge + Reaper's Tithe x4 (Salvager's Salvo)",
+"perks": [
+"Spike Grenades",
+"Trickle Charge",
+"Reaper's Tithe"
+],
+"dps": 3422,
+"total": 43373
+},
+{
+"name": "Praxic Blade",
+"frame": "",
+"type": "Sword",
+"ammo": 2,
+"setup": "3L1H combo, Offensive Form, Forceful Blade III, Kinetic Synthesis, Combination Argent Blade, Sword Storm Combo",
+"perks": [
+"Offensive Form",
+"Forceful Blade III",
+"Kinetic Synthesis",
+"Combination Argent Blade"
+],
+"dps": 3361,
+"total": null
+},
+{
+"name": "Precision shotgun",
+"frame": "Precision",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, no Backup Mag, Assault Mag, Reconstruction + Trench Barrel (Prophet of Doom), reload cancelling",
+"perks": [
+"body",
+"no Backup Mag",
+"Assault Mag",
+"Reconstruction",
+"Trench Barrel",
+"reload cancelling"
+],
+"dps": 3328,
+"total": 55236
+},
+{
+"name": "Precision shotgun",
+"frame": "Precision",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, no Backup Mag, Assault Mag, Reconstruction + Gear Shift x5 (Prophet of Doom), reload cancelling",
+"perks": [
+"body",
+"no Backup Mag",
+"Assault Mag",
+"Reconstruction",
+"Gear Shift",
+"reload cancelling"
+],
+"dps": 3316,
+"total": 49713
+},
+{
+"name": "Gjallarhorn",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "Argent Ordnance",
+"perks": [
+"Argent Ordnance"
+],
+"dps": 3268,
+"total": 56374
+},
+{
+"name": "Heavy burst shotgun",
+"frame": "Heavy burst",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Appended Mag, e. High-Impact Reserves + Bait and Switch (Pure Recollection), reload cancelling",
+"perks": [
+"Appended Mag",
+"High-Impact Reserves",
+"Bait",
+"Switch",
+"reload cancelling"
+],
+"dps": 3256,
+"total": 60979
+},
+{
+"name": "Lightweight shotgun",
+"frame": "Lightweight",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, Assault Mag, Reconstruction + Trench Barrel (Starscape Null), reload cancelling",
+"perks": [
+"body",
+"Assault Mag",
+"Reconstruction",
+"Trench Barrel",
+"reload cancelling"
+],
+"dps": 3241,
+"total": 58534
+},
+{
+"name": "The Colony",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "",
+"perks": [],
+"dps": 3221,
+"total": 49096
+},
+{
+"name": "Pinpoint slug shotgun",
+"frame": "Pinpoint",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Assault Mag, e. Fourth Time's the Charm + Elemental Honing x5 (Unvoiced), reload cancelling",
+"perks": [
+"Assault Mag",
+"Fourth Time's the Charm",
+"Elemental Honing",
+"reload cancelling"
+],
+"dps": 3217,
+"total": 88432
+},
+{
+"name": "Rapid-fire slug shotgun",
+"frame": "Rapid-fire",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Rapid Hit + e. Precision Instrument (Trachinus), reload cancelling",
+"perks": [
+"Rapid Hit",
+"Precision Instrument",
+"reload cancelling"
+],
+"dps": 3175,
+"total": 55573
+},
+{
+"name": "Black Talon",
+"frame": "",
+"type": "Sword",
+"ammo": 3,
+"setup": "2H2L combo, Lucent Blades x3, Argent Blade",
+"perks": [
+"Lucent Blades",
+"Argent Blade"
+],
+"dps": 3175,
+"total": 79745
+},
+{
+"name": "New Malpais",
+"frame": "",
+"type": "Pulse Rifle",
+"ammo": 2,
+"setup": "assumes suspend tick every 3 shots",
+"perks": [],
+"dps": 3127,
+"total": 77113
+},
+{
+"name": "Ice Breaker",
+"frame": "",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Sniper's Meditation",
+"perks": [
+"Sniper's Meditation"
+],
+"dps": 3122,
+"total": 34643
+},
+{
+"name": "Conditional Finality",
+"frame": "",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, average across both shots",
+"perks": [
+"body",
+"average across both shots"
+],
+"dps": 3081,
+"total": 61897
+},
+{
+"name": "The Queenbreaker",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 3,
+"setup": "Rewind Rounds, Marksman Sights",
+"perks": [
+"Rewind Rounds",
+"Marksman Sights"
+],
+"dps": 3056,
+"total": 74475
+},
+{
+"name": "Dead Messenger",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "The Fundamentals",
+"perks": [
+"The Fundamentals"
+],
+"dps": 3008,
+"total": 88586
+},
+{
+"name": "Dragon's Breath",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "auto-loaded, Composite Propellant x5, Dawn Chorus, Argent Ordnance",
+"perks": [
+"auto-loaded",
+"Composite Propellant",
+"Dawn Chorus",
+"Argent Ordnance"
+],
+"dps": 3006,
+"total": 153290
+},
+{
+"name": "Symmetry",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "Dynamic Charge x10 into 10 Revolution x10 shots cycle, Well of Radiance caster, Storm's Keep, Flashover",
+"perks": [
+"Well of Radiance caster",
+"Storm's Keep",
+"Flashover"
+],
+"dps": 3002,
+"total": null
+},
+{
+"name": "Hierarchy of Needs",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 1,
+"setup": "Guidance Ring, Argent Quiver",
+"perks": [
+"Guidance Ring",
+"Argent Quiver"
+],
+"dps": 2997,
+"total": null
+},
+{
+"name": "Adaptive fusion rifle",
+"frame": "Adaptive",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Accelerated Coils, Charge MW, Trickle Charge + Gear Shift x5 + Accelerated Assault (Main Ingredient)",
+"perks": [
+"Accelerated Coils",
+"Charge MW",
+"Trickle Charge",
+"Gear Shift",
+"Accelerated Assault"
+],
+"dps": 2989,
+"total": 82701
+},
+{
+"name": "Rapid-fire fusion rifle",
+"frame": "Rapid-fire",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Accelerated Coils, Charge MW, Reconstruction + e. Aggregate Charge (Cartesian Coordinate), Particle Reconstruction",
+"perks": [
+"Accelerated Coils",
+"Charge MW",
+"Reconstruction",
+"Aggregate Charge",
+"Particle Reconstruction"
+],
+"dps": 2987,
+"total": 57855
+},
+{
+"name": "High-impact fusion rifle",
+"frame": "High-impact",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Enhanced Battery, Charge MW, Envious Assassin + Controlled Burst (The Eremite)",
+"perks": [
+"Enhanced Battery",
+"Charge MW",
+"Envious Assassin",
+"Controlled Burst"
+],
+"dps": 2979,
+"total": 85266
+},
+{
+"name": "Thunderlord",
+"frame": "",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "assumes only one reload post-nerf",
+"perks": [],
+"dps": 2979,
+"total": 101659
+},
+{
+"name": "Grand Overture",
+"frame": "",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "volleys when available",
+"perks": [
+"volleys when available"
+],
+"dps": 2946,
+"total": 144658
+},
+{
+"name": "Micro-missile pulse rifle",
+"frame": "",
+"type": "Pulse Rifle",
+"ammo": 2,
+"setup": "Appended Mag, Trickle Charge + Elemental Honing x5, Accelerated Assault (Psi Aeterna IV), Energy Acceleration",
+"perks": [
+"Appended Mag",
+"Trickle Charge",
+"Elemental Honing",
+"Accelerated Assault",
+"Energy Acceleration"
+],
+"dps": 2898,
+"total": 39562
+},
+{
+"name": "Heavy burst shotgun",
+"frame": "Heavy burst",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "Appended Mag, Fourth Time's the Charm + e. Aggregate Charge x3 (Arcane Embrace)",
+"perks": [
+"Appended Mag",
+"Fourth Time's the Charm",
+"Aggregate Charge"
+],
+"dps": 2894,
+"total": 104727
+},
+{
+"name": "Xenophage",
+"frame": "",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "",
+"perks": [],
+"dps": 2862,
+"total": 67645
+},
+{
+"name": "Rapid-fire shotgun",
+"frame": "Rapid-fire",
+"type": "Shotgun",
+"ammo": 2,
+"setup": "body, Cast No Shadows, Trench Barrel (Perfect Paradox), melee reloads, melee damage excluded",
+"perks": [
+"body",
+"Cast No Shadows",
+"Trench Barrel",
+"melee reloads",
+"melee damage excluded"
+],
+"dps": 2852,
+"total": 49627
+},
+{
+"name": "Heirloom",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 2,
+"setup": "1 charge, catalyst, Argent Quiver",
+"perks": [
+"1 charge",
+"catalyst",
+"Argent Quiver"
+],
+"dps": 2813,
+"total": 88751
+},
+{
+"name": "Touch of Malice",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "final round, blighted, Precision Instrument",
+"perks": [
+"final round",
+"blighted",
+"Precision Instrument"
+],
+"dps": 2803,
+"total": null
+},
+{
+"name": "Aggressive fusion rifle",
+"frame": "Aggressive",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Accelerated Coils, Charge MW, e. Rewind Rounds + Gear Shift x5 (Tempered Dynamo)",
+"perks": [
+"Accelerated Coils",
+"Charge MW",
+"Rewind Rounds",
+"Gear Shift"
+],
+"dps": 2799,
+"total": 55244
+},
+{
+"name": "Precision bow",
+"frame": "Precision",
+"type": "Combat Bow",
+"ammo": 1,
+"setup": "Archer's Gambit (Hush), Guidance Ring x3",
+"perks": [
+"Archer's Gambit",
+"Guidance Ring"
+],
+"dps": 2796,
+"total": null
+},
+{
+"name": "Heirloom",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 2,
+"setup": "2 charges, catalyst, Argent Quiver",
+"perks": [
+"2 charges",
+"catalyst",
+"Argent Quiver"
+],
+"dps": 2775,
+"total": 139286
+},
+{
+"name": "Wavesplitter",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 2,
+"setup": "Supercharged Battery, Detonator Beam, Harsh Refraction",
+"perks": [
+"Supercharged Battery",
+"Detonator Beam",
+"Harsh Refraction"
+],
+"dps": 2728,
+"total": 88666
+},
+{
+"name": "Aggressive sniper",
+"frame": "Aggressive",
+"type": "Sniper Rifle",
+"ammo": 2,
+"setup": "Appended Mag, Triple Tap + Fourth Time's the Charm (Keen Thistle), Networked Targeting x5, Sniper's Meditation",
+"perks": [
+"Appended Mag",
+"Triple Tap",
+"Fourth Time's the Charm",
+"Networked Targeting",
+"Sniper's Meditation"
+],
+"dps": 2727,
+"total": 254164
+},
+{
+"name": "Precision fusion rifle",
+"frame": "Precision",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Enhanced Battery, Charge MW, e. Overflow + e. Aggregate Charge (Accelerando-42), Particle Reconstruction",
+"perks": [
+"Enhanced Battery",
+"Charge MW",
+"Overflow",
+"Aggregate Charge",
+"Particle Reconstruction"
+],
+"dps": 2720,
+"total": 73522
+},
+{
+"name": "Ex Diris",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "Corrupted Nucleosynthesis, assumes max frenzy",
+"perks": [
+"Corrupted Nucleosynthesis"
+],
+"dps": 2710,
+"total": 59890
+},
+{
+"name": "Whirling Ovation",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "no Anticipation, fully charged, Argent Ordnance",
+"perks": [
+"no Anticipation",
+"fully charged",
+"Argent Ordnance"
+],
+"dps": 2671,
+"total": 111905
+},
+{
+"name": "Heirloom",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 2,
+"setup": "fully charged, catalyst, Argent Quiver",
+"perks": [
+"fully charged",
+"catalyst",
+"Argent Quiver"
+],
+"dps": 2648,
+"total": 166743
+},
+{
+"name": "Rapid-fire glaive",
+"frame": "Rapid-fire",
+"type": "Glaive",
+"ammo": 2,
+"setup": "no Backup Mag, projectile, Chaos Reshaped x2 + Mega Kill Clip (Greasy Luck)",
+"perks": [
+"no Backup Mag",
+"projectile",
+"Chaos Reshaped",
+"Mega Kill Clip"
+],
+"dps": 2611,
+"total": 64564
+},
+{
+"name": "Adaptive fusion rifle",
+"frame": "Adaptive",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "Accelerated Coils, Charge MW, e. Rewind Rounds + Controlled Burst (Techeun Force)",
+"perks": [
+"Accelerated Coils",
+"Charge MW",
+"Rewind Rounds",
+"Controlled Burst"
+],
+"dps": 2576,
+"total": 57638
+},
+{
+"name": "Aggressive machine gun",
+"frame": "Aggressive",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "Appended Mag, e. Fourth Time's the Charm + e. Target Lock + e. Fail-Deadly (Temporal Clause)",
+"perks": [
+"Appended Mag",
+"Fourth Time's the Charm",
+"Target Lock",
+"Fail-Deadly"
+],
+"dps": 2533,
+"total": 243302
+},
+{
+"name": "Heirloom",
+"frame": "",
+"type": "Combat Bow",
+"ammo": 2,
+"setup": "uncharged, Argent Quiver",
+"perks": [
+"uncharged",
+"Argent Quiver"
+],
+"dps": 2530,
+"total": 56885
+},
+{
+"name": "Winterbite",
+"frame": "",
+"type": "Glaive",
+"ammo": 2,
+"setup": "projectile",
+"perks": [
+"projectile"
+],
+"dps": 2451,
+"total": 58815
+},
+{
+"name": "Salvation's Grip",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "uncharged",
+"perks": [
+"uncharged"
+],
+"dps": 2424,
+"total": 46806
+},
+{
+"name": "Final Warning",
+"frame": "",
+"type": "Sidearm",
+"ammo": 1,
+"setup": "15 shot half charge auto into tap fire burst, catalyst",
+"perks": [
+"catalyst"
+],
+"dps": 2398,
+"total": null
+},
+{
+"name": "Arbalest",
+"frame": "",
+"type": "Linear Fusion Rifle",
+"ammo": 2,
+"setup": "",
+"perks": [],
+"dps": 2389,
+"total": 58835
+},
+{
+"name": "The Wardcliff Coil",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "excludes Bolt Charge, Argent Ordnance",
+"perks": [
+"excludes Bolt Charge",
+"Argent Ordnance"
+],
+"dps": 2387,
+"total": 52072
+},
+{
+"name": "Cull's Shadow",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "with corruption",
+"perks": [
+"with corruption"
+],
+"dps": 2373,
+"total": 64753
+},
+{
+"name": "Salvation's Grip",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 3,
+"setup": "charged, Hail the Storm",
+"perks": [
+"charged",
+"Hail the Storm"
+],
+"dps": 2361,
+"total": 83906
+},
+{
+"name": "Rapid-fire machine gun",
+"frame": "Rapid-fire",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "no Backup Mag, Tactical Mag, e. Fourth Time's the Charm + e. Target Lock (Retrofit Escapade)",
+"perks": [
+"no Backup Mag",
+"Tactical Mag",
+"Fourth Time's the Charm",
+"Target Lock"
+],
+"dps": 2358,
+"total": 214272
+},
+{
+"name": "Trace rifle",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 2,
+"setup": "e. Fourth Time's the Charm + e. Target Lock (Acasia's Dejection), Cenotaph Mask, Harsh Refraction",
+"perks": [
+"Fourth Time's the Charm",
+"Target Lock",
+"Cenotaph Mask",
+"Harsh Refraction"
+],
+"dps": 2258,
+"total": 154783
+},
+{
+"name": "Divinity",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 2,
+"setup": "held down, includes jolt, Focused Fury, Harsh Refraction",
+"perks": [
+"held down",
+"Focused Fury",
+"Harsh Refraction"
+],
+"dps": 2256,
+"total": 75483
+},
+{
+"name": "Skyburner's Oath",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "hipfire, with ignitions, Ember of Ashes, Burning Ambition, Dawn Chorus",
+"perks": [
+"hipfire",
+"with ignitions",
+"Ember of Ashes",
+"Burning Ambition",
+"Dawn Chorus"
+],
+"dps": 2242,
+"total": null
+},
+{
+"name": "Barrow-Dyad",
+"frame": "",
+"type": "Submachine Gun",
+"ammo": 1,
+"setup": "Target Lock, Taken Ambition",
+"perks": [
+"Target Lock",
+"Taken Ambition"
+],
+"dps": 2221,
+"total": null
+},
+{
+"name": "Outbreak Perfected",
+"frame": "",
+"type": "Pulse Rifle",
+"ammo": 1,
+"setup": "starts at max nanites, Rewind Rounds, Appended Mag, approximate",
+"perks": [
+"starts at max nanites",
+"Rewind Rounds",
+"Appended Mag",
+"approximate"
+],
+"dps": 2206,
+"total": null
+},
+{
+"name": "Choir of One",
+"frame": "",
+"type": "Auto Rifle",
+"ammo": 2,
+"setup": "hitscan mode, precision",
+"perks": [
+"hitscan mode",
+"precision"
+],
+"dps": 2201,
+"total": 144867
+},
+{
+"name": "Tessellation",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "full grenade uptime, Property: Irreducible, Transcendent but excludes 5%, simulated",
+"perks": [
+"full grenade uptime",
+"Property: Irreducible",
+"simulated"
+],
+"dps": 2181,
+"total": 154322
+},
+{
+"name": "Dragon's Breath",
+"frame": "",
+"type": "Rocket Launcher",
+"ammo": 3,
+"setup": "auto-loaded, Composite Propellant x5, Argent Ordnance",
+"perks": [
+"auto-loaded",
+"Composite Propellant",
+"Argent Ordnance"
+],
+"dps": 2176,
+"total": 110995
+},
+{
+"name": "Adaptive machine gun",
+"frame": "Adaptive",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "Appended Mag, e. Fourth Time's the Charm + e. Target Lock (Hammerhead)",
+"perks": [
+"Appended Mag",
+"Fourth Time's the Charm",
+"Target Lock"
+],
+"dps": 2143,
+"total": 240671
+},
+{
+"name": "Micro-missile grenade launcher",
+"frame": "Micro-missile",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "Implosion Rounds, Reconstruction + Elemental Honing x5 (Theodolite), Energy Acceleration",
+"perks": [
+"Implosion Rounds",
+"Reconstruction",
+"Elemental Honing",
+"Energy Acceleration"
+],
+"dps": 2076,
+"total": 57426
+},
+{
+"name": "Forerunner",
+"frame": "",
+"type": "Sidearm",
+"ammo": 2,
+"setup": "",
+"perks": [],
+"dps": 2072,
+"total": 51349
+},
+{
+"name": "High-impact machine gun",
+"frame": "High-impact",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "Tactical Mag, Fourth Time's the Charm + e. Target Lock (Archon's Thunder)",
+"perks": [
+"Tactical Mag",
+"Fourth Time's the Charm",
+"Target Lock"
+],
+"dps": 2017,
+"total": 285810
+},
+{
+"name": "Revision Zero",
+"frame": "",
+"type": "Pulse Rifle",
+"ammo": 1,
+"setup": "4 burst cycle into 6 Hunter's Trace shots, Extended Mag, Fourth Time's the Charm, Vorpal Weapon",
+"perks": [
+"Extended Mag",
+"Fourth Time's the Charm",
+"Vorpal Weapon"
+],
+"dps": 2007,
+"total": null
+},
+{
+"name": "Aggressive glaive",
+"frame": "Aggressive",
+"type": "Glaive",
+"ammo": 2,
+"setup": "no Backup Mag, projectile, e. Redirection x30 (The Heron)",
+"perks": [
+"no Backup Mag",
+"projectile",
+"Redirection"
+],
+"dps": 1960,
+"total": 66817
+},
+{
+"name": "Double fire grenade launcher",
+"frame": "Double fire",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "Spike Grenades, Elemental Honing x5 (Wilderflight)",
+"perks": [
+"Spike Grenades",
+"Elemental Honing"
+],
+"dps": 1959,
+"total": 55819
+},
+{
+"name": "J\u00f6tunn",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "",
+"perks": [],
+"dps": 1956,
+"total": 61950
+},
+{
+"name": "Touch of Malice",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "blight into 15 shot cycle",
+"perks": [],
+"dps": 1922,
+"total": null
+},
+{
+"name": "Vexcalibur",
+"frame": "",
+"type": "Glaive",
+"ammo": 2,
+"setup": "projectile",
+"perks": [
+"projectile"
+],
+"dps": 1913,
+"total": 45160
+},
+{
+"name": "Telesto",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 2,
+"setup": "",
+"perks": [],
+"dps": 1912,
+"total": 51208
+},
+{
+"name": "Revision Zero",
+"frame": "",
+"type": "Pulse Rifle",
+"ammo": 1,
+"setup": "2 burst cycle into 6 Hunter's Trace shots, Extended Mag, Fourth Time's the Charm, Vorpal Weapon",
+"perks": [
+"Extended Mag",
+"Fourth Time's the Charm",
+"Vorpal Weapon"
+],
+"dps": 1900,
+"total": null
+},
+{
+"name": "Vex Mythoclast",
+"frame": "",
+"type": "Fusion Rifle",
+"ammo": 1,
+"setup": "Calculated Balance, Particle Reconstruction",
+"perks": [
+"Calculated Balance",
+"Particle Reconstruction"
+],
+"dps": 1840,
+"total": null
+},
+{
+"name": "Edge of Concurrence",
+"frame": "",
+"type": "Glaive",
+"ammo": 2,
+"setup": "pre-stacked, Lightning Seeker into six shot cycle",
+"perks": [],
+"dps": 1774,
+"total": 50199
+},
+{
+"name": "Wave grenade launcher",
+"frame": "Wave",
+"type": "Grenade Launcher",
+"ammo": 2,
+"setup": "e. Redirection x30 + Bait and Switch (Forbearance), simulated",
+"perks": [
+"Redirection",
+"Bait",
+"Switch",
+"simulated"
+],
+"dps": 1771,
+"total": 50483
+},
+{
+"name": "Adaptive glaive",
+"frame": "Adaptive",
+"type": "Glaive",
+"ammo": 2,
+"setup": "no Backup Mag, projectile, Chaos Reshaped x2 (Refusal of the Call)",
+"perks": [
+"no Backup Mag",
+"projectile",
+"Chaos Reshaped"
+],
+"dps": 1736,
+"total": 52919
+},
+{
+"name": "Deterministic Chaos",
+"frame": "",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "Target Lock",
+"perks": [
+"Target Lock"
+],
+"dps": 1704,
+"total": 137936
+},
+{
+"name": "Service of Luzaku",
+"frame": "",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "",
+"perks": [],
+"dps": 1686,
+"total": 110752
+},
+{
+"name": "Micro-missile sidearm",
+"frame": "",
+"type": "Sidearm",
+"ammo": 2,
+"setup": "precision, High-Explosive Ordnance, Trickle Charge + Gear Shift x5 (Indebted Kindness), Energy Acceleration",
+"perks": [
+"precision",
+"High-Explosive Ordnance",
+"Trickle Charge",
+"Gear Shift",
+"Energy Acceleration"
+],
+"dps": 1676,
+"total": 44395
+},
+{
+"name": "Outbreak Perfected",
+"frame": "",
+"type": "Pulse Rifle",
+"ammo": 1,
+"setup": "starts at 0 nanites, Rewind Rounds, Appended Mag",
+"perks": [
+"starts at 0 nanites",
+"Rewind Rounds",
+"Appended Mag"
+],
+"dps": 1642,
+"total": null
+},
+{
+"name": "Polaris Lance",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "Ember of Ashes, Dawn Chorus",
+"perks": [
+"Ember of Ashes",
+"Dawn Chorus"
+],
+"dps": 1611,
+"total": null
+},
+{
+"name": "Tractor Cannon",
+"frame": "",
+"type": "Shotgun",
+"ammo": 3,
+"setup": "",
+"perks": [],
+"dps": 1564,
+"total": 22149
+},
+{
+"name": "Heir Apparent",
+"frame": "",
+"type": "Machine Gun",
+"ammo": 3,
+"setup": "",
+"perks": [],
+"dps": 1538,
+"total": 58096
+},
+{
+"name": "Tarrabah",
+"frame": "",
+"type": "Submachine Gun",
+"ammo": 1,
+"setup": "Ravenous Beast",
+"perks": [
+"Ravenous Beast"
+],
+"dps": 1495,
+"total": null
+},
+{
+"name": "Hawkmoon",
+"frame": "",
+"type": "Hand Cannon",
+"ammo": 1,
+"setup": "successive mags, Paracausal Shot x7",
+"perks": [
+"successive mags",
+"Paracausal Shot"
+],
+"dps": 1388,
+"total": null
+},
+{
+"name": "Tommy's Matchbook",
+"frame": "",
+"type": "Auto Rifle",
+"ammo": 1,
+"setup": "Ember of Ashes",
+"perks": [
+"Ember of Ashes"
+],
+"dps": 1355,
+"total": null
+},
+{
+"name": "Rat King",
+"frame": "",
+"type": "Sidearm",
+"ammo": 1,
+"setup": "Rat Pack x5",
+"perks": [
+"Rat Pack"
+],
+"dps": 1255,
+"total": null
+},
+{
+"name": "Lodestar",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 1,
+"setup": "ADS, Harsh Refraction",
+"perks": [
+"ADS",
+"Harsh Refraction"
+],
+"dps": 1246,
+"total": null
+},
+{
+"name": "Osteo Striga",
+"frame": "",
+"type": "Submachine Gun",
+"ammo": 1,
+"setup": "",
+"perks": [],
+"dps": 1204,
+"total": null
+},
+{
+"name": "Polaris Lance",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "Ember of Ashes",
+"perks": [
+"Ember of Ashes"
+],
+"dps": 1175,
+"total": null
+},
+{
+"name": "Graviton Spike",
+"frame": "",
+"type": "Hand Cannon",
+"ammo": 1,
+"setup": "alternating modes with 3 shot cycles, Temporal Alignment",
+"perks": [
+"Temporal Alignment"
+],
+"dps": 1154,
+"total": null
+},
+{
+"name": "Cerberus+1",
+"frame": "",
+"type": "Auto Rifle",
+"ammo": 1,
+"setup": "precision, point blank",
+"perks": [
+"precision",
+"point blank"
+],
+"dps": 1146,
+"total": null
+},
+{
+"name": "Third Iteration",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "16 marked shots",
+"perks": [
+"16 marked shots"
+],
+"dps": 1127,
+"total": null
+},
+{
+"name": "Riskrunner",
+"frame": "",
+"type": "Submachine Gun",
+"ammo": 1,
+"setup": "Arc Conductor, simulated",
+"perks": [
+"Arc Conductor",
+"simulated"
+],
+"dps": 1100,
+"total": null
+},
+{
+"name": "Third Iteration",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "Amalgamation Round into 15 marked shots",
+"perks": [
+"Amalgamation Round into 15 marked shots"
+],
+"dps": 1050,
+"total": null
+},
+{
+"name": "Polaris Lance",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "",
+"perks": [],
+"dps": 1045,
+"total": null
+},
+{
+"name": "Skyburner's Oath",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "hipfire, with ignitions, Ember of Ashes, Burning Ambition",
+"perks": [
+"hipfire",
+"with ignitions",
+"Ember of Ashes",
+"Burning Ambition"
+],
+"dps": 1030,
+"total": null
+},
+{
+"name": "Fighting Lion",
+"frame": "",
+"type": "Grenade Launcher",
+"ammo": 1,
+"setup": "",
+"perks": [],
+"dps": 994,
+"total": null
+},
+{
+"name": "Lodestar",
+"frame": "",
+"type": "Trace Rifle",
+"ammo": 1,
+"setup": "hip-fire, Harsh Refraction",
+"perks": [
+"hip-fire",
+"Harsh Refraction"
+],
+"dps": 989,
+"total": null
+},
+{
+"name": "Sweet Business",
+"frame": "",
+"type": "Auto Rifle",
+"ammo": 1,
+"setup": "",
+"perks": [],
+"dps": 952,
+"total": null
+},
+{
+"name": "Malfeasance",
+"frame": "",
+"type": "Hand Cannon",
+"ammo": 1,
+"setup": "successive mags, Vorpal Weapon",
+"perks": [
+"successive mags",
+"Vorpal Weapon"
+],
+"dps": 918,
+"total": null
+},
+{
+"name": "Quicksilver Storm",
+"frame": "",
+"type": "Auto Rifle",
+"ammo": 1,
+"setup": "42 shot burst into 3 grenade cycle",
+"perks": [],
+"dps": 868,
+"total": null
+},
+{
+"name": "The Last Word",
+"frame": "",
+"type": "Hand Cannon",
+"ammo": 1,
+"setup": "hip-fire, successive mags",
+"perks": [
+"hip-fire",
+"successive mags"
+],
+"dps": 825,
+"total": null
+},
+{
+"name": "MIDA Multi-Tool",
+"frame": "",
+"type": "Scout Rifle",
+"ammo": 1,
+"setup": "High-Power Ammo",
+"perks": [
+"High-Power Ammo"
+],
+"dps": 673,
+"total": null
+}
+]
+}

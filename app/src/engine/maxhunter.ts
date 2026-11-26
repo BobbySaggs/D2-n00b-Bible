@@ -4,7 +4,7 @@ import type { CatalogEntry } from "../bungie/catalog";
 import type { Inventory, Item } from "../model/inventory";
 import { STAT_LABEL, STAT_ORDER, type StatKey } from "../bungie/config";
 import type { Goal } from "./loops";
-import { searchBuilds } from "./builds";
+import { damageFor, searchBuilds } from "./builds";
 import { evaluate, evaluateNow, makeCtx, specFromBuild, tuneArtifactNow, type ArtifactTune, type BuildView, type Settings } from "./evaluate";
 import { withCatalog, isStandIn, standInSource } from "./catalog";
 
@@ -335,6 +335,11 @@ function confidenceOf(v: BuildView, boss: boolean): { confidence: Confidence; wh
   const guessed = [...new Set(parts.filter(k => (k as { read?: string }).read === "description").map(k => k.name))];
   const bits = [read ? `Rests partly on Steeped's reading of ${guessed.slice(0, 4).join(", ")}${guessed.length > 4 ? ` and ${guessed.length - 4} more` : ""}` : "Every piece is a proven rule"];
   if (typeOnly) bits.push(`${typeOnly} weapon${typeOnly > 1 ? "s" : ""} judged by type only`);
-  if (boss) { if (c === "Proven") c = "Mostly proven"; bits.push("no real damage numbers yet, so heavy and boss picks are judgment"); }
+  if (boss) {
+    const guns = v.weapons.filter((w): w is NonNullable<typeof w> => !!w && w.ammo > 1);
+    const tested = guns.filter(w => damageFor(w)).length;
+    if (tested < guns.length) { if (c === "Proven") c = "Mostly proven"; bits.push(`${guns.length - tested} of ${guns.length} special and heavy picks have no tested damage numbers, so those are judgment`); }
+    else if (guns.length) bits.push("special and heavy picks use tested boss damage (Aegis)");
+  }
   return { confidence: c, why: bits.join("; ") };
 }

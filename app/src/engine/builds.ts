@@ -8,6 +8,7 @@ import { isPvp, scoreLoops, weightOf, statLean, type Goal, type LoopReport, type
 import { solve, type Solution, type StatPlan } from "./solve";
 import { artifactsOf, bestArtifact, type ArtifactFit } from "./artifact";
 import { perkKnowledge, type ArtifactPerk } from "../knowledge/artifact";
+import { damageOf, dpsPoints, knowPerks, type DamageRead } from "./damage";
 import { DUEL_SLOT, PVP_PAST_100, WEAPON_STAT, duelRating, type WeaponStats } from "../knowledge/pvp";
 
 export interface Weapon {
@@ -24,6 +25,7 @@ export interface Weapon {
   // Perk columns you can switch between for free (Tier 3+ drops with 2-3 per column). cols[i][0] is what's slotted.
   cols: { socket: number; options: ArtifactPerk[] }[];
   base: K[]; // the weapon's own knowledge and type (not its column perks)
+  frame: string; // intrinsic frame name ("Aggressive Frame"), "" for exotics
 }
 
 export interface Build {
@@ -71,15 +73,18 @@ export function ownedWeapons(inv: Inventory, defOf: DefOf, power = 0): Weapon[] 
       const own = byName.get(item.name);
       if (own && own.kind === "weapon") base.push(own);
       const cols: Weapon["cols"] = [];
+      let frame = "";
       item.plugs.forEach((h, socket) => {
         const d = defOf(h);
         if (!d?.name) return;
+        if (!item.exotic && d.plugCat === "intrinsics" && !frame) frame = d.name;
         const trait = d.plugCat === "frames" || d.plugCat === "origins" || (item.exotic && d.plugCat === "intrinsics" && !own);
         if (!trait) { const k = byName.get(d.name); if (k && k.kind === "weapon" && !base.includes(k)) base.push(k); return; }
         const hashes = [h, ...(item.reusable[socket] ?? []).filter(x => x !== h)];
         const options = hashes.map(x => defOf(x)).filter((x): x is ItemDef => !!x?.name)
           .map(x => perkKnowledge(x.hash, x.name, x.desc ?? "", "weapon"));
         cols.push({ socket, options });
+        knowPerks(options.map(o => o.name));
       });
       const typeName = defOf(item.hash)?.type ?? "";
       const type = WEAPON_TYPE[typeName];
@@ -87,7 +92,7 @@ export function ownedWeapons(inv: Inventory, defOf: DefOf, power = 0): Weapon[] 
       const ks = [...base, ...cols.map(c => c.options[0])];
       const rated = base.some(k => k !== type) || cols.some(c => c.options[0].read !== "description");
       const wstats: WeaponStats = Object.fromEntries(Object.entries(WEAPON_STAT).map(([k, h]) => [k, item.wstats?.[h] ?? 0])) as WeaponStats;
-      return { item, ks, base, cols, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated, wstats,
+      return { item, ks, base, cols, element: item.damage || "Kinetic", ammo: defOf(item.hash)?.ammo ?? 1, type: typeName, rated, wstats, frame,
         duel: duelRating(typeName, wstats), tier: item.gearTier ?? 0, infuse: power > 0 && item.power < power - 10 };
     });
 }
@@ -143,16 +148,22 @@ export function corePartsOf(b: CoreLike): Part[] {
   return [...[b.super, b.grenade, b.melee, b.classAbility, ...b.aspects, ...b.fragments, b.exotic].map(k => ({ k })), ...(b.subclass ? [subMarker(b.subclass)] : [])];
 }
 
+// Real boss DPS for this copy with the perks it has picked, from Aegis's tested setups (null when the sheet has no row for it).
+export const damageFor = (w: Weapon): DamageRead | null =>
+  damageOf({ name: w.item.name, exotic: w.item.exotic, frame: w.frame, type: w.type, ammo: w.ammo, perks: w.ks.map(k => k.name) });
+
 function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
   let s = 0;
   const el = ELEMENT[sub];
   if (w.element === el || (sub === "Prismatic Hunter" && w.element !== "Kinetic")) s += 1;
   if (exotic.name === "Fr0st-EE5" && w.element === "Stasis") s += 1.5;
   if (exotic.name === "Gyrfalcon's Hauberk" && w.element === "Void") s += 2;
-  if (goal === "bossDps" && w.ammo === 2) {
+  const dmg = goal === "bossDps" ? damageFor(w) : null;
+  if (dmg) s += dpsPoints(dmg, w.ammo);
+  if (goal === "bossDps" && w.ammo === 2 && !dmg) {
     for (const k of w.ks) for (const m of k.makes) { const [t, n] = m.split(":"); if (t === "bossDmg") s += 1.5 * Number(n ?? 1); }
   }
-  if (goal === "bossDps" && w.ammo === 3) {
+  if (goal === "bossDps" && w.ammo === 3 && !dmg) {
     // The heavy weapon is the boss-damage weapon: judge it on its own damage perks, not the build's loops.
     for (const k of w.ks) for (const m of k.makes) { const [t, n] = m.split(":"); if (t === "bossDmg") s += 3 * Number(n ?? 1); }
   }
