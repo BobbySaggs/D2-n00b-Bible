@@ -131,8 +131,15 @@ export function scoreLoops(given: Part[], goal: Goal): LoopReport {
   const pre = buildMade(() => 1);
   combos = COMBOS.filter(c => !(c.pve && isPvp(goal)) && c.all.every(cond => has(cond, pre)));
   // Pass 1 decides which pieces get triggered; pass 2 counts an untriggered piece's effects at 40%.
-  const first = buildMade(() => 1);
-  const triggered = new Set(live.filter(p => { const tr = triggers(p); return !tr.length || tr.some(([t]) => sourceFor(first, t, p.k.name)); }).map(p => p.k.name));
+  // Grounded triggering: start from pieces that need nothing, then add pieces fed by what's already running, until
+  // nothing changes. Two pieces can't switch each other on in a circle (Horde Shuttle needs unravel, To Shreds
+  // makes unravel but needs sever, Horde Shuttle makes sever) unless something real starts the chain.
+  const triggered = new Set(live.filter(p => !triggers(p).length).map(p => p.k.name));
+  for (let changed = true; changed; ) {
+    changed = false;
+    const on = buildMade(p => (triggered.has(p.k.name) ? 1 : 0));
+    for (const p of live) if (!triggered.has(p.k.name) && triggers(p).some(([t]) => sourceFor(on, t, p.k.name))) { triggered.add(p.k.name); changed = true; }
+  }
   const base = (p: Part) => (triggered.has(p.k.name) ? 1 : p.k.kind === "artifact" ? 0 : 0.4); // an idle artifact perk does nothing at all
   // Loop speed: a piece fires as often as what feeds it. An ability comes back faster with more of its energy
   // (Monte Carlo and Mask of Fealty both refill melee), and a piece triggered by a token runs harder when that

@@ -1456,7 +1456,6 @@
     "sever"
    ],
    "uses": [
-    "kDebuffed",
     "unravel"
    ],
    "says": "Damaging unraveled targets with a weapon occasionally spawns a Threadling. Threadlings sever targets that they damage.",
@@ -1468,7 +1467,8 @@
     }
    ],
    "confidence": "bungie",
-   "checked": "2026-11-23"
+   "checked": "2026-11-26",
+   "note": "Fixed Nov 26: was marked as needing Stasis and triggered by any debuff; Bungie text needs unraveled targets (Strand)."
   },
   {
    "name": "Hail The Storm",
