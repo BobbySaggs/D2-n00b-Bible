@@ -190,15 +190,29 @@ function weaponFit(w: Weapon, sub: Subclass, exotic: K, goal: Goal): number {
 
 // Pick the best perk in each column, one column at a time.
 function tunePerks(w: Weapon, score: (w: Weapon) => number): { w: Weapon; score: number } {
-  const picks = w.cols.map(() => 0);
+  // Perks work in pairs (Destabilizing Rounds makes Volatile that Demolitionist or Repulsor Brace cash in), so
+  // one column at a time can miss the best roll. Try every combination when there are few (a Tier 5 gun has
+  // up to 3 x 3 x 1), otherwise go column by column twice.
+  const count = w.cols.reduce((n, c) => n * Math.max(1, c.options.length), 1);
+  const need = (picks: number[]) => (picks.some((j, i) => j > 0 && (w.cols[i].options[j] as { read?: string }).read === "description") ? GUESS_MARGIN : 1e-6);
   let cur = w, best = score(w);
-  w.cols.forEach((c, i) => {
-    for (let j = 1; j < c.options.length; j++) {
+  if (count <= 64) {
+    let combos: number[][] = [[]];
+    for (const c of w.cols) combos = combos.flatMap(a => c.options.map((_, j) => [...a, j]));
+    for (const picks of combos) {
+      if (picks.every(j => j === 0)) continue;
+      const t = withPerks(w, picks), sc = score(t);
+      if (sc > best + need(picks)) { best = sc; cur = t; }
+    }
+    return { w: cur, score: best };
+  }
+  const picks = w.cols.map(() => 0);
+  for (let pass = 0; pass < 2; pass++) w.cols.forEach((c, i) => {
+    for (let j = 0; j < c.options.length; j++) {
+      if (j === picks[i]) continue;
       const trial = picks.map((p, k) => (k === i ? j : p));
-      const t = withPerks(w, trial);
-      const sc = score(t);
-      const need = (c.options[j] as { read?: string }).read === "description" ? GUESS_MARGIN : 1e-6;
-      if (sc > best + need) { best = sc; cur = t; picks[i] = j; }
+      const t = withPerks(w, trial), sc = score(t);
+      if (sc > best + need(trial)) { best = sc; cur = t; picks[i] = j; }
     }
   });
   return { w: cur, score: best };
